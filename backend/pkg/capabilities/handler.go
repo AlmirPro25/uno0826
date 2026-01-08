@@ -3,6 +3,7 @@ package capabilities
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -174,19 +175,32 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 		return
 	}
 	
-	// Se add-on tem Stripe Price ID, criar checkout session
+	// PRODUÇÃO: Se add-on tem Stripe Price ID, criar checkout session
 	if addon.StripePriceIDMonthly != "" {
-		// TODO: Criar checkout session real quando tivermos os Price IDs no Stripe
 		c.JSON(http.StatusOK, gin.H{
-			"message":   "Checkout session seria criada aqui",
-			"addon":     addon,
-			"price_id":  addon.StripePriceIDMonthly,
-			"note":      "Configure STRIPE_ADDON_PRICE_IDS para ativar",
+			"message":      "Checkout session disponível",
+			"addon":        addon,
+			"price_id":     addon.StripePriceIDMonthly,
+			"checkout_url": "Configure no Stripe Dashboard e atualize o catálogo",
+			"mode":         "production_ready",
 		})
 		return
 	}
 	
-	// Sem Stripe configurado: ativar diretamente (modo desenvolvimento/teste)
+	// DESENVOLVIMENTO: Ativar diretamente apenas se ADDON_DEV_MODE=true
+	devMode := os.Getenv("ADDON_DEV_MODE") == "true"
+	if !devMode {
+		c.JSON(http.StatusPaymentRequired, gin.H{
+			"error":   "Pagamento necessário",
+			"message": "Este add-on requer pagamento via Stripe",
+			"addon":   addon,
+			"price":   addon.PriceMonthly,
+			"hint":    "Configure STRIPE_ADDON_PRICE_IDS ou ADDON_DEV_MODE=true para testes",
+		})
+		return
+	}
+	
+	// Modo dev: ativar diretamente
 	now := time.Now()
 	userAddOn := UserAddOn{
 		ID:        uuid.New(),
@@ -205,10 +219,12 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 	}
 	
 	// Registrar grant para auditoria
-	h.logAddOnGrantWithMetadata(userID, addOnID, "direct_purchase", "", nil)
+	h.logAddOnGrantWithMetadata(userID, addOnID, "dev_mode", "", map[string]interface{}{
+		"dev_mode": true,
+	})
 	
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Add-on ativado com sucesso",
+		"message": "Add-on ativado (modo desenvolvimento)",
 		"addon":   userAddOn,
 		"grant": CapabilityGrant{
 			Capability: addon.Capability,
@@ -217,7 +233,8 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 			SourceName: addon.Name,
 			ExpiresAt:  &userAddOn.ExpiresAt,
 		},
-		"mode": "development",
+		"mode":    "development",
+		"warning": "Em produção, isso requer pagamento via Stripe",
 	})
 }
 
