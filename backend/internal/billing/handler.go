@@ -697,6 +697,54 @@ func (h *BillingHandler) handlePayoutFailed(event *WebhookEvent) error {
 }
 
 // ========================================
+// CHECKOUT SESSION - Stripe Real
+// ========================================
+
+// CreateCheckoutSession cria uma sessão de checkout do Stripe
+func (h *BillingHandler) CreateCheckoutSession(c *gin.Context) {
+	userIDStr := c.GetString("userID")
+	if userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Não autenticado"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	// Buscar ou criar billing account
+	account, err := h.service.GetBillingAccount(userID)
+	if err != nil {
+		// Criar conta se não existir
+		ctx := c.Request.Context()
+		appCtx := extractBillingAppContext(c)
+		account, err = h.governedService.CreateBillingAccountGoverned(ctx, userID, "", "", userID, appCtx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar conta"})
+			return
+		}
+	}
+
+	// Criar checkout session via Stripe
+	ctx := c.Request.Context()
+	successURL := "https://uno0826-pr57.vercel.app/success"
+	cancelURL := "https://uno0826-pr57.vercel.app/cancel"
+	
+	sessionURL, sessionID, err := h.stripeService.CreateCheckoutSession(ctx, account.StripeCustomerID, successURL, cancelURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar checkout: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"checkout_url": sessionURL,
+		"session_id":   sessionID,
+	})
+}
+
+// ========================================
 // ROUTE REGISTRATION
 // ========================================
 
@@ -714,6 +762,9 @@ func RegisterBillingRoutes(router *gin.RouterGroup, service *BillingService, gov
 		billing.POST("/intents", authMiddleware, handler.CreatePaymentIntent)
 		billing.GET("/intents", authMiddleware, handler.ListPaymentIntents)
 		billing.GET("/intents/:intentId", authMiddleware, handler.GetPaymentIntent)
+
+		// Checkout Session (Stripe real)
+		billing.POST("/checkout", authMiddleware, handler.CreateCheckoutSession)
 
 		// Ledger
 		billing.GET("/ledger", authMiddleware, handler.GetLedger)

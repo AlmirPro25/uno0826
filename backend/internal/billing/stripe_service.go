@@ -14,6 +14,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/stripe/stripe-go/v76"
+	"github.com/stripe/stripe-go/v76/checkout/session"
 	"prost-qs/backend/pkg/resilience"
 )
 
@@ -211,6 +213,49 @@ func (s *StripeService) CancelSubscription(ctx context.Context, subscriptionID s
 		// stripe.Subscription.Cancel(subscriptionID, nil)
 		return nil
 	})
+}
+
+// ========================================
+// CHECKOUT SESSION
+// ========================================
+
+// CreateCheckoutSession cria uma sessão de checkout do Stripe
+func (s *StripeService) CreateCheckoutSession(ctx context.Context, customerID, successURL, cancelURL string) (string, string, error) {
+	if !s.IsConfigured() {
+		// Mock mode
+		mockURL := "https://checkout.stripe.com/mock_session"
+		return mockURL, fmt.Sprintf("cs_mock_%d", time.Now().UnixNano()), nil
+	}
+
+	// Usar Stripe SDK real
+	stripe.Key = s.secretKey
+
+	// Price ID do produto PROST-QS Pro
+	priceID := "price_1SnMCgInQBs0OE9Df5OVQD5i"
+
+	params := &stripe.CheckoutSessionParams{
+		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				Price:    stripe.String(priceID),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		SuccessURL: stripe.String(successURL + "?session_id={CHECKOUT_SESSION_ID}"),
+		CancelURL:  stripe.String(cancelURL),
+	}
+
+	// Se tiver customer ID válido (não mock), usar
+	if customerID != "" && !strings.HasPrefix(customerID, "cus_mock_") {
+		params.Customer = stripe.String(customerID)
+	}
+
+	session, err := session.New(params)
+	if err != nil {
+		return "", "", fmt.Errorf("erro ao criar checkout session: %w", err)
+	}
+
+	return session.URL, session.ID, nil
 }
 
 // ========================================
