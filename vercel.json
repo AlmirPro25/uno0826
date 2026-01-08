@@ -1,8 +1,12 @@
 {
   "rewrites": [
     { "source": "/", "destination": "/frontend/index.html" },
+    { "source": "/success", "destination": "/frontend/admin/success.html" },
+    { "source": "/cancel", "destination": "/frontend/admin/cancel.html" },
     { "source": "/admin", "destination": "/frontend/admin/index.html" },
     { "source": "/admin/", "destination": "/frontend/admin/index.html" },
+    { "source": "/admin/success", "destination": "/frontend/admin/success.html" },
+    { "source": "/admin/cancel", "destination": "/frontend/admin/cancel.html" },
     { "source": "/admin/(.*)", "destination": "/frontend/admin/index.html" },
     { "source": "/dev-portal", "destination": "/frontend/dev-portal/index.html" },
     { "source": "/dev-portal/", "destination": "/frontend/dev-portal/index.html" },

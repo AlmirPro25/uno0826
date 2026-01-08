@@ -729,8 +729,9 @@ func (h *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 
 	// Criar checkout session via Stripe
 	ctx := c.Request.Context()
-	successURL := "https://uno0826-pr57.vercel.app/success"
-	cancelURL := "https://uno0826-pr57.vercel.app/cancel"
+	// URLs temporárias - depois trocar para páginas reais do frontend
+	successURL := "https://example.com/success"
+	cancelURL := "https://example.com/cancel"
 	
 	sessionURL, sessionID, err := h.stripeService.CreateCheckoutSession(ctx, account.StripeCustomerID, successURL, cancelURL)
 	if err != nil {
