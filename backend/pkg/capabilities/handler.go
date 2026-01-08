@@ -274,8 +274,7 @@ func createAddOnCheckoutSession(customerID, userID, addOnID, priceID, successURL
 		return "https://checkout.stripe.com/mock_addon_session", "cs_addon_mock_" + userID, nil
 	}
 	
-	// Importar stripe inline para evitar dependência circular
-	// O stripe já está configurado no billing service
+	// Configurar Stripe
 	stripe.Key = stripeKey
 	
 	params := &stripe.CheckoutSessionParams{
@@ -305,12 +304,17 @@ func createAddOnCheckoutSession(customerID, userID, addOnID, priceID, successURL
 		"addon_id":   addOnID,
 	}
 
-	// Se tiver customer ID válido (não mock), usar
-	if customerID != "" && len(customerID) > 4 && customerID[:4] != "cus_" {
-		// customerID inválido, ignorar
-	} else if customerID != "" && len(customerID) > 9 && customerID[:9] != "cus_mock_" {
+	// Se tiver customer ID real do Stripe (não mock), usar
+	// Customer IDs reais começam com "cus_" mas NÃO com "cus_mock_"
+	isRealCustomer := customerID != "" && 
+		len(customerID) > 4 && 
+		customerID[:4] == "cus_" && 
+		(len(customerID) < 9 || customerID[:9] != "cus_mock_")
+	
+	if isRealCustomer {
 		params.Customer = stripe.String(customerID)
 	}
+	// Se não tiver customer real, Stripe vai pedir email no checkout
 
 	sess, err := session.New(params)
 	if err != nil {
