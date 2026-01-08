@@ -100,6 +100,11 @@ func main() {
 	// Configurar Gin
 	r := gin.Default()
 
+	// Rota raiz para health check rápido do Render
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok", "service": "prost-qs"})
+	})
+
 	// Configuração CORS - Permite todas as portas dos frontends
 	r.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://127.0.0.1:3003"},
