@@ -83,7 +83,7 @@ var AddOnCatalog = map[string]AddOn{
 		PriceMonthly:         990,  // R$ 9,90
 		PriceYearly:          9900, // R$ 99,00 (2 meses grátis)
 		Currency:             "brl",
-		StripePriceIDMonthly: "price_1SnOCVInQBs0OE9D2XlffrVt",
+		StripePriceIDMonthly: "price_1SnQc0IYhyBfQ2dRRiklubXJ",
 		Active:               true,
 		RequiresPlan:         []string{"free", "pro"}, // Enterprise já tem
 	},
@@ -96,8 +96,8 @@ var AddOnCatalog = map[string]AddOn{
 		PriceMonthly:         1990, // R$ 19,90
 		PriceYearly:          19900,
 		Currency:             "brl",
-		StripePriceIDMonthly: "price_1SnODjInQBs0OE9DhdSXDRjb",
-		Active:               true,
+		StripePriceIDMonthly: "", // TODO: criar no modo teste
+		Active:               false, // Desativado até ter Price ID
 		RequiresPlan:         []string{"pro"},
 	},
 	"extra_apps_5": {
@@ -110,8 +110,8 @@ var AddOnCatalog = map[string]AddOn{
 		PriceMonthly:         1490, // R$ 14,90
 		PriceYearly:          14900,
 		Currency:             "brl",
-		StripePriceIDMonthly: "price_1SnOF1InQBs0OE9DXoz5ohH5",
-		Active:               true,
+		StripePriceIDMonthly: "", // TODO: criar no modo teste
+		Active:               false, // Desativado até ter Price ID
 		RequiresPlan:         []string{"pro"},
 	},
 	"extra_apps_20": {
@@ -124,8 +124,8 @@ var AddOnCatalog = map[string]AddOn{
 		PriceMonthly:         4990, // R$ 49,90
 		PriceYearly:          49900,
 		Currency:             "brl",
-		StripePriceIDMonthly: "price_1SnOG4InQBs0OE9D4OO2fKVw",
-		Active:               true,
+		StripePriceIDMonthly: "", // TODO: criar no modo teste
+		Active:               false, // Desativado até ter Price ID
 		RequiresPlan:         []string{"pro"},
 	},
 	"extra_users_5000": {
@@ -138,8 +138,8 @@ var AddOnCatalog = map[string]AddOn{
 		PriceMonthly:         2990, // R$ 29,90
 		PriceYearly:          29900,
 		Currency:             "brl",
-		StripePriceIDMonthly: "price_1SnOHYInQBs0OE9DctaQ8r2X",
-		Active:               true,
+		StripePriceIDMonthly: "", // TODO: criar no modo teste
+		Active:               false, // Desativado até ter Price ID
 		RequiresPlan:         []string{"pro"},
 	},
 }
