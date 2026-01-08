@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -570,6 +571,7 @@ func (s *BillingService) CreateSubscriptionFromStripe(accountID uuid.UUID, strip
 		existing.Status = status
 		existing.UpdatedAt = time.Now()
 		s.db.Save(&existing)
+		log.Printf("📝 [SUBSCRIPTION] Atualizada: account=%s stripe_sub=%s status=%s", accountID, stripeSubID, status)
 		return &existing, nil
 	}
 	
@@ -595,6 +597,11 @@ func (s *BillingService) CreateSubscriptionFromStripe(accountID uuid.UUID, strip
 	
 	// Adicionar entrada no ledger
 	s.addLedgerEntry(accountID, "credit", 2990, "brl", "Subscription PROST-QS Pro", stripeSubID)
+	
+	// 🎉 EVENTO: Assinatura concedida - um humano ganhou poderes novos
+	log.Printf("🎉 [SUBSCRIPTION_GRANTED] account=%s plan=%s stripe_sub=%s amount=2990 currency=brl", 
+		accountID, planID, stripeSubID)
+	log.Printf("   → Capacidades desbloqueadas: criar apps, gerar credentials, gerenciar recursos")
 	
 	return sub, nil
 }

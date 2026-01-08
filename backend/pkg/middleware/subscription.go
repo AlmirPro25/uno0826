@@ -30,6 +30,8 @@ const ContextSubscriptionKey = "subscription"
 
 // SubscriptionGuard verifica se o usuário tem assinatura ativa
 // Retorna 402 Payment Required se não tiver
+// Estados válidos: active, trialing
+// Estados bloqueados: past_due, canceled, expired, none
 func SubscriptionGuard(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Usa a mesma key do AuthMiddleware
@@ -60,42 +62,90 @@ func SubscriptionGuard(db *gorm.DB) gin.HandlerFunc {
 				"error":   "Assinatura necessária",
 				"message": "Você precisa de uma assinatura ativa para acessar este recurso.",
 				"code":    "SUBSCRIPTION_REQUIRED",
+				"status":  "none",
 			})
 			c.Abort()
 			return
 		}
 
-		// Buscar subscription ativa
+		// Buscar subscription (qualquer status para dar feedback correto)
 		var subscription struct {
 			Status string `gorm:"column:status"`
 			PlanID string `gorm:"column:plan_id"`
 		}
 		err = db.Table("subscriptions").
 			Select("status, plan_id").
-			Where("account_id = ? AND status IN ?", account.AccountID, []string{"active", "trialing"}).
+			Where("account_id = ?", account.AccountID).
+			Order("created_at DESC").
 			First(&subscription).Error
 
 		if err != nil {
-			// Sem subscription ativa
+			// Sem subscription
 			c.JSON(http.StatusPaymentRequired, gin.H{
 				"error":   "Assinatura necessária",
 				"message": "Você precisa de uma assinatura ativa para acessar este recurso.",
 				"code":    "SUBSCRIPTION_REQUIRED",
+				"status":  "none",
 			})
 			c.Abort()
 			return
 		}
 
-		// Subscription ativa - adicionar info ao contexto
-		info := SubscriptionInfo{
-			HasSubscription: true,
-			Status:          subscription.Status,
-			PlanID:          subscription.PlanID,
-			AccountID:       account.AccountID.String(),
-		}
-		c.Set(ContextSubscriptionKey, info)
+		// Verificar status da subscription
+		switch subscription.Status {
+		case "active", "trialing":
+			// OK - continua
+			info := SubscriptionInfo{
+				HasSubscription: true,
+				Status:          subscription.Status,
+				PlanID:          subscription.PlanID,
+				AccountID:       account.AccountID.String(),
+			}
+			c.Set(ContextSubscriptionKey, info)
+			c.Next()
+			return
 
-		c.Next()
+		case "past_due":
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error":   "Pagamento pendente",
+				"message": "Sua assinatura está com pagamento pendente. Atualize seu método de pagamento.",
+				"code":    "PAYMENT_PAST_DUE",
+				"status":  "past_due",
+			})
+			c.Abort()
+			return
+
+		case "canceled":
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error":   "Assinatura cancelada",
+				"message": "Sua assinatura foi cancelada. Reative para continuar usando.",
+				"code":    "SUBSCRIPTION_CANCELED",
+				"status":  "canceled",
+			})
+			c.Abort()
+			return
+
+		case "expired":
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error":   "Assinatura expirada",
+				"message": "Sua assinatura expirou. Renove para continuar usando.",
+				"code":    "SUBSCRIPTION_EXPIRED",
+				"status":  "expired",
+			})
+			c.Abort()
+			return
+
+		default:
+			// Status desconhecido - bloqueia por segurança
+			c.JSON(http.StatusPaymentRequired, gin.H{
+				"error":   "Assinatura inválida",
+				"message": "Status de assinatura não reconhecido. Entre em contato com o suporte.",
+				"code":    "SUBSCRIPTION_INVALID",
+				"status":  subscription.Status,
+			})
+			c.Abort()
+			return
+		}
 	}
 }
 
