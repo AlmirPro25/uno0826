@@ -232,21 +232,45 @@ func (h *AddOnHandler) GetEffectiveEntitlements(c *gin.Context) {
 	planID := h.getUserPlanID(userID)
 	basePlan := GetPlan(planID)
 	
-	// Resolver entitlements efetivos
+	// Resolver entitlements efetivos (agora com grants detalhados)
 	entitlements := h.resolver.ResolveEntitlements(userID, basePlan)
 	
-	// Converter capabilities para strings
-	caps := make([]string, len(entitlements.Capabilities))
-	for i, cap := range entitlements.Capabilities {
-		caps[i] = string(cap)
+	c.JSON(http.StatusOK, entitlements)
+}
+
+// ExplainCapability explica de onde vem uma capability específica
+// GET /capabilities/:capability/explain
+func (h *AddOnHandler) ExplainCapability(c *gin.Context) {
+	userIDStr := c.GetString("userID")
+	if userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Não autenticado"})
+		return
+	}
+
+	userID, _ := uuid.Parse(userIDStr)
+	capName := c.Param("capability")
+	cap := Capability(capName)
+	
+	// Buscar plano base
+	planID := h.getUserPlanID(userID)
+	basePlan := GetPlan(planID)
+	
+	// Buscar grant específico
+	grant := h.resolver.GetCapabilityGrant(userID, basePlan, cap)
+	
+	if grant == nil {
+		c.JSON(http.StatusOK, gin.H{
+			"capability": capName,
+			"granted":    false,
+			"reason":     "Capability não disponível no seu plano ou add-ons",
+		})
+		return
 	}
 	
 	c.JSON(http.StatusOK, gin.H{
-		"plan_id":       entitlements.PlanID,
-		"plan_name":     entitlements.PlanName,
-		"capabilities":  caps,
-		"limits":        entitlements.Limits,
-		"active_addons": entitlements.ActiveAddOns,
+		"capability": capName,
+		"granted":    true,
+		"grant":      grant,
 	})
 }
 
@@ -294,4 +318,7 @@ func RegisterAddOnRoutes(router *gin.RouterGroup, db *gorm.DB, authMiddleware gi
 	
 	// Entitlements efetivos (plano + add-ons)
 	router.GET("/entitlements/effective", authMiddleware, handler.GetEffectiveEntitlements)
+	
+	// Explicar origem de uma capability (debug/suporte)
+	router.GET("/capabilities/:capability/explain", authMiddleware, handler.ExplainCapability)
 }
