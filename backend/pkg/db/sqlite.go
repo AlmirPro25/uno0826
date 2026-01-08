@@ -36,6 +36,7 @@ import (
 	"prost-qs/backend/internal/risk"
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
+	"prost-qs/backend/pkg/capabilities"
 )
 
 // InitSQLite inicializa a conexão com o banco de dados SQLite.
@@ -291,6 +292,12 @@ func MigrateSchema(db *gorm.DB) error {
 		// ========================================
 		&kernel_billing.BillingFeatureFlag{},
 		&kernel_billing.PilotApp{},
+
+		// ========================================
+		// ADD-ONS - Capabilities como SKUs
+		// "Capability primeiro. Preço depois. Agora: preço."
+		// ========================================
+		&capabilities.UserAddOn{},
 	)
 	if err != nil {
 		return fmt.Errorf("falha ao executar migrações: %w", err)

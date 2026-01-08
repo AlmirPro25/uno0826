@@ -43,6 +43,7 @@ import (
 	"prost-qs/backend/internal/risk"
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
+	"prost-qs/backend/pkg/capabilities"
 	"prost-qs/backend/pkg/db"
 	"prost-qs/backend/pkg/middleware"
 	"prost-qs/backend/pkg/utils"
@@ -612,6 +613,12 @@ func main() {
 		// "O que eu posso fazer? Quanto posso criar?"
 		// ========================================
 		identity.RegisterCapabilitiesRoutes(v1, gormDB, middleware.AuthMiddleware())
+
+		// ========================================
+		// ADD-ONS - Capabilities como SKUs
+		// "Capability primeiro. Preço depois. Agora: preço."
+		// ========================================
+		capabilities.RegisterAddOnRoutes(v1, gormDB, middleware.AuthMiddleware())
 
 		// ========================================
 		// LOGIN EVENTS - Fase 26.8
