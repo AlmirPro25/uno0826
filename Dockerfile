@@ -3,11 +3,14 @@
 # "Minimalista, seguro, auditável"
 # ========================================
 
-# Build stage
-FROM golang:1.23-alpine AS builder
+# Build stage - usando golang:latest para ter a versão mais recente
+FROM golang:alpine AS builder
 
 # Instalar dependências de build para SQLite
 RUN apk add --no-cache gcc musl-dev sqlite-dev
+
+# Habilitar toolchain automático para resolver dependências
+ENV GOTOOLCHAIN=auto
 
 WORKDIR /app
 
