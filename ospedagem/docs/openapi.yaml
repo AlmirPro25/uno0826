@@ -1,0 +1,41 @@
+
+openapi: 3.0.3
+info:
+  title: Sovereign Cloud Engine API
+  description: Interface de comando para orquestração de infraestrutura soberana.
+  version: 1.0.0
+servers:
+  - url: /api/v1
+paths:
+  /auth/login:
+    post:
+      summary: Autenticação de comando
+      responses:
+        200:
+          description: JWT Token e Refresh Token
+  /projects:
+    get:
+      summary: Lista todos os ecossistemas (apps) ativos
+    post:
+      summary: Forja um novo projeto de infraestrutura
+  /projects/{id}/deployments:
+    post:
+      summary: Inicia o pipeline de build e deploy imutável
+    get:
+      summary: Histórico de versões do software
+  /projects/{id}/logs:
+    get:
+      summary: Stream de logs em tempo real via SSE
+  /infra/stats:
+    get:
+      summary: Telemetria do Host (CPU, RAM, Disk, Containers)
+components:
+  schemas:
+    Project:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        type: { type: string, enum: [FRONTEND, BACKEND] }
+        repository_url: { type: string }
+        environment_variables: { type: object }

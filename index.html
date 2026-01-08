@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROST-QS Sovereign Kernel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        secondary: '#8b5cf6',
+                        accent: '#10b981',
+                        background: '#020617',
+                        surface: 'rgba(30, 41, 59, 0.4)',
+                        'text-muted': '#94a3b8',
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Outfit', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #020617; color: white; }
+        .glass { background: rgba(15, 23, 42, 0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .glass-card-sm { background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05); border-radius: 12px; }
+        .btn-primary { background: linear-gradient(to right, #6366f1, #8b5cf6); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(99, 102, 241, 0.4); }
+        .page-content.hidden { display: none; }
+    </style>
+</head>
+<body class="font-sans antialiased min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="glass h-16 flex items-center justify-between px-6 shrink-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded-lg btn-primary flex items-center justify-center">
+                <i class="fas fa-layer-group text-white text-xs"></i>
+            </div>
+            <h1 class="font-heading font-bold text-lg tracking-tight uppercase">PROST<span class="text-primary">.QS</span></h1>
+        </div>
+        <div class="flex items-center gap-4">
+            <div class="hidden md:flex items-center gap-2 bg-white/5 px-3 py-1 rounded-full border border-white/10">
+                <div class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></div>
+                <span class="text-[10px] font-mono text-emerald-400 uppercase">Sovereign Mode</span>
+            </div>
+            <button onclick="logout()" class="w-8 h-8 rounded-full border border-white/10 flex items-center justify-center hover:bg-rose-500/20 transition-all">
+                <i class="fas fa-power-off text-xs text-text-muted"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto p-6 pb-28">
+
+        <!-- HOME -->
+        <section id="home-page" class="page-content space-y-12 py-12 text-center">
+            <div class="mx-auto max-w-2xl space-y-6">
+                <div class="inline-block px-4 py-1 rounded-full border border-primary/30 bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest">Sovereign Kernel v1.0</div>
+                <h2 class="text-5xl md:text-6xl font-heading font-extrabold tracking-tighter leading-none">
+                    Identidade. Economia. <span class="bg-gradient-to-r from-primary to-emerald-400 bg-clip-text text-transparent">Governança.</span>
+                </h2>
+                <p class="text-text-muted text-lg max-w-lg mx-auto">Kernel soberano para fintechs com ledger imutável, agentes governados e identidade verificável.</p>
+                <div class="flex gap-4 justify-center pt-8">
+                    <button onclick="navTo('login')" class="btn-primary px-8 py-3 rounded-xl font-bold transition-all">Entrar</button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-12 max-w-4xl mx-auto">
+                <div class="glass p-6 rounded-2xl text-left">
+                    <i class="fas fa-fingerprint text-primary mb-4 text-2xl"></i>
+                    <h3 class="font-bold mb-2">Identidade Soberana</h3>
+                    <p class="text-xs text-text-muted">Phone-first com OTP. Sem senhas, sem vazamentos.</p>
+                </div>
+                <div class="glass p-6 rounded-2xl text-left">
+                    <i class="fas fa-book text-emerald-400 mb-4 text-2xl"></i>
+                    <h3 class="font-bold mb-2">Ledger Imutável</h3>
+                    <p class="text-xs text-text-muted">Toda transação é registrada. Stripe é executor, não fonte de verdade.</p>
+                </div>
+                <div class="glass p-6 rounded-2xl text-left">
+                    <i class="fas fa-robot text-secondary mb-4 text-2xl"></i>
+                    <h3 class="font-bold mb-2">Agentes Governados</h3>
+                    <p class="text-xs text-text-muted">IA propõe, humano aprova. Risco calculado, ações auditadas.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- LOGIN (Phone) -->
+        <section id="login-page" class="page-content hidden flex items-center justify-center min-h-[60vh]">
+            <div class="glass p-8 rounded-2xl w-full max-w-md space-y-6">
+                <div class="text-center">
+                    <h2 class="text-3xl font-heading font-bold">Identidade Soberana</h2>
+                    <p class="text-text-muted text-sm mt-2">Digite seu telefone para receber o código.</p>
+                </div>
+                <form onsubmit="handleRequestOTP(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] text-text-muted uppercase font-bold mb-1 ml-1">Telefone</label>
+                        <input id="phone-input" type="tel" placeholder="+55 11 99999-9999" required
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-primary transition-all">
+                    </div>
+                    <button type="submit" class="w-full btn-primary py-4 rounded-xl font-bold uppercase tracking-widest text-sm">Enviar Código</button>
+                </form>
+            </div>
+        </section>
+
+        <!-- VERIFY OTP -->
+        <section id="verify-otp-page" class="page-content hidden flex items-center justify-center min-h-[60vh]">
+            <div class="glass p-8 rounded-2xl w-full max-w-md space-y-6">
+                <div class="text-center">
+                    <h2 class="text-3xl font-heading font-bold">Verificar Código</h2>
+                    <p class="text-text-muted text-sm mt-2">Digite o código de 6 dígitos enviado.</p>
+                    <p id="dev-otp-hint" class="hidden text-emerald-400 text-xs mt-2 font-mono"></p>
+                </div>
+                <form onsubmit="handleVerifyOTP(event)" class="space-y-4">
+                    <div>
+                        <label class="block text-[10px] text-text-muted uppercase font-bold mb-1 ml-1">Código OTP</label>
+                        <input id="otp-input" type="text" maxlength="6" placeholder="000000" required
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 outline-none focus:border-primary transition-all text-center text-2xl font-mono tracking-[0.5em]">
+                    </div>
+                    <button type="submit" class="w-full btn-primary py-4 rounded-xl font-bold uppercase tracking-widest text-sm">Verificar</button>
+                </form>
+                <p class="text-center text-xs text-text-muted">
+                    <a href="#" onclick="navTo('login')" class="text-primary hover:underline">← Voltar</a>
+                </p>
+            </div>
+        </section>
+
+        <!-- DASHBOARD -->
+        <section id="dashboard-page" class="page-content hidden space-y-6">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Saldo Ledger</span>
+                    <div class="text-2xl font-heading font-bold" id="display-balance">R$ 0,00</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Billing Status</span>
+                    <div class="text-lg font-bold text-emerald-400" id="billing-status">-</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Decisões Pendentes</span>
+                    <div class="text-2xl font-heading font-bold"><span id="pending-decisions-badge" class="hidden bg-amber-500 text-white px-2 py-1 rounded-full text-sm">0</span></div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Identity</span>
+                    <div class="text-xs font-mono text-text-muted" id="dashboard-identity-id">-</div>
+                    <div class="text-xs text-text-muted" id="dashboard-phone">-</div>
+                </div>
+            </div>
+
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="font-bold text-sm mb-4">Atividade do Ledger</h3>
+                <div class="h-48"><canvas id="eventsChart"></canvas></div>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onclick="navTo('billing')" class="glass p-4 rounded-xl text-left hover:border-primary/50 transition-all">
+                    <i class="fas fa-wallet text-emerald-400 mb-2"></i>
+                    <p class="text-xs font-bold">Billing</p>
+                </button>
+                <button onclick="navTo('ads')" class="glass p-4 rounded-xl text-left hover:border-primary/50 transition-all">
+                    <i class="fas fa-bullhorn text-secondary mb-2"></i>
+                    <p class="text-xs font-bold">Ads</p>
+                </button>
+                <button onclick="navTo('agents')" class="glass p-4 rounded-xl text-left hover:border-primary/50 transition-all">
+                    <i class="fas fa-robot text-primary mb-2"></i>
+                    <p class="text-xs font-bold">Agents</p>
+                </button>
+                <button onclick="navTo('admin')" class="glass p-4 rounded-xl text-left hover:border-primary/50 transition-all">
+                    <i class="fas fa-shield-alt text-rose-400 mb-2"></i>
+                    <p class="text-xs font-bold">Admin</p>
+                </button>
+            </div>
+        </section>
+
+        <!-- BILLING -->
+        <section id="billing-page" class="page-content hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-heading font-bold">Billing & Ledger</h2>
+                <button onclick="createPaymentIntent()" class="btn-primary px-4 py-2 rounded-lg text-xs font-bold">+ Payment Intent</button>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <span class="text-[10px] text-text-muted uppercase font-bold">Saldo Total</span>
+                <div class="text-4xl font-heading font-bold mt-2" id="billing-balance">R$ 0,00</div>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="font-bold text-sm mb-4">Ledger Entries</h3>
+                <div id="ledger-list" class="space-y-3 max-h-64 overflow-y-auto"></div>
+            </div>
+            <div class="glass p-6 rounded-2xl">
+                <h3 class="font-bold text-sm mb-4">Subscriptions</h3>
+                <div id="subscriptions-list" class="space-y-3"></div>
+            </div>
+        </section>
+
+        <!-- ADS -->
+        <section id="ads-page" class="page-content hidden space-y-6">
+            <div class="flex items-center justify-between">
+                <h2 class="text-2xl font-heading font-bold">Ads Manager</h2>
+                <div class="text-xs text-text-muted">Account: <span id="ads-account-id" class="font-mono">-</span> | <span id="ads-account-status" class="text-emerald-400">-</span></div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass p-6 rounded-2xl">
+                    <h3 class="font-bold text-sm mb-4">Campaigns</h3>
+                    <div id="campaigns-list" class="space-y-3 max-h-80 overflow-y-auto"></div>
+                </div>
+                <div class="glass p-6 rounded-2xl">
+                    <h3 class="font-bold text-sm mb-4">Budgets</h3>
+                    <div id="budgets-list" class="space-y-3"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- AGENTS -->
+        <section id="agents-page" class="page-content hidden space-y-6">
+            <h2 class="text-2xl font-heading font-bold">Agent Governance</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-bold text-sm mb-4 flex items-center gap-2">
+                        <i class="fas fa-clock text-amber-400"></i> Decisões Pendentes
+                    </h3>
+                    <div id="pending-decisions-list" class="space-y-4"></div>
+                </div>
+                <div>
+                    <h3 class="font-bold text-sm mb-4">Histórico Recente</h3>
+                    <div id="recent-decisions-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ADMIN -->
+        <section id="admin-page" class="page-content hidden space-y-6">
+            <h2 class="text-2xl font-heading font-bold">Admin Dashboard</h2>
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Identities</span>
+                    <div class="text-2xl font-bold" id="admin-total-identities">0</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Billing Accounts</span>
+                    <div class="text-2xl font-bold" id="admin-total-billing">0</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Ledger Total</span>
+                    <div class="text-2xl font-bold text-emerald-400" id="admin-total-ledger">R$ 0</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Pending Jobs</span>
+                    <div class="text-2xl font-bold text-amber-400" id="admin-pending-jobs">0</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">Failed Jobs</span>
+                    <div class="text-2xl font-bold text-rose-400" id="admin-failed-jobs">0</div>
+                </div>
+                <div class="glass p-5 rounded-2xl">
+                    <span class="text-[10px] text-text-muted uppercase font-bold block mb-2">DISPUTED</span>
+                    <div class="text-2xl font-bold text-rose-400" id="admin-disputed-count">0</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- TERMINAL -->
+        <section id="terminal-page" class="page-content hidden space-y-6">
+            <h2 class="text-2xl font-heading font-bold">Terminal</h2>
+            <div class="glass rounded-2xl overflow-hidden">
+                <div class="bg-black/40 px-4 py-2 border-b border-white/10 flex items-center gap-2">
+                    <div class="w-2.5 h-2.5 rounded-full bg-rose-500/50"></div>
+                    <div class="w-2.5 h-2.5 rounded-full bg-amber-500/50"></div>
+                    <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/50"></div>
+                    <span class="text-[10px] font-mono text-text-muted ml-2">sovereign-kernel</span>
+                </div>
+                <div id="terminal-output" class="h-64 p-4 font-mono text-xs overflow-y-auto bg-black/20 space-y-1">
+                    <div class="text-emerald-400"># PROST-QS Sovereign Kernel CLI</div>
+                    <div class="text-text-muted"># Ready for commands...</div>
+                </div>
+                <form onsubmit="executeCmd(event)" class="bg-black/40 p-4 border-t border-white/10 flex items-center gap-3">
+                    <select id="cmd-type-select" class="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs">
+                        <option value="TrackImpression">TrackImpression</option>
+                        <option value="InitiatePayment">InitiatePayment</option>
+                    </select>
+                    <span class="text-primary font-bold">></span>
+                    <input id="cmd-input" type="text" class="bg-transparent border-none outline-none text-white flex-1 text-xs font-mono" placeholder='{"key": "value"}'>
+                    <button type="submit" class="w-8 h-8 rounded-lg btn-primary flex items-center justify-center">
+                        <i class="fas fa-play text-[10px]"></i>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation -->
+    <nav id="bottom-nav" class="glass fixed bottom-4 left-1/2 -translate-x-1/2 h-16 w-[95%] max-w-lg rounded-2xl flex items-center justify-around px-2 z-50">
+        <a onclick="navTo('dashboard')" class="flex flex-col items-center gap-1 cursor-pointer group">
+            <i class="fas fa-home text-lg text-text-muted group-hover:text-primary"></i>
+            <span class="text-[8px] font-bold text-text-muted group-hover:text-primary">HOME</span>
+        </a>
+        <a onclick="navTo('billing')" class="flex flex-col items-center gap-1 cursor-pointer group">
+            <i class="fas fa-wallet text-lg text-text-muted group-hover:text-primary"></i>
+            <span class="text-[8px] font-bold text-text-muted group-hover:text-primary">BILLING</span>
+        </a>
+        <a onclick="navTo('terminal')" class="relative -top-4">
+            <div class="w-14 h-14 btn-primary rounded-full flex items-center justify-center shadow-xl cursor-pointer">
+                <i class="fas fa-terminal text-xl"></i>
+            </div>
+        </a>
+        <a onclick="navTo('agents')" class="flex flex-col items-center gap-1 cursor-pointer group">
+            <i class="fas fa-robot text-lg text-text-muted group-hover:text-primary"></i>
+            <span class="text-[8px] font-bold text-text-muted group-hover:text-primary">AGENTS</span>
+        </a>
+        <a onclick="logout()" class="flex flex-col items-center gap-1 cursor-pointer group">
+            <i class="fas fa-sign-out-alt text-lg text-rose-400"></i>
+            <span class="text-[8px] font-bold text-rose-400">SAIR</span>
+        </a>
+    </nav>
+
+    <!-- Loader -->
+    <div id="global-loader" class="hidden fixed inset-0 bg-background/90 z-[100] flex flex-col items-center justify-center">
+        <div class="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin"></div>
+        <p id="loader-text" class="mt-4 font-mono text-[10px] text-primary uppercase tracking-widest">Carregando...</p>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-8 right-8 z-[110] flex flex-col pointer-events-none"></div>
+
+    <script src="/src/main.js"></script>
+</body>
+</html>

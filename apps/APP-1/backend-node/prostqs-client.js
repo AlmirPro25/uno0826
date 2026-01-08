@@ -1,0 +1,315 @@
+/**
+ * ========================================
+ * PROST-QS CLIENT - VOX-BRIDGE
+ * "Cliente burro: só registra, só pergunta"
+ * ========================================
+ * 
+ * Este cliente NÃO decide nada.
+ * Ele apenas:
+ * - Registra sessões
+ * - Emite eventos de audit
+ * - Pergunta se pode (policy) - FUTURO
+ */
+
+// ========================================
+// CONFIGURAÇÃO - OBRIGATÓRIO VIA ENV VARS
+// ========================================
+// NUNCA hardcode secrets aqui!
+// Configure via variáveis de ambiente:
+//   PROSTQS_URL=http://localhost:8080
+//   PROSTQS_APP_KEY=pq_pk_xxx
+//   PROSTQS_APP_SECRET=pq_sk_xxx
+// ========================================
+
+const PROSTQS_URL = process.env.PROSTQS_URL;
+const PROSTQS_APP_KEY = process.env.PROSTQS_APP_KEY;
+const PROSTQS_APP_SECRET = process.env.PROSTQS_APP_SECRET;
+const APP_ID = process.env.PROSTQS_APP_ID || '4fb16e2f-f8f0-425d-84f0-2ef3176bba43';
+
+// Validar configuração obrigatória
+if (!PROSTQS_URL || !PROSTQS_APP_KEY || !PROSTQS_APP_SECRET) {
+  console.warn('⚠️ PROST-QS: Configuração incompleta. Defina PROSTQS_URL, PROSTQS_APP_KEY e PROSTQS_APP_SECRET');
+}
+
+// Buffer de eventos para batch (evita muitas requests)
+let eventBuffer = [];
+let flushTimeout = null;
+const FLUSH_INTERVAL = 5000; // 5 segundos
+const MAX_BUFFER_SIZE = 50;
+
+/**
+ * Emite um evento de audit para o PROST-QS
+ * @param {string} type - Tipo do evento (SESSION_STARTED, MATCH_CREATED, etc)
+ * @param {object} data - Dados do evento
+ */
+async function emitEvent(type, data) {
+  const event = {
+    type,
+    app_id: APP_ID,
+    actor_id: data.session_id || data.actor_id || 'system',
+    actor_type: data.actor_type || 'anonymous_user',
+    target_id: data.target_id || data.session_id || 'unknown',
+    target_type: data.target_type || 'session',
+    action: type.toLowerCase(),
+    metadata: JSON.stringify(data.metadata || {}),
+    ip: data.ip || '',
+    user_agent: data.user_agent || '',
+    timestamp: new Date().toISOString()
+  };
+
+  // Adicionar ao buffer
+  eventBuffer.push(event);
+
+  // Flush se buffer cheio
+  if (eventBuffer.length >= MAX_BUFFER_SIZE) {
+    await flushEvents();
+  } else if (!flushTimeout) {
+    // Agendar flush
+    flushTimeout = setTimeout(flushEvents, FLUSH_INTERVAL);
+  }
+}
+
+/**
+ * Envia eventos em batch para o PROST-QS
+ */
+async function flushEvents() {
+  if (flushTimeout) {
+    clearTimeout(flushTimeout);
+    flushTimeout = null;
+  }
+
+  if (eventBuffer.length === 0) return;
+
+  const events = [...eventBuffer];
+  eventBuffer = [];
+
+  try {
+    // Enviar cada evento individualmente (API atual não suporta batch)
+    for (const event of events) {
+      await sendAuditEvent(event);
+    }
+    console.log(`📊 PROST-QS: ${events.length} eventos enviados`);
+  } catch (error) {
+    console.error('❌ PROST-QS: Erro ao enviar eventos:', error.message);
+    // Re-adicionar eventos ao buffer em caso de erro
+    eventBuffer = [...events, ...eventBuffer].slice(0, MAX_BUFFER_SIZE * 2);
+  }
+}
+
+/**
+ * Envia um evento de audit individual
+ */
+async function sendAuditEvent(event) {
+  try {
+    const response = await fetch(`${PROSTQS_URL}/api/v1/apps/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Prost-App-Key': PROSTQS_APP_KEY,
+        'X-Prost-App-Secret': PROSTQS_APP_SECRET
+      },
+      body: JSON.stringify(event)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`HTTP ${response.status}: ${text}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    // Log silencioso - não quebrar o app por causa de audit
+    if (process.env.PROSTQS_DEBUG === 'true') {
+      console.error('PROST-QS audit error:', error.message);
+    }
+    return null;
+  }
+}
+
+// ========================================
+// EVENTOS PRÉ-DEFINIDOS
+// ========================================
+
+/**
+ * Registra início de sessão
+ */
+function sessionStarted(sessionId, ip, userAgent, country) {
+  return emitEvent('SESSION_STARTED', {
+    session_id: sessionId,
+    ip,
+    user_agent: userAgent,
+    metadata: {
+      country,
+      connected_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra entrada na fila
+ */
+function queueJoined(sessionId, nativeLanguage, targetLanguage, interests) {
+  return emitEvent('QUEUE_JOINED', {
+    session_id: sessionId,
+    target_type: 'queue',
+    metadata: {
+      native_language: nativeLanguage,
+      target_language: targetLanguage,
+      interests,
+      joined_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra match criado
+ */
+function matchCreated(roomId, session1Id, session2Id) {
+  return emitEvent('MATCH_CREATED', {
+    session_id: session1Id,
+    target_id: roomId,
+    target_type: 'room',
+    metadata: {
+      room_id: roomId,
+      partner_session_id: session2Id,
+      created_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra match encerrado
+ */
+function matchEnded(roomId, sessionId, duration, reason) {
+  return emitEvent('MATCH_ENDED', {
+    session_id: sessionId,
+    target_id: roomId,
+    target_type: 'room',
+    metadata: {
+      room_id: roomId,
+      duration_ms: duration,
+      reason, // 'user_left', 'partner_left', 'timeout', 'error'
+      ended_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra skip rápido (< 10s) - possível comportamento suspeito
+ */
+function skipFast(sessionId, roomId, duration) {
+  return emitEvent('SKIP_FAST', {
+    session_id: sessionId,
+    target_id: roomId,
+    target_type: 'room',
+    metadata: {
+      duration_ms: duration,
+      skipped_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra uso de tradução
+ */
+function translationUsed(sessionId, fromLang, toLang, charCount) {
+  return emitEvent('TRANSLATION_USED', {
+    session_id: sessionId,
+    target_type: 'translation',
+    metadata: {
+      from_language: fromLang,
+      to_language: toLang,
+      char_count: charCount,
+      used_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra desconexão abrupta
+ */
+function disconnectAbrupt(sessionId, wasInRoom, roomId) {
+  return emitEvent('DISCONNECT_ABRUPT', {
+    session_id: sessionId,
+    target_id: roomId || sessionId,
+    target_type: wasInRoom ? 'room' : 'session',
+    metadata: {
+      was_in_room: wasInRoom,
+      room_id: roomId,
+      disconnected_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra falha de ICE (WebRTC)
+ */
+function iceFailure(sessionId, roomId, errorType) {
+  return emitEvent('ICE_FAILURE', {
+    session_id: sessionId,
+    target_id: roomId,
+    target_type: 'room',
+    metadata: {
+      error_type: errorType,
+      failed_at: Date.now()
+    }
+  });
+}
+
+/**
+ * Registra fim de sessão
+ */
+function sessionEnded(sessionId, duration, matchCount, skipCount) {
+  return emitEvent('SESSION_ENDED', {
+    session_id: sessionId,
+    metadata: {
+      duration_ms: duration,
+      match_count: matchCount,
+      skip_count: skipCount,
+      ended_at: Date.now()
+    }
+  });
+}
+
+// ========================================
+// HEALTH CHECK
+// ========================================
+
+/**
+ * Verifica se o PROST-QS está acessível
+ */
+async function healthCheck() {
+  try {
+    const response = await fetch(`${PROSTQS_URL}/health`);
+    const data = await response.json();
+    return { ok: response.ok, data };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+// ========================================
+// EXPORTS
+// ========================================
+
+module.exports = {
+  // Core
+  emitEvent,
+  flushEvents,
+  healthCheck,
+  
+  // Eventos pré-definidos
+  sessionStarted,
+  queueJoined,
+  matchCreated,
+  matchEnded,
+  skipFast,
+  translationUsed,
+  disconnectAbrupt,
+  iceFailure,
+  sessionEnded,
+  
+  // Config
+  APP_ID,
+  PROSTQS_URL
+};

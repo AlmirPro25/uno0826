@@ -1,0 +1,43 @@
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: ./backend/Dockerfile
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    volumes:
+      - backend_data:/app/data # Volume persistente para o arquivo SQLite
+    env_file:
+      - ./.env
+    # Adicionar um healthcheck para o backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - prostqs_network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: ./frontend/Dockerfile
+    ports:
+      - "${FRONTEND_PORT:-3000}:80" # Frontend rodará na porta 80 dentro do container
+    depends_on:
+      backend:
+        condition: service_healthy # Garante que o backend esteja saudável antes de iniciar o frontend
+    env_file:
+      - ./.env
+    networks:
+      - prostqs_network
+
+networks:
+  prostqs_network:
+    driver: bridge
+
+volumes:
+  backend_data: # Define o volume para persistência do SQLite

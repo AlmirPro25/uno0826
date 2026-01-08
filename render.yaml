@@ -1,0 +1,29 @@
+# ========================================
+# PROST-QS - Render.com Configuration
+# ========================================
+
+services:
+  - type: web
+    name: prost-qs
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: oregon
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: GIN_MODE
+        value: release
+      - key: SERVER_PORT
+        value: "8080"
+      - key: SQLITE_DB_PATH
+        value: /data/prostqs.db
+      - key: JWT_SECRET
+        generateValue: true
+      - key: AES_SECRET_KEY
+        value: "12345678901234567890123456789012"
+      - key: SECRETS_MASTER_KEY
+        value: "abcdefghijklmnopqrstuvwxyz123456"
+    disk:
+      name: prostqs-data
+      mountPath: /data
+      sizeGB: 1

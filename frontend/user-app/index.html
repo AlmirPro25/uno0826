@@ -1,0 +1,600 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PROST-QS</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        'primary-dark': '#4f46e5',
+                        dark: '#0f0f1a',
+                        'dark-card': '#1a1a2e',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: linear-gradient(135deg, #0f0f1a 0%, #1a1a2e 100%); }
+        .glass { background: rgba(255,255,255,0.05); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .btn-primary { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(99,102,241,0.3); }
+        input:focus { outline: none; border-color: #6366f1; }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+    <!-- Loader -->
+    <div id="loader" class="fixed inset-0 bg-dark z-50 flex items-center justify-center hidden">
+        <div class="text-center">
+            <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p id="loader-text" class="text-sm text-gray-400">Carregando...</p>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
+
+    <!-- ========== LOGIN PAGE ========== -->
+    <div id="login-page" class="min-h-screen flex items-center justify-center p-6">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-shield-halved text-3xl text-primary"></i>
+                </div>
+                <h1 class="text-2xl font-bold">Bem-vindo</h1>
+                <p class="text-gray-400 mt-2">Entre com seu telefone para continuar</p>
+            </div>
+
+            <form id="login-form" class="glass rounded-2xl p-6">
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Número de telefone</label>
+                    <div class="flex">
+                        <span class="bg-dark-card border border-white/10 rounded-l-xl px-4 py-3 text-gray-400">+55</span>
+                        <input type="tel" id="phone-input" placeholder="11 99999-9999" 
+                            class="flex-1 bg-dark-card border border-white/10 border-l-0 rounded-r-xl px-4 py-3 text-white"
+                            maxlength="15">
+                    </div>
+                </div>
+                <button type="submit" class="w-full btn-primary text-white font-bold py-3 rounded-xl transition-all">
+                    Continuar
+                </button>
+            </form>
+
+            <p class="text-center text-gray-500 text-sm mt-6">
+                Ao continuar, você concorda com nossos <a href="#" class="text-primary">Termos de Uso</a>
+            </p>
+        </div>
+    </div>
+
+    <!-- ========== VERIFY OTP PAGE ========== -->
+    <div id="verify-page" class="min-h-screen flex items-center justify-center p-6 hidden">
+        <div class="w-full max-w-md">
+            <button onclick="showPage('login')" class="mb-6 text-gray-400 hover:text-white">
+                <i class="fas fa-arrow-left mr-2"></i> Voltar
+            </button>
+
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-emerald-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-message-code text-3xl text-emerald-400"></i>
+                </div>
+                <h1 class="text-2xl font-bold">Verificar código</h1>
+                <p class="text-gray-400 mt-2">Digite o código enviado para <span id="display-phone" class="text-white"></span></p>
+            </div>
+
+            <form id="verify-form" class="glass rounded-2xl p-6">
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Código de 6 dígitos</label>
+                    <input type="text" id="otp-input" placeholder="000000" 
+                        class="w-full bg-dark-card border border-white/10 rounded-xl px-4 py-3 text-white text-center text-2xl tracking-widest"
+                        maxlength="6" inputmode="numeric">
+                </div>
+                <p id="dev-otp" class="text-center text-emerald-400 text-sm mb-4 hidden"></p>
+                <button type="submit" class="w-full btn-primary text-white font-bold py-3 rounded-xl transition-all">
+                    Verificar
+                </button>
+            </form>
+
+            <p class="text-center text-gray-500 text-sm mt-6">
+                Não recebeu? <button onclick="resendOTP()" class="text-primary">Reenviar código</button>
+            </p>
+        </div>
+    </div>
+
+    <!-- ========== SIGNUP PAGE ========== -->
+    <div id="signup-page" class="min-h-screen flex items-center justify-center p-6 hidden">
+        <div class="w-full max-w-md">
+            <div class="text-center mb-8">
+                <div class="w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user-plus text-3xl text-primary"></i>
+                </div>
+                <h1 class="text-2xl font-bold">Criar conta</h1>
+                <p class="text-gray-400 mt-2">Complete seu cadastro para continuar</p>
+            </div>
+
+            <form id="signup-form" class="glass rounded-2xl p-6">
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Nome completo</label>
+                    <input type="text" id="name-input" placeholder="Seu nome" 
+                        class="w-full bg-dark-card border border-white/10 rounded-xl px-4 py-3 text-white">
+                </div>
+                <div class="mb-4">
+                    <label class="block text-sm text-gray-400 mb-2">Email</label>
+                    <input type="email" id="email-input" placeholder="seu@email.com" 
+                        class="w-full bg-dark-card border border-white/10 rounded-xl px-4 py-3 text-white">
+                </div>
+                <div class="mb-6">
+                    <label class="flex items-center gap-2 text-sm text-gray-400">
+                        <input type="checkbox" id="terms-checkbox" class="w-4 h-4 rounded">
+                        <span>Aceito os <a href="#" class="text-primary">Termos de Uso</a> e <a href="#" class="text-primary">Política de Privacidade</a></span>
+                    </label>
+                </div>
+                <button type="submit" class="w-full btn-primary text-white font-bold py-3 rounded-xl transition-all">
+                    Criar conta
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ========== DASHBOARD PAGE ========== -->
+    <div id="dashboard-page" class="min-h-screen pb-24 hidden">
+        <!-- Header -->
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-gray-400 text-sm">Olá,</p>
+                    <h1 id="user-name" class="text-xl font-bold">Usuário</h1>
+                </div>
+                <button onclick="showPage('profile')" class="w-10 h-10 bg-primary/20 rounded-full flex items-center justify-center">
+                    <i class="fas fa-user text-primary"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Balance Card -->
+        <div class="p-6">
+            <div class="glass rounded-2xl p-6 mb-6">
+                <p class="text-gray-400 text-sm mb-1">Saldo disponível</p>
+                <h2 id="balance" class="text-3xl font-bold mb-4">R$ 0,00</h2>
+                <div class="flex gap-3">
+                    <button onclick="showPage('deposit')" class="flex-1 btn-primary text-white font-bold py-3 rounded-xl">
+                        <i class="fas fa-plus mr-2"></i> Depositar
+                    </button>
+                    <button onclick="showPage('wallet')" class="flex-1 bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 transition-all">
+                        <i class="fas fa-history mr-2"></i> Histórico
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <h3 class="text-lg font-bold mb-4">Ações rápidas</h3>
+            <div class="grid grid-cols-3 gap-4">
+                <button onclick="showPage('wallet')" class="glass rounded-xl p-4 text-center hover:bg-white/10 transition-all">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-2">
+                        <i class="fas fa-wallet text-emerald-400"></i>
+                    </div>
+                    <span class="text-sm">Carteira</span>
+                </button>
+                <button onclick="showPage('profile')" class="glass rounded-xl p-4 text-center hover:bg-white/10 transition-all">
+                    <div class="w-12 h-12 bg-blue-500/20 rounded-xl flex items-center justify-center mx-auto mb-2">
+                        <i class="fas fa-user text-blue-400"></i>
+                    </div>
+                    <span class="text-sm">Perfil</span>
+                </button>
+                <button onclick="showPage('subscription')" class="glass rounded-xl p-4 text-center hover:bg-white/10 transition-all">
+                    <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mx-auto mb-2">
+                        <i class="fas fa-crown text-amber-400"></i>
+                    </div>
+                    <span class="text-sm">Premium</span>
+                </button>
+            </div>
+
+            <!-- Subscription Status -->
+            <div id="subscription-banner" class="glass rounded-2xl p-4 mt-6 hidden">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-crown text-amber-400"></i>
+                        </div>
+                        <div>
+                            <p id="sub-plan-name" class="font-bold">Premium</p>
+                            <p id="sub-status" class="text-xs text-gray-400">Ativo</p>
+                        </div>
+                    </div>
+                    <button onclick="showPage('subscription')" class="text-primary text-sm">Gerenciar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SUBSCRIPTION PAGE ========== -->
+    <div id="subscription-page" class="min-h-screen pb-24 hidden">
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="showPage('dashboard')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-xl font-bold">Assinatura</h1>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Current Plan -->
+            <div id="current-plan-card" class="glass rounded-2xl p-6 mb-6 hidden">
+                <div class="flex items-center justify-between mb-4">
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-crown text-amber-400 text-xl"></i>
+                        </div>
+                        <div>
+                            <p id="current-plan-name" class="font-bold text-lg">Premium</p>
+                            <p id="current-plan-price" class="text-gray-400">R$ 29,90/mês</p>
+                        </div>
+                    </div>
+                    <span id="current-plan-status" class="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm">Ativo</span>
+                </div>
+                <div class="border-t border-white/10 pt-4">
+                    <p class="text-sm text-gray-400 mb-2">Próxima cobrança: <span id="next-billing-date">-</span></p>
+                    <button onclick="cancelSubscription()" class="text-rose-400 text-sm hover:underline">
+                        <i class="fas fa-times mr-1"></i> Cancelar assinatura
+                    </button>
+                </div>
+            </div>
+
+            <!-- Plans -->
+            <h3 class="text-lg font-bold mb-4">Escolha seu plano</h3>
+            <div class="space-y-4">
+                <!-- Free Plan -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-bold text-lg">Free</h4>
+                            <p class="text-gray-400">R$ 0/mês</p>
+                        </div>
+                        <span id="free-badge" class="bg-gray-500/20 text-gray-400 px-3 py-1 rounded-full text-sm hidden">Atual</span>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400 mb-4">
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Acesso básico</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> 100 operações/mês</li>
+                        <li><i class="fas fa-times text-rose-400 mr-2"></i> Sem suporte prioritário</li>
+                    </ul>
+                </div>
+
+                <!-- Premium Plan -->
+                <div class="glass rounded-2xl p-6 border-2 border-amber-500/50 relative">
+                    <div class="absolute -top-3 left-4 bg-amber-500 text-black text-xs font-bold px-3 py-1 rounded-full">
+                        POPULAR
+                    </div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-bold text-lg">Premium</h4>
+                            <p class="text-amber-400">R$ 29,90/mês</p>
+                        </div>
+                        <span id="premium-badge" class="bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-sm hidden">Atual</span>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400 mb-4">
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Acesso completo</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Operações ilimitadas</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Suporte prioritário</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Recursos exclusivos</li>
+                    </ul>
+                    <button onclick="subscribeToPlan('premium', 2990)" id="premium-btn" class="w-full btn-primary text-white font-bold py-3 rounded-xl">
+                        <i class="fas fa-crown mr-2"></i> Assinar Premium
+                    </button>
+                </div>
+
+                <!-- Pro Plan -->
+                <div class="glass rounded-2xl p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div>
+                            <h4 class="font-bold text-lg">Pro</h4>
+                            <p class="text-primary">R$ 99,90/mês</p>
+                        </div>
+                        <span id="pro-badge" class="bg-primary/20 text-primary px-3 py-1 rounded-full text-sm hidden">Atual</span>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-400 mb-4">
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Tudo do Premium</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> API dedicada</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> SLA garantido</li>
+                        <li><i class="fas fa-check text-emerald-400 mr-2"></i> Suporte 24/7</li>
+                    </ul>
+                    <button onclick="subscribeToPlan('pro', 9990)" id="pro-btn" class="w-full bg-white/10 text-white font-bold py-3 rounded-xl hover:bg-white/20 transition-all">
+                        Assinar Pro
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== SETTINGS PAGE ========== -->
+    <div id="settings-page" class="min-h-screen pb-24 hidden">
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="showPage('profile')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-xl font-bold">Configurações</h1>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="glass rounded-2xl divide-y divide-white/10">
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-bell text-gray-400"></i>
+                        <span>Notificações</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="notifications-toggle" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                    </label>
+                </div>
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-moon text-gray-400"></i>
+                        <span>Tema escuro</span>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" class="sr-only peer" checked disabled>
+                        <div class="w-11 h-6 bg-primary rounded-full peer after:content-[''] after:absolute after:top-[2px] after:right-[2px] after:bg-white after:rounded-full after:h-5 after:w-5"></div>
+                    </label>
+                </div>
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-language text-gray-400"></i>
+                        <span>Idioma</span>
+                    </div>
+                    <span class="text-gray-400">Português</span>
+                </div>
+            </div>
+
+            <div class="glass rounded-2xl mt-6 divide-y divide-white/10">
+                <button class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-shield text-gray-400"></i>
+                        <span>Privacidade</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </button>
+                <button class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-file-contract text-gray-400"></i>
+                        <span>Termos de uso</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </button>
+                <button class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-question-circle text-gray-400"></i>
+                        <span>Ajuda</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </button>
+            </div>
+
+            <button onclick="logout()" class="w-full mt-6 bg-rose-500/20 text-rose-400 font-bold py-3 rounded-xl hover:bg-rose-500/30 transition-all">
+                <i class="fas fa-sign-out-alt mr-2"></i> Sair da conta
+            </button>
+
+            <p class="text-center text-gray-500 text-xs mt-6">
+                PROST-QS v1.0 • Build 2024.12
+            </p>
+        </div>
+    </div>
+
+    <!-- ========== POWERS & LIMITS PAGE ========== -->
+    <div id="powers-page" class="min-h-screen pb-24 hidden">
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="showPage('profile')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-xl font-bold">Poderes & Limites</h1>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Current Plan -->
+            <div class="glass rounded-2xl p-6 mb-6">
+                <div class="flex items-center gap-4 mb-4">
+                    <div id="powers-plan-icon" class="w-14 h-14 bg-gray-500/20 rounded-2xl flex items-center justify-center">
+                        <i class="fas fa-user text-gray-400 text-2xl"></i>
+                    </div>
+                    <div>
+                        <p class="text-gray-400 text-sm">Seu plano atual</p>
+                        <h2 id="powers-plan-name" class="text-2xl font-bold">Free</h2>
+                    </div>
+                </div>
+                <button onclick="showPage('subscription')" class="w-full bg-primary/20 text-primary py-2 rounded-xl hover:bg-primary/30 transition-all text-sm">
+                    <i class="fas fa-arrow-up mr-2"></i> Fazer upgrade
+                </button>
+            </div>
+
+            <!-- Features -->
+            <h3 class="font-bold mb-4">O que você pode fazer</h3>
+            <div id="powers-features" class="space-y-3 mb-6">
+                <!-- Loaded dynamically -->
+            </div>
+
+            <!-- Limits -->
+            <h3 class="font-bold mb-4">Seus limites</h3>
+            <div id="powers-limits" class="space-y-3 mb-6">
+                <!-- Loaded dynamically -->
+            </div>
+
+            <!-- Blocked Features -->
+            <h3 class="font-bold mb-4 text-gray-400">Bloqueado no seu plano</h3>
+            <div id="powers-blocked" class="space-y-3 mb-6">
+                <!-- Loaded dynamically -->
+            </div>
+
+            <!-- Recent Events -->
+            <h3 class="font-bold mb-4">Eventos recentes</h3>
+            <div id="powers-events" class="space-y-2">
+                <!-- Loaded dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== WALLET PAGE ========== -->
+    <div id="wallet-page" class="min-h-screen pb-24 hidden">
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="showPage('dashboard')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-xl font-bold">Carteira</h1>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="glass rounded-2xl p-6 mb-6">
+                <p class="text-gray-400 text-sm mb-1">Saldo atual</p>
+                <h2 id="wallet-balance" class="text-3xl font-bold">R$ 0,00</h2>
+            </div>
+
+            <h3 class="text-lg font-bold mb-4">Histórico</h3>
+            <div id="transactions-list" class="space-y-3">
+                <p class="text-gray-500 text-center py-8">Nenhuma transação ainda</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== PROFILE PAGE ========== -->
+    <div id="profile-page" class="min-h-screen pb-24 hidden">
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="showPage('dashboard')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-xl font-bold">Perfil</h1>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="glass rounded-2xl p-6 mb-6 text-center">
+                <div class="w-20 h-20 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-user text-3xl text-primary"></i>
+                </div>
+                <h2 id="profile-name" class="text-xl font-bold">Nome</h2>
+                <p id="profile-email" class="text-gray-400">email@exemplo.com</p>
+            </div>
+
+            <div class="glass rounded-2xl divide-y divide-white/10">
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-phone text-gray-400"></i>
+                        <span>Telefone</span>
+                    </div>
+                    <span id="profile-phone" class="text-gray-400">+55 11 99999-9999</span>
+                </div>
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-calendar text-gray-400"></i>
+                        <span>Membro desde</span>
+                    </div>
+                    <span id="profile-since" class="text-gray-400">Jan 2024</span>
+                </div>
+                <button onclick="showPage('subscription')" class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-crown text-amber-400"></i>
+                        <span>Assinatura</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span id="profile-plan" class="text-gray-400">Free</span>
+                        <i class="fas fa-chevron-right text-gray-500"></i>
+                    </div>
+                </button>
+                <button onclick="showPage('powers')" class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-bolt text-primary"></i>
+                        <span>Poderes & Limites</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </button>
+                <button onclick="showPage('settings')" class="w-full p-4 flex items-center justify-between text-left hover:bg-white/5">
+                    <div class="flex items-center gap-3">
+                        <i class="fas fa-cog text-gray-400"></i>
+                        <span>Configurações</span>
+                    </div>
+                    <i class="fas fa-chevron-right text-gray-500"></i>
+                </button>
+            </div>
+
+            <button onclick="logout()" class="w-full mt-6 bg-rose-500/20 text-rose-400 font-bold py-3 rounded-xl hover:bg-rose-500/30 transition-all">
+                <i class="fas fa-sign-out-alt mr-2"></i> Sair da conta
+            </button>
+        </div>
+    </div>
+
+    <!-- ========== DEPOSIT PAGE ========== -->
+    <div id="deposit-page" class="min-h-screen pb-24 hidden">
+        <div class="glass border-b border-white/10 px-6 py-4">
+            <div class="flex items-center gap-4">
+                <button onclick="showPage('dashboard')" class="text-gray-400 hover:text-white">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1 class="text-xl font-bold">Depositar</h1>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <div class="glass rounded-2xl p-6 mb-6">
+                <p class="text-gray-400 text-sm mb-4">Escolha o valor do depósito</p>
+                
+                <div class="grid grid-cols-3 gap-3 mb-6">
+                    <button onclick="setDepositAmount(1000)" class="deposit-amount bg-dark-card border border-white/10 rounded-xl py-3 hover:border-primary transition-all">
+                        R$ 10
+                    </button>
+                    <button onclick="setDepositAmount(2500)" class="deposit-amount bg-dark-card border border-white/10 rounded-xl py-3 hover:border-primary transition-all">
+                        R$ 25
+                    </button>
+                    <button onclick="setDepositAmount(5000)" class="deposit-amount bg-dark-card border border-white/10 rounded-xl py-3 hover:border-primary transition-all">
+                        R$ 50
+                    </button>
+                    <button onclick="setDepositAmount(10000)" class="deposit-amount bg-dark-card border border-white/10 rounded-xl py-3 hover:border-primary transition-all">
+                        R$ 100
+                    </button>
+                    <button onclick="setDepositAmount(25000)" class="deposit-amount bg-dark-card border border-white/10 rounded-xl py-3 hover:border-primary transition-all">
+                        R$ 250
+                    </button>
+                    <button onclick="setDepositAmount(50000)" class="deposit-amount bg-dark-card border border-white/10 rounded-xl py-3 hover:border-primary transition-all">
+                        R$ 500
+                    </button>
+                </div>
+
+                <div class="mb-6">
+                    <label class="block text-sm text-gray-400 mb-2">Ou digite um valor</label>
+                    <div class="flex">
+                        <span class="bg-dark-card border border-white/10 rounded-l-xl px-4 py-3 text-gray-400">R$</span>
+                        <input type="text" id="deposit-amount" placeholder="0,00" 
+                            class="flex-1 bg-dark-card border border-white/10 border-l-0 rounded-r-xl px-4 py-3 text-white text-right text-xl">
+                    </div>
+                </div>
+
+                <button onclick="processDeposit()" class="w-full btn-primary text-white font-bold py-4 rounded-xl transition-all">
+                    <i class="fas fa-credit-card mr-2"></i> Pagar com cartão
+                </button>
+
+                <p class="text-center text-gray-500 text-xs mt-4">
+                    <i class="fas fa-lock mr-1"></i> Pagamento seguro via Stripe
+                </p>
+            </div>
+
+            <div class="glass rounded-2xl p-4">
+                <p class="text-sm text-gray-400">
+                    <i class="fas fa-info-circle mr-2 text-primary"></i>
+                    O valor será creditado instantaneamente após a confirmação do pagamento.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script src="src/main.js"></script>
+</body>
+</html>

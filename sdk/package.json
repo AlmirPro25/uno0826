@@ -1,0 +1,30 @@
+{
+  "name": "@prost-qs/kernel-sdk",
+  "version": "1.0.0",
+  "description": "SDK para o Kernel Soberano PROST-QS - Identity, Billing, Ads, Agents",
+  "main": "dist/index.js",
+  "module": "src/index.js",
+  "types": "src/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "esbuild src/index.js --bundle --outfile=dist/index.js --format=cjs",
+    "build:esm": "esbuild src/index.js --bundle --outfile=dist/index.esm.js --format=esm"
+  },
+  "keywords": [
+    "prost-qs",
+    "kernel",
+    "identity",
+    "billing",
+    "fintech",
+    "sdk"
+  ],
+  "author": "Almir",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/AlmirPro25/UNO.git"
+  }
+}

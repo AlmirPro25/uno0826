@@ -1,0 +1,31 @@
+
+{
+  "project_name": "Sovereign Cloud Engine (SCE)",
+  "version": "1.0.0",
+  "architect": "MANIFEST ARCHITECT",
+  "topology": {
+    "type": "Modular Monolith with Hexagonal Core",
+    "strategy": "Container-as-a-Service (CaaS) Private PaaS",
+    "isolation_primitive": "Docker Engine API / Linux Cgroups",
+    "routing_engine": "Dynamic Reverse Proxy (Internal Traefik/Caddy Integration)",
+    "storage": "PostgreSQL (State) + Redis (Pub/Sub for Logs)"
+  },
+  "design_decisions": {
+    "backend": {
+      "language": "Go 1.23+",
+      "architecture": "Hexagonal (Domain, Ports, Adapters)",
+      "concurrency": "Goroutines for build pipelines and health checks",
+      "security": "AES-256-GCM for Environment Variables"
+    },
+    "frontend": {
+      "framework": "Next.js 15 (App Router)",
+      "styling": "Tailwind CSS + Shadcn/UI (Custom Glassmorphism)",
+      "state_management": "TanStack Query + Server Actions",
+      "real_time": "Server-Sent Events (SSE) for Build Streams"
+    }
+  },
+  "infrastructure_map": {
+    "super_domain": "User Defined (e.g., *.manifest.sh)",
+    "deployment_flow": "Source Code -> Build Engine -> Container Image -> Health Check -> Edge Routing Update"
+  }
+}

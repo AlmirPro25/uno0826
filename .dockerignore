@@ -1,0 +1,46 @@
+# Git
+.git
+.gitignore
+
+# Documentação
+*.md
+docs/
+
+# Frontend (não vai no container do backend)
+frontend/
+apps/
+
+# SDK (separado)
+sdk/
+
+# Dados locais
+*.db
+*.db-wal
+*.db-shm
+data/
+
+# Ambiente
+.env
+.env.*
+.env.local
+
+# Node
+node_modules/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backups
+backups/
+*.bak
+
+# Logs
+*.log
+logs/

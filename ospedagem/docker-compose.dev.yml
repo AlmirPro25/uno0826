@@ -1,0 +1,38 @@
+version: '3.8'
+
+# Docker Compose para desenvolvimento local (SQLite)
+# Uso: docker-compose -f docker-compose.dev.yml up -d
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: sce-backend-dev
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: file:/app/data/sce.db
+      JWT_SECRET: sce-dev-secret-local
+      AES_ENCRYPTION_KEY: dev_aes_key_32_characters_here!
+      SUPER_DOMAIN: localhost
+      PORT: 3001
+      NODE_ENV: development
+    volumes:
+      - //./pipe/docker_engine:/var/run/docker.sock
+      - ./data:/app/data
+      - ./backend/src:/app/src
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+    container_name: sce-frontend-dev
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    environment:
+      NODE_ENV: development

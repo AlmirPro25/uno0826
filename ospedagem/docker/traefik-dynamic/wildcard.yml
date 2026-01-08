@@ -1,0 +1,18 @@
+# Dynamic configuration for wildcard subdomains
+# Apps deployados serão roteados automaticamente via labels Docker
+
+http:
+  routers:
+    # Catch-all para subdomínios de apps
+    apps-wildcard:
+      rule: "HostRegexp(`{subdomain:[a-z0-9-]+}.apps.{domain:.+}`)"
+      entryPoints:
+        - websecure
+      service: apps-service
+      tls:
+        certResolver: letsencrypt
+
+  services:
+    apps-service:
+      loadBalancer:
+        passHostHeader: true

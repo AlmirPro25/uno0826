@@ -1,0 +1,47 @@
+# ========================================
+# PROST-QS - Fly.io Configuration
+# "Deploy minimalista para Sovereign Kernel"
+# ========================================
+
+app = "prost-qs"
+primary_region = "gru"  # São Paulo
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  GIN_MODE = "release"
+  SERVER_PORT = "8080"
+  SQLITE_DB_PATH = "/data/prostqs.db"
+
+# Volume persistente para SQLite
+[mounts]
+  source = "prostqs_data"
+  destination = "/data"
+
+# Configuração HTTP
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = false
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 50
+    soft_limit = 40
+
+# Health checks
+[[http_service.checks]]
+  interval = "15s"
+  timeout = "5s"
+  grace_period = "10s"
+  method = "GET"
+  path = "/health"
+
+# Configuração de máquina
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"

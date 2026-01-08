@@ -1,0 +1,86 @@
+# ========================================
+# PROST-QS - GITIGNORE
+# ========================================
+
+# Go binaries
+/backend/bin/
+/backend/*.exe
+/backend/*.exe~
+/backend/*.test
+/backend/*.prof
+*.exe
+*.exe~
+
+# Database (NUNCA commitar banco de dados)
+/backend/data/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+
+# Frontend
+/frontend/node_modules/
+/frontend/dist/
+/frontend/npm-debug.log
+/frontend/yarn-error.log
+/apps/**/node_modules/
+node_modules/
+
+# SDK
+/sdk/node_modules/
+/sdk/dist/
+
+# Environment & Secrets (CRÍTICO - NUNCA commitar)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Tokens & Keys (CRÍTICO - NUNCA commitar)
+token.txt
+*.pem
+*.key
+*.p12
+*.pfx
+*_rsa
+*_dsa
+*_ecdsa
+*_ed25519
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.bak
+*.sublime-*
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.lnk
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+temp/
+
+# Build artifacts
+dist/
+build/
+out/
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output/

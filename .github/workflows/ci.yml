@@ -1,0 +1,109 @@
+
+name: Prost-QS CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - '.github/workflows/**'
+
+jobs:
+  backend-go:
+    name: Backend Go Tests & Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+        
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('backend/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Load .env file
+        uses: sridharoruganti/env-action@v1.0
+        with:
+          env: |
+            JWT_SECRET="github_actions_jwt_secret_for_testing_1234567890"
+            AES_SECRET_KEY="github_actions_aes_key_32bytes_123456789012"
+            SQLITE_DB_PATH=/tmp/test.db
+          # You might want to get these from GitHub Secrets in a real scenario
+          # JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          # AES_SECRET_KEY: ${{ secrets.AES_SECRET_KEY }}
+          # SQLITE_DB_PATH: /tmp/test.db
+
+      - name: Go Modules Download
+        working-directory: ./backend
+        run: go mod download
+
+      - name: Run Go Tests
+        working-directory: ./backend
+        run: go test -v ./...
+
+      - name: Build Go Application
+        working-directory: ./backend
+        run: CGO_ENABLED=0 go build -ldflags "-s -w" -o prost-qs-core ./cmd/api/main.go
+
+      - name: Lint Go Code (Optional - requires golangci-lint)
+        # You'd typically install golangci-lint first
+        # For simplicity, skipping this in a basic CI.
+        run: echo "Linting skipped. Install golangci-lint for this step."
+
+  frontend-web:
+    name: Frontend Web Build & Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Cache Node modules
+        uses: actions/cache@v4
+        with:
+          path: frontend/node_modules
+          key: ${{ runner.os }}-node-${{ hashFiles('frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+      
+      - name: Install TailwindCSS CLI
+        working-directory: ./frontend
+        run: npm install -D tailwindcss
+
+      - name: Build TailwindCSS
+        working-directory: ./frontend
+        run: npx tailwindcss -i ./src/input.css -o ./src/styles.css --minify
+
+      - name: Lint HTML/JS (Optional - requires linters)
+        # You'd typically set up ESLint for JS and html-validate for HTML
+        # For simplicity, skipping this in a basic CI.
+        run: echo "Frontend linting skipped. Set up ESLint/HTML-Validate for this step."
+
+      - name: Verify Frontend Build Output
+        working-directory: ./frontend
+        run: |
+          ls -lh src/styles.css
+          grep -q "tailwind" index.html

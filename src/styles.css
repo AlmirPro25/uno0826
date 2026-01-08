@@ -1,0 +1,81 @@
+/* 
+   PROST-QS: Global Styles & Custom Animations 
+   Este arquivo complementa o Tailwind CSS carregado via CDN.
+*/
+
+:root {
+    --primary-glow: rgba(99, 102, 241, 0.4);
+    --secondary-glow: rgba(139, 92, 246, 0.3);
+}
+
+/* Page Transitions */
+.page-content.hidden {
+    display: none;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.page-content:not(.hidden) {
+    display: block;
+    animation: fadeInScale 0.4s ease-out forwards;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.98) translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Glassmorphism Refinements */
+.glass-border-gradient {
+    position: relative;
+    border-radius: inherit;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    transition: background 0.3s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.5);
+}
+
+/* Glow Effects */
+.glow-primary {
+    filter: drop-shadow(0 0 10px var(--primary-glow));
+}
+
+.glow-secondary {
+    filter: drop-shadow(0 0 10px var(--secondary-glow));
+}
+
+/* Interactive Elements */
+.btn-primary:active {
+    scale: 0.98;
+}
+
+/* Android WebView Optimizations */
+* {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+}

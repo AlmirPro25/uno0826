@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # TRAEFIK - Reverse Proxy & SSL (Produção)
+  # ============================================
+  traefik:
+    image: traefik:v3.0
+    container_name: sce-traefik
+    restart: always
+    profiles: ["production"]
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./docker/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./docker/traefik-dynamic:/etc/traefik/dynamic:ro
+      - traefik_certs:/letsencrypt
+    networks:
+      - sce-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${SUPER_DOMAIN:-sce.local}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+
+  # ============================================
+  # BACKEND - SCE Engine (Node.js/Fastify + SQLite)
+  # ============================================
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: sce-backend
+    restart: always
+    environment:
+      DATABASE_URL: file:/app/data/sce.db
+      JWT_SECRET: ${JWT_SECRET:-sce-sovereign-cloud-secret-2024}
+      AES_ENCRYPTION_KEY: ${AES_ENCRYPTION_KEY:-super_sovereign_aes_key_32_chars}
+      SUPER_DOMAIN: ${SUPER_DOMAIN:-localhost}
+      PORT: 3001
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    volumes:
+      - //./pipe/docker_engine:/var/run/docker.sock
+      - sce_data:/app/data
+      - sce_builds:/tmp/sce-builds
+    networks:
+      - sce-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.api.rule=Host(`api.${SUPER_DOMAIN:-sce.local}`)"
+      - "traefik.http.services.api.loadbalancer.server.port=3001"
+
+  # ============================================
+  # FRONTEND - Command Center (Next.js)
+  # ============================================
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:3001/api/v1
+    container_name: sce-frontend
+    restart: always
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    networks:
+      - sce-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.frontend.rule=Host(`cloud.${SUPER_DOMAIN:-sce.local}`)"
+      - "traefik.http.services.frontend.loadbalancer.server.port=3000"
+
+networks:
+  sce-network:
+    name: sce-network
+    driver: bridge
+
+volumes:
+  sce_data:
+  sce_builds:
+  traefik_certs:

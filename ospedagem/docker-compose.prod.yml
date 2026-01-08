@@ -1,0 +1,45 @@
+
+version: '3.8'
+
+services:
+  database:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: sce_prod
+    volumes:
+      - sce_prod_data:/var/lib/postgresql/data
+    networks:
+      - sce_internal
+
+  backend:
+    image: ghcr.io/${GITHUB_USER}/sce-backend:latest
+    restart: always
+    environment:
+      DATABASE_URL: postgresql://${DB_USER}:${DB_PASSWORD}@database:5432/sce_prod
+      JWT_SECRET: ${JWT_SECRET}
+      AES_KEY: ${AES_ENCRYPTION_KEY}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - sce_internal
+      - sce_public
+
+  frontend:
+    image: ghcr.io/${GITHUB_USER}/sce-frontend:latest
+    restart: always
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.${SUPER_DOMAIN}/api/v1
+    networks:
+      - sce_public
+
+networks:
+  sce_internal:
+    internal: true
+  sce_public:
+    driver: bridge
+
+volumes:
+  sce_prod_data:

@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PROST-QS - Developer Portal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#6366f1',
+                        dark: '#0a0a12',
+                        'dark-card': '#12121e'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background: #0a0a12; }
+        .code-block { background: #1a1a2e; border-radius: 12px; overflow: hidden; }
+        .code-block pre { margin: 0; padding: 1rem; overflow-x: auto; }
+        .copy-btn { position: absolute; top: 8px; right: 8px; }
+    </style>
+</head>
+<body class="min-h-screen text-white">
+    <!-- Header -->
+    <header class="border-b border-white/10 px-8 py-4">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+                    <i class="fas fa-code text-primary"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold">PROST-QS</h1>
+                    <p class="text-xs text-gray-500">Developer Portal</p>
+                </div>
+            </div>
+            <nav class="flex items-center gap-4">
+                <a href="#getting-started" class="text-gray-400 hover:text-white transition-colors text-sm">Docs</a>
+                <a href="#sdk" class="text-gray-400 hover:text-white transition-colors text-sm">SDK</a>
+                <a href="#api" class="text-gray-400 hover:text-white transition-colors text-sm">API</a>
+                <a href="#apps" class="text-purple-400 hover:text-purple-300 transition-colors text-sm">Apps</a>
+                <a href="#tokens" class="text-amber-400 hover:text-amber-300 transition-colors text-sm">Tokens</a>
+                <a href="#usage" class="text-blue-400 hover:text-blue-300 transition-colors text-sm">Uso</a>
+                <a href="#playground" class="text-emerald-400 hover:text-emerald-300 transition-colors text-sm">Playground</a>
+                <div id="dev-auth-section" class="ml-4 pl-4 border-l border-white/10">
+                    <button onclick="showDevLoginModal()" id="dev-login-btn" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl text-sm transition-all">
+                        <i class="fas fa-sign-in-alt mr-2"></i> Login
+                    </button>
+                    <div id="dev-user-info" class="hidden flex items-center gap-2">
+                        <span id="dev-user-name" class="text-sm text-gray-400"></span>
+                        <button onclick="devLogout()" class="text-rose-400 hover:text-rose-300 text-sm">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </button>
+                    </div>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-8 py-12">
+        <!-- Hero -->
+        <section class="text-center mb-16">
+            <h1 class="text-4xl font-bold mb-4">Conecte seu app ao PROST-QS</h1>
+            <p class="text-xl text-gray-400 mb-8">Identidade soberana + Economia governada + IA contida</p>
+            <div class="flex justify-center gap-4">
+                <a href="#quick-start" class="bg-primary hover:bg-primary/80 text-white font-bold px-6 py-3 rounded-xl transition-all">
+                    Integração em 5 minutos
+                </a>
+                <a href="#api" class="bg-white/10 hover:bg-white/20 text-white font-bold px-6 py-3 rounded-xl transition-all">
+                    Ver API Reference
+                </a>
+            </div>
+        </section>
+
+        <!-- Quick Start - Integração Completa -->
+        <section id="quick-start" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400">⚡</span>
+                Integração Rápida (5 minutos)
+            </h2>
+
+            <div class="bg-gradient-to-r from-emerald-500/10 to-primary/10 border border-emerald-500/20 rounded-2xl p-6 mb-6">
+                <h3 class="font-bold mb-4 text-emerald-400">Exemplo completo: App com login e pagamento</h3>
+                <p class="text-gray-400 mb-4">Copie este código e adapte para seu app. Em 5 minutos você terá autenticação e pagamentos funcionando.</p>
+                
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar tudo
+                    </button>
+                    <pre><code class="language-javascript">// ============================================
+// PROST-QS - Integração Completa
+// Copie e adapte para seu app
+// ============================================
+
+const KERNEL_URL = 'http://localhost:8080/api/v1';
+let authToken = localStorage.getItem('pq_token');
+
+// Helper para chamadas à API
+async function kernelAPI(endpoint, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(authToken ? { 'Authorization': `Bearer ${authToken}` } : {})
+  };
+  
+  const res = await fetch(`${KERNEL_URL}${endpoint}`, { ...headers, ...options });
+  const data = await res.json();
+  
+  if (!res.ok) throw new Error(data.error || 'Erro');
+  return data;
+}
+
+// ============================================
+// 1. AUTENTICAÇÃO
+// ============================================
+
+// Solicitar código OTP
+async function requestOTP(phone) {
+  const { verification_id, dev_otp } = await kernelAPI('/auth/phone/request', {
+    method: 'POST',
+    body: JSON.stringify({ phone_number: phone, channel: 'sms' })
+  });
+  
+  console.log('[DEV] Código:', dev_otp); // Apenas em desenvolvimento
+  return verification_id;
+}
+
+// Verificar código e fazer login
+async function verifyAndLogin(verificationId, code) {
+  const result = await kernelAPI('/auth/phone/verify', {
+    method: 'POST',
+    body: JSON.stringify({ verification_id: verificationId, code })
+  });
+  
+  if (result.is_new_user) {
+    // Novo usuário - precisa completar cadastro
+    return { needsSignup: true, verificationId };
+  }
+  
+  // Login completo
+  authToken = result.token;
+  localStorage.setItem('pq_token', authToken);
+  return { user: result.user };
+}
+
+// Completar cadastro de novo usuário
+async function completeSignup(verificationId, name, email) {
+  const result = await kernelAPI(`/auth/complete-signup?verification_id=${verificationId}`, {
+    method: 'POST',
+    body: JSON.stringify({ name, email })
+  });
+  
+  authToken = result.token;
+  localStorage.setItem('pq_token', authToken);
+  return result.user;
+}
+
+// ============================================
+// 2. USUÁRIO
+// ============================================
+
+// Buscar dados do usuário logado
+async function getUser() {
+  return await kernelAPI('/users/me');
+}
+
+// ============================================
+// 3. PAGAMENTOS
+// ============================================
+
+// Buscar saldo
+async function getBalance() {
+  try {
+    const account = await kernelAPI('/billing/account');
+    return account.balance; // em centavos
+  } catch {
+    // Criar conta se não existir
+    await kernelAPI('/billing/account', { method: 'POST' });
+    return 0;
+  }
+}
+
+// Criar cobrança
+async function createPayment(amountCents, description) {
+  return await kernelAPI('/billing/payment-intent', {
+    method: 'POST',
+    body: JSON.stringify({
+      amount: amountCents,
+      currency: 'brl',
+      description
+    })
+  });
+}
+
+// ============================================
+// EXEMPLO DE USO
+// ============================================
+
+async function exemploCompleto() {
+  // 1. Login
+  const verificationId = await requestOTP('+5511999999999');
+  const code = prompt('Digite o código:');
+  const loginResult = await verifyAndLogin(verificationId, code);
+  
+  if (loginResult.needsSignup) {
+    const name = prompt('Seu nome:');
+    const email = prompt('Seu email:');
+    await completeSignup(loginResult.verificationId, name, email);
+  }
+  
+  // 2. Buscar dados
+  const user = await getUser();
+  console.log('Usuário:', user.profile.name);
+  
+  // 3. Buscar saldo
+  const balance = await getBalance();
+  console.log('Saldo:', (balance / 100).toFixed(2));
+  
+  // 4. Criar cobrança
+  const payment = await createPayment(1000, 'Pedido #123');
+  console.log('Pagamento criado:', payment.intent_id);
+}</code></pre>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <div class="w-12 h-12 bg-primary/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-user-check text-primary text-xl"></i>
+                    </div>
+                    <h4 class="font-bold mb-1">Autenticação</h4>
+                    <p class="text-gray-400 text-sm">Login com telefone + OTP</p>
+                </div>
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <div class="w-12 h-12 bg-emerald-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-wallet text-emerald-400 text-xl"></i>
+                    </div>
+                    <h4 class="font-bold mb-1">Pagamentos</h4>
+                    <p class="text-gray-400 text-sm">Stripe + Ledger interno</p>
+                </div>
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <div class="w-12 h-12 bg-amber-500/20 rounded-xl flex items-center justify-center mx-auto mb-3">
+                        <i class="fas fa-shield-halved text-amber-400 text-xl"></i>
+                    </div>
+                    <h4 class="font-bold mb-1">Segurança</h4>
+                    <p class="text-gray-400 text-sm">JWT + RBAC + Rate Limit</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Getting Started -->
+        <section id="getting-started" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center text-primary">1</span>
+                Getting Started
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <h3 class="font-bold mb-4">Instale o SDK</h3>
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-bash">npm install @prost-qs/kernel-sdk</code></pre>
+                </div>
+            </div>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <h3 class="font-bold mb-4">Configure o cliente</h3>
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-javascript">import { ProstQS } from '@prost-qs/kernel-sdk';
+
+const kernel = new ProstQS({
+  baseURL: 'https://api.seudominio.com', // ou http://localhost:8080
+});
+
+// Pronto! Agora você pode usar todas as funcionalidades</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Authentication -->
+        <section id="authentication" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center text-primary">2</span>
+                Autenticação
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <h3 class="font-bold mb-2">Fluxo de Login com Telefone</h3>
+                <p class="text-gray-400 mb-4">O PROST-QS usa verificação por telefone (OTP) como método principal de autenticação.</p>
+                
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-javascript">// 1. Solicitar código OTP
+const { verificationId } = await kernel.auth.requestOTP('+5511999999999');
+
+// 2. Usuário digita o código recebido por SMS
+const code = '123456';
+
+// 3. Verificar código
+const result = await kernel.auth.verifyOTP(verificationId, code);
+
+if (result.isNewUser) {
+  // 4a. Novo usuário - completar cadastro
+  const user = await kernel.auth.completeSignup({
+    name: 'João Silva',
+    email: 'joao@email.com'
+  });
+  console.log('Conta criada!', user);
+} else {
+  // 4b. Usuário existente - login completo
+  console.log('Bem-vindo de volta!', result.user);
+}
+
+// Token JWT é salvo automaticamente pelo SDK</code></pre>
+                </div>
+            </div>
+
+            <div class="bg-dark-card rounded-2xl p-6">
+                <h3 class="font-bold mb-2">Obter dados do usuário logado</h3>
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-javascript">// Buscar perfil do usuário
+const user = await kernel.identity.getMe();
+console.log(user.profile.name);  // "João Silva"
+console.log(user.profile.email); // "joao@email.com"
+
+// Atualizar perfil
+await kernel.identity.updateProfile({
+  name: 'João da Silva',
+  avatarUrl: 'https://...'
+});</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- Billing -->
+        <section id="billing" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center text-primary">3</span>
+                Billing & Pagamentos
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <h3 class="font-bold mb-2">Consultar saldo</h3>
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-javascript">// Buscar ledger do usuário
+const ledger = await kernel.billing.getLedger();
+
+console.log('Saldo:', ledger.balance);     // em centavos
+console.log('Moeda:', ledger.currency);    // "brl"
+console.log('Entradas:', ledger.entries);  // histórico</code></pre>
+                </div>
+            </div>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <h3 class="font-bold mb-2">Criar cobrança (PaymentIntent)</h3>
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-javascript">// Criar intenção de pagamento
+const intent = await kernel.billing.createPaymentIntent({
+  amount: 1000,           // R$ 10,00 (em centavos)
+  currency: 'brl',
+  description: 'Pedido #123'
+});
+
+console.log('Intent ID:', intent.id);
+console.log('Status:', intent.status);  // "pending"
+
+// Quando o pagamento for confirmado (via webhook),
+// o saldo do usuário será creditado automaticamente</code></pre>
+                </div>
+            </div>
+
+            <div class="bg-dark-card rounded-2xl p-6">
+                <h3 class="font-bold mb-2">Criar assinatura</h3>
+                <div class="code-block relative">
+                    <button onclick="copyCode(this)" class="copy-btn bg-white/10 hover:bg-white/20 px-3 py-1 rounded text-sm">
+                        <i class="fas fa-copy"></i> Copiar
+                    </button>
+                    <pre><code class="language-javascript">// Criar assinatura mensal
+const subscription = await kernel.billing.createSubscription({
+  planId: 'premium',
+  amount: 2990,      // R$ 29,90/mês
+  currency: 'brl',
+  interval: 'month'
+});
+
+// Buscar assinatura ativa
+const active = await kernel.billing.getActiveSubscription();
+
+// Cancelar assinatura
+await kernel.billing.cancelSubscription(subscription.id);</code></pre>
+                </div>
+            </div>
+        </section>
+
+        <!-- SDK Reference -->
+        <section id="sdk" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center text-primary">4</span>
+                SDK Reference
+            </h2>
+
+            <div class="grid grid-cols-2 gap-6">
+                <div class="bg-dark-card rounded-2xl p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-user text-primary"></i> kernel.auth
+                    </h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><code class="text-primary">requestOTP(phone)</code> - Solicitar código</li>
+                        <li><code class="text-primary">verifyOTP(id, code)</code> - Verificar código</li>
+                        <li><code class="text-primary">completeSignup(data)</code> - Completar cadastro</li>
+                        <li><code class="text-primary">logout()</code> - Encerrar sessão</li>
+                    </ul>
+                </div>
+
+                <div class="bg-dark-card rounded-2xl p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-id-card text-emerald-400"></i> kernel.identity
+                    </h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><code class="text-emerald-400">getMe()</code> - Dados do usuário</li>
+                        <li><code class="text-emerald-400">updateProfile(data)</code> - Atualizar perfil</li>
+                    </ul>
+                </div>
+
+                <div class="bg-dark-card rounded-2xl p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-wallet text-amber-400"></i> kernel.billing
+                    </h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><code class="text-amber-400">getLedger()</code> - Saldo e histórico</li>
+                        <li><code class="text-amber-400">createPaymentIntent(data)</code> - Criar cobrança</li>
+                        <li><code class="text-amber-400">createSubscription(data)</code> - Criar assinatura</li>
+                        <li><code class="text-amber-400">getActiveSubscription()</code> - Assinatura ativa</li>
+                        <li><code class="text-amber-400">cancelSubscription(id)</code> - Cancelar</li>
+                    </ul>
+                </div>
+
+                <div class="bg-dark-card rounded-2xl p-6">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">
+                        <i class="fas fa-bullhorn text-rose-400"></i> kernel.ads
+                    </h3>
+                    <ul class="space-y-2 text-gray-400">
+                        <li><code class="text-rose-400">getCampaigns()</code> - Listar campanhas</li>
+                        <li><code class="text-rose-400">createCampaign(data)</code> - Criar campanha</li>
+                        <li><code class="text-rose-400">pauseCampaign(id)</code> - Pausar</li>
+                        <li><code class="text-rose-400">resumeCampaign(id)</code> - Retomar</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Reference -->
+        <section id="api" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-primary/20 rounded-lg flex items-center justify-center text-primary">5</span>
+                API Reference
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl overflow-hidden">
+                <table class="w-full">
+                    <thead>
+                        <tr class="text-left border-b border-white/10">
+                            <th class="px-6 py-4 text-gray-400">Método</th>
+                            <th class="px-6 py-4 text-gray-400">Endpoint</th>
+                            <th class="px-6 py-4 text-gray-400">Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-white/5">
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">POST</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/auth/phone/request</td>
+                            <td class="px-6 py-3 text-gray-400">Solicitar OTP</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">POST</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/auth/phone/verify</td>
+                            <td class="px-6 py-3 text-gray-400">Verificar OTP</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">POST</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/auth/complete-signup</td>
+                            <td class="px-6 py-3 text-gray-400">Completar cadastro</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs">GET</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/identity/me</td>
+                            <td class="px-6 py-3 text-gray-400">Dados do usuário</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs">GET</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/billing/account</td>
+                            <td class="px-6 py-3 text-gray-400">Conta de billing</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">POST</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/billing/account</td>
+                            <td class="px-6 py-3 text-gray-400">Criar conta de billing</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs">GET</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/subscriptions/active</td>
+                            <td class="px-6 py-3 text-gray-400">Assinatura ativa</td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-3"><span class="bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded text-xs">POST</span></td>
+                            <td class="px-6 py-3 font-mono text-sm">/api/v1/subscriptions</td>
+                            <td class="px-6 py-3 text-gray-400">Criar assinatura</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-6 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+                <p class="text-amber-400">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <strong>Autenticação:</strong> Todas as rotas (exceto auth) requerem header <code>Authorization: Bearer {token}</code>
+                </p>
+            </div>
+        </section>
+
+        <!-- Self-Service: Manage Apps -->
+        <section id="apps" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center text-purple-400">📦</span>
+                Seus Apps
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="font-bold">Apps Registrados</h3>
+                        <p class="text-gray-400 text-sm">Gerencie seus apps conectados ao PROST-QS</p>
+                    </div>
+                    <button onclick="showCreateAppModal()" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl transition-all">
+                        <i class="fas fa-plus mr-2"></i> Novo App
+                    </button>
+                </div>
+
+                <div id="apps-list" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Faça login para ver seus apps</p>
+                </div>
+            </div>
+
+            <!-- Create App Modal -->
+            <div id="create-app-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-dark-card rounded-2xl max-w-lg w-full p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-lg">Criar Novo App</h3>
+                        <button onclick="hideCreateAppModal()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Nome do App</label>
+                            <input type="text" id="app-name" placeholder="Meu App Incrível" 
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Descrição</label>
+                            <textarea id="app-description" rows="2" placeholder="Descrição do seu app..."
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Callback URL (opcional)</label>
+                            <input type="text" id="app-callback" placeholder="https://meuapp.com/callback" 
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Permissões</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="perm-identity" checked class="rounded">
+                                    <span class="text-sm">Identity</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="perm-billing" class="rounded">
+                                    <span class="text-sm">Billing</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="perm-agents" class="rounded">
+                                    <span class="text-sm">Agents</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="perm-ads" class="rounded">
+                                    <span class="text-sm">Ads</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button onclick="createApp()" class="w-full bg-primary hover:bg-primary/80 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-rocket mr-2"></i> Criar App
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Self-Service: API Tokens -->
+        <section id="tokens" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-amber-500/20 rounded-lg flex items-center justify-center text-amber-400">🔑</span>
+                API Tokens
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 class="font-bold">Tokens de Acesso</h3>
+                        <p class="text-gray-400 text-sm">Crie e gerencie tokens para acessar a API</p>
+                    </div>
+                    <button onclick="showCreateTokenModal()" class="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-xl transition-all">
+                        <i class="fas fa-key mr-2"></i> Novo Token
+                    </button>
+                </div>
+
+                <div id="tokens-list" class="space-y-3">
+                    <p class="text-gray-500 text-center py-8">Faça login para gerenciar tokens</p>
+                </div>
+            </div>
+
+            <!-- Create Token Modal -->
+            <div id="create-token-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-dark-card rounded-2xl max-w-lg w-full p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-lg">Criar Novo Token</h3>
+                        <button onclick="hideCreateTokenModal()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Nome do Token</label>
+                            <input type="text" id="token-name" placeholder="Token de Produção" 
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Expiração</label>
+                            <select id="token-expiry" class="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white">
+                                <option value="7">7 dias</option>
+                                <option value="30" selected>30 dias</option>
+                                <option value="90">90 dias</option>
+                                <option value="365">1 ano</option>
+                                <option value="0">Nunca expira</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Escopos</label>
+                            <div class="grid grid-cols-2 gap-2">
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="scope-read" checked class="rounded">
+                                    <span class="text-sm">Leitura</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="scope-write" class="rounded">
+                                    <span class="text-sm">Escrita</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="scope-billing" class="rounded">
+                                    <span class="text-sm">Billing</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-2 bg-dark rounded-lg">
+                                    <input type="checkbox" id="scope-admin" class="rounded">
+                                    <span class="text-sm">Admin</span>
+                                </label>
+                            </div>
+                        </div>
+                        <button onclick="createToken()" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-key mr-2"></i> Gerar Token
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Token Display Modal -->
+            <div id="token-display-modal" class="fixed inset-0 bg-black/50 z-50 hidden flex items-center justify-center p-4">
+                <div class="bg-dark-card rounded-2xl max-w-lg w-full p-6">
+                    <div class="text-center mb-6">
+                        <div class="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <i class="fas fa-check text-emerald-400 text-2xl"></i>
+                        </div>
+                        <h3 class="font-bold text-lg">Token Criado!</h3>
+                        <p class="text-gray-400 text-sm">Copie agora, você não verá novamente</p>
+                    </div>
+                    <div class="bg-dark rounded-xl p-4 mb-4">
+                        <code id="new-token-value" class="text-emerald-400 text-sm break-all"></code>
+                    </div>
+                    <div class="flex gap-4">
+                        <button onclick="copyNewToken()" class="flex-1 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl">
+                            <i class="fas fa-copy mr-2"></i> Copiar
+                        </button>
+                        <button onclick="hideTokenDisplayModal()" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-xl">
+                            Fechar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- SDK Usage Stats -->
+        <section id="usage" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center text-blue-400">📊</span>
+                Uso da API
+            </h2>
+
+            <div class="grid grid-cols-4 gap-4 mb-6">
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <p id="usage-requests" class="text-2xl font-bold text-primary">-</p>
+                    <p class="text-gray-400 text-sm">Requests (24h)</p>
+                </div>
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <p id="usage-success" class="text-2xl font-bold text-emerald-400">-</p>
+                    <p class="text-gray-400 text-sm">Sucesso</p>
+                </div>
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <p id="usage-errors" class="text-2xl font-bold text-rose-400">-</p>
+                    <p class="text-gray-400 text-sm">Erros</p>
+                </div>
+                <div class="bg-dark-card rounded-xl p-4 text-center">
+                    <p id="usage-latency" class="text-2xl font-bold text-amber-400">-</p>
+                    <p class="text-gray-400 text-sm">Latência média</p>
+                </div>
+            </div>
+
+            <div class="bg-dark-card rounded-2xl p-6">
+                <h3 class="font-bold mb-4">Requests por Endpoint (últimas 24h)</h3>
+                <div id="usage-endpoints" class="space-y-3">
+                    <p class="text-gray-500 text-center py-4">Faça login para ver estatísticas</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- API Playground -->
+        <section id="playground" class="mb-16">
+            <h2 class="text-2xl font-bold mb-6 flex items-center gap-3">
+                <span class="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center text-emerald-400">🧪</span>
+                API Playground
+            </h2>
+
+            <div class="bg-dark-card rounded-2xl p-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <!-- Request -->
+                    <div>
+                        <h3 class="font-bold mb-4">Request</h3>
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-400 mb-2">Token JWT (opcional)</label>
+                            <input type="text" id="pg-token" placeholder="eyJhbGciOiJIUzI1NiIs..." 
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-2 text-white text-sm font-mono">
+                        </div>
+                        <div class="flex gap-2 mb-4">
+                            <select id="pg-method" class="bg-dark border border-white/10 rounded-xl px-4 py-2 text-white">
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                                <option value="DELETE">DELETE</option>
+                            </select>
+                            <input type="text" id="pg-endpoint" value="/api/v1/health" 
+                                class="flex-1 bg-dark border border-white/10 rounded-xl px-4 py-2 text-white font-mono">
+                        </div>
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-400 mb-2">Body (JSON)</label>
+                            <textarea id="pg-body" rows="4" placeholder='{"key": "value"}'
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-2 text-white font-mono text-sm"></textarea>
+                        </div>
+                        <button onclick="executePlayground()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-play mr-2"></i> Executar
+                        </button>
+                    </div>
+
+                    <!-- Response -->
+                    <div>
+                        <h3 class="font-bold mb-4">Response</h3>
+                        <div class="flex items-center gap-2 mb-4">
+                            <span id="pg-status" class="bg-gray-500/20 text-gray-400 px-3 py-1 rounded-full text-sm">-</span>
+                            <span id="pg-time" class="text-gray-500 text-sm">-</span>
+                        </div>
+                        <div class="code-block h-64 overflow-auto">
+                            <pre><code id="pg-response" class="language-json text-sm">// Response aparecerá aqui</code></pre>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="mt-6 pt-6 border-t border-white/10">
+                    <p class="text-sm text-gray-400 mb-3">Ações rápidas:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="setPlayground('GET', '/api/v1/health', '')" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg text-sm">
+                            Health Check
+                        </button>
+                        <button onclick="setPlayground('POST', '/api/v1/auth/phone/request', '{&quot;phone_number&quot;: &quot;+5511999999999&quot;, &quot;channel&quot;: &quot;sms&quot;}')" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg text-sm">
+                            Request OTP
+                        </button>
+                        <button onclick="setPlayground('GET', '/api/v1/identity/me', '')" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg text-sm">
+                            Get User
+                        </button>
+                        <button onclick="setPlayground('GET', '/api/v1/billing/account', '')" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg text-sm">
+                            Get Billing
+                        </button>
+                        <button onclick="setPlayground('GET', '/api/v1/subscriptions/active', '')" class="bg-white/5 hover:bg-white/10 px-3 py-1 rounded-lg text-sm">
+                            Get Subscription
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="border-t border-white/10 pt-8 text-center text-gray-500">
+            <p>PROST-QS Sovereign Kernel &copy; 2024</p>
+            <p class="text-sm mt-2">Identidade soberana. Economia governada. IA contida.</p>
+        </footer>
+    </main>
+
+    <script>
+        hljs.highlightAll();
+
+        const API_BASE = 'http://localhost:8080';
+        const DEV_STORAGE = {
+            TOKEN: 'pq_dev_token',
+            USER: 'pq_dev_user'
+        };
+
+        let devToken = localStorage.getItem(DEV_STORAGE.TOKEN);
+        let devUser = JSON.parse(localStorage.getItem(DEV_STORAGE.USER) || 'null');
+
+        // ========================================
+        // COPY CODE
+        // ========================================
+
+        function copyCode(btn) {
+            const code = btn.parentElement.querySelector('code').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                btn.innerHTML = '<i class="fas fa-check"></i> Copiado!';
+                setTimeout(() => {
+                    btn.innerHTML = '<i class="fas fa-copy"></i> Copiar';
+                }, 2000);
+            });
+        }
+
+        // ========================================
+        // DEV AUTH
+        // ========================================
+
+        function showDevLoginModal() {
+            const modal = document.createElement('div');
+            modal.id = 'dev-login-modal';
+            modal.className = 'fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4';
+            modal.innerHTML = `
+                <div class="bg-dark-card rounded-2xl max-w-md w-full p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-lg">Login do Desenvolvedor</h3>
+                        <button onclick="hideDevLoginModal()" class="text-gray-400 hover:text-white">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm text-gray-400 mb-2">Cole seu Token JWT</label>
+                            <textarea id="dev-token-input" rows="4" placeholder="eyJhbGciOiJIUzI1NiIs..."
+                                class="w-full bg-dark border border-white/10 rounded-xl px-4 py-3 text-white font-mono text-sm"></textarea>
+                        </div>
+                        <button onclick="devLoginWithToken()" class="w-full bg-primary hover:bg-primary/80 text-white font-bold py-3 rounded-xl transition-all">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Entrar
+                        </button>
+                        <p class="text-xs text-gray-500 text-center">
+                            Obtenha um token fazendo login no User App ou Admin Console
+                        </p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        function hideDevLoginModal() {
+            document.getElementById('dev-login-modal')?.remove();
+        }
+
+        function devLoginWithToken() {
+            const token = document.getElementById('dev-token-input').value.trim();
+            if (!token) {
+                alert('Cole um token válido');
+                return;
+            }
+
+            try {
+                const claims = JSON.parse(atob(token.split('.')[1]));
+                if (claims.exp * 1000 < Date.now()) {
+                    alert('Token expirado');
+                    return;
+                }
+
+                devToken = token;
+                devUser = { id: claims.user_id, role: claims.role };
+                localStorage.setItem(DEV_STORAGE.TOKEN, token);
+                localStorage.setItem(DEV_STORAGE.USER, JSON.stringify(devUser));
+
+                hideDevLoginModal();
+                updateDevAuthUI();
+                loadDevData();
+            } catch {
+                alert('Token inválido');
+            }
+        }
+
+        function devLogout() {
+            devToken = null;
+            devUser = null;
+            localStorage.removeItem(DEV_STORAGE.TOKEN);
+            localStorage.removeItem(DEV_STORAGE.USER);
+            updateDevAuthUI();
+            resetDevData();
+        }
+
+        function updateDevAuthUI() {
+            const loginBtn = document.getElementById('dev-login-btn');
+            const userInfo = document.getElementById('dev-user-info');
+            const userName = document.getElementById('dev-user-name');
+
+            if (devToken && devUser) {
+                loginBtn.classList.add('hidden');
+                userInfo.classList.remove('hidden');
+                userName.textContent = devUser.role || 'Dev';
+            } else {
+                loginBtn.classList.remove('hidden');
+                userInfo.classList.add('hidden');
+            }
+        }
+
+        // ========================================
+        // DEV DATA LOADING
+        // ========================================
+
+        async function devApi(endpoint, options = {}) {
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(devToken ? { 'Authorization': `Bearer ${devToken}` } : {}),
+                ...options.headers
+            };
+
+            const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
+            const text = await res.text();
+            return text ? JSON.parse(text) : {};
+        }
+
+        async function loadDevData() {
+            if (!devToken) return;
+
+            // Load apps
+            loadApps();
+            // Load tokens
+            loadTokens();
+            // Load usage stats
+            loadUsageStats();
+        }
+
+        function resetDevData() {
+            document.getElementById('apps-list').innerHTML = '<p class="text-gray-500 text-center py-8">Faça login para ver seus apps</p>';
+            document.getElementById('tokens-list').innerHTML = '<p class="text-gray-500 text-center py-8">Faça login para gerenciar tokens</p>';
+            document.getElementById('usage-endpoints').innerHTML = '<p class="text-gray-500 text-center py-4">Faça login para ver estatísticas</p>';
+            document.getElementById('usage-requests').textContent = '-';
+            document.getElementById('usage-success').textContent = '-';
+            document.getElementById('usage-errors').textContent = '-';
+            document.getElementById('usage-latency').textContent = '-';
+        }
+
+        // ========================================
+        // APPS MANAGEMENT
+        // ========================================
+
+        async function loadApps() {
+            const list = document.getElementById('apps-list');
+            
+            try {
+                // Simulated apps data (in real implementation, would call /apps endpoint)
+                const apps = await devApi('/api/v1/identity/me').then(user => {
+                    // Return mock apps based on user
+                    return [
+                        {
+                            id: 'app_' + (user.id || 'demo').substring(0, 8),
+                            name: 'Meu Primeiro App',
+                            description: 'App de demonstração',
+                            created_at: new Date().toISOString(),
+                            permissions: ['identity', 'billing'],
+                            status: 'active'
+                        }
+                    ];
+                }).catch(() => []);
+
+                if (apps.length > 0) {
+                    list.innerHTML = apps.map(app => `
+                        <div class="bg-dark rounded-xl p-4 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 bg-purple-500/20 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-cube text-purple-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-bold">${app.name}</h4>
+                                    <p class="text-sm text-gray-400">${app.description}</p>
+                                    <div class="flex gap-2 mt-1">
+                                        ${app.permissions.map(p => `<span class="text-xs bg-white/5 px-2 py-0.5 rounded">${p}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="px-2 py-1 rounded-full text-xs ${app.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}">${app.status}</span>
+                                <p class="text-xs text-gray-500 mt-1">ID: ${app.id}</p>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-cube text-4xl text-gray-600 mb-4"></i>
+                            <p class="text-gray-500">Nenhum app criado ainda</p>
+                            <button onclick="showCreateAppModal()" class="mt-4 text-primary hover:underline">Criar primeiro app</button>
+                        </div>
+                    `;
+                }
+            } catch {
+                list.innerHTML = '<p class="text-gray-500 text-center py-8">Erro ao carregar apps</p>';
+            }
+        }
+
+        function showCreateAppModal() {
+            if (!devToken) {
+                showDevLoginModal();
+                return;
+            }
+            document.getElementById('create-app-modal').classList.remove('hidden');
+        }
+
+        function hideCreateAppModal() {
+            document.getElementById('create-app-modal').classList.add('hidden');
+        }
+
+        async function createApp() {
+            const name = document.getElementById('app-name').value;
+            const description = document.getElementById('app-description').value;
+            const callback = document.getElementById('app-callback').value;
+            
+            const permissions = [];
+            if (document.getElementById('perm-identity').checked) permissions.push('identity');
+            if (document.getElementById('perm-billing').checked) permissions.push('billing');
+            if (document.getElementById('perm-agents').checked) permissions.push('agents');
+            if (document.getElementById('perm-ads').checked) permissions.push('ads');
+
+            if (!name) {
+                alert('Nome é obrigatório');
+                return;
+            }
+
+            // In real implementation, would POST to /apps
+            alert(`App "${name}" criado com sucesso!\n\nPermissões: ${permissions.join(', ')}`);
+            hideCreateAppModal();
+            loadApps();
+        }
+
+        // ========================================
+        // TOKENS MANAGEMENT
+        // ========================================
+
+        async function loadTokens() {
+            const list = document.getElementById('tokens-list');
+            
+            try {
+                // Simulated tokens (in real implementation, would call /tokens endpoint)
+                const tokens = [
+                    {
+                        id: 'tok_' + Math.random().toString(36).substring(7),
+                        name: 'Token de Desenvolvimento',
+                        created_at: new Date(Date.now() - 86400000).toISOString(),
+                        expires_at: new Date(Date.now() + 86400000 * 30).toISOString(),
+                        scopes: ['read', 'write'],
+                        last_used: new Date(Date.now() - 3600000).toISOString()
+                    }
+                ];
+
+                if (tokens.length > 0) {
+                    list.innerHTML = tokens.map(token => `
+                        <div class="bg-dark rounded-xl p-4 flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center">
+                                    <i class="fas fa-key text-amber-400"></i>
+                                </div>
+                                <div>
+                                    <h4 class="font-medium">${token.name}</h4>
+                                    <div class="flex gap-2 mt-1">
+                                        ${token.scopes.map(s => `<span class="text-xs bg-white/5 px-2 py-0.5 rounded">${s}</span>`).join('')}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <p class="text-xs text-gray-500">Expira: ${new Date(token.expires_at).toLocaleDateString('pt-BR')}</p>
+                                <p class="text-xs text-gray-500">Último uso: ${new Date(token.last_used).toLocaleString('pt-BR')}</p>
+                                <button onclick="revokeToken('${token.id}')" class="text-rose-400 hover:text-rose-300 text-xs mt-1">
+                                    <i class="fas fa-trash mr-1"></i> Revogar
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    list.innerHTML = `
+                        <div class="text-center py-8">
+                            <i class="fas fa-key text-4xl text-gray-600 mb-4"></i>
+                            <p class="text-gray-500">Nenhum token criado</p>
+                        </div>
+                    `;
+                }
+            } catch {
+                list.innerHTML = '<p class="text-gray-500 text-center py-8">Erro ao carregar tokens</p>';
+            }
+        }
+
+        function showCreateTokenModal() {
+            if (!devToken) {
+                showDevLoginModal();
+                return;
+            }
+            document.getElementById('create-token-modal').classList.remove('hidden');
+        }
+
+        function hideCreateTokenModal() {
+            document.getElementById('create-token-modal').classList.add('hidden');
+        }
+
+        async function createToken() {
+            const name = document.getElementById('token-name').value;
+            const expiry = document.getElementById('token-expiry').value;
+            
+            const scopes = [];
+            if (document.getElementById('scope-read').checked) scopes.push('read');
+            if (document.getElementById('scope-write').checked) scopes.push('write');
+            if (document.getElementById('scope-billing').checked) scopes.push('billing');
+            if (document.getElementById('scope-admin').checked) scopes.push('admin');
+
+            if (!name) {
+                alert('Nome é obrigatório');
+                return;
+            }
+
+            // In real implementation, would POST to /tokens
+            // For demo, generate a fake token
+            const fakeToken = 'pq_' + btoa(JSON.stringify({ name, scopes, exp: Date.now() + parseInt(expiry) * 86400000 })).substring(0, 40);
+            
+            hideCreateTokenModal();
+            document.getElementById('new-token-value').textContent = fakeToken;
+            document.getElementById('token-display-modal').classList.remove('hidden');
+            loadTokens();
+        }
+
+        function hideTokenDisplayModal() {
+            document.getElementById('token-display-modal').classList.add('hidden');
+        }
+
+        function copyNewToken() {
+            const token = document.getElementById('new-token-value').textContent;
+            navigator.clipboard.writeText(token).then(() => {
+                alert('Token copiado!');
+            });
+        }
+
+        async function revokeToken(id) {
+            if (!confirm('Revogar este token? Esta ação não pode ser desfeita.')) return;
+            
+            // In real implementation, would DELETE /tokens/:id
+            alert('Token revogado');
+            loadTokens();
+        }
+
+        // ========================================
+        // USAGE STATS
+        // ========================================
+
+        async function loadUsageStats() {
+            // Simulated stats
+            const stats = {
+                requests: Math.floor(Math.random() * 1000) + 100,
+                success: Math.floor(Math.random() * 50) + 95,
+                errors: Math.floor(Math.random() * 20),
+                latency: Math.floor(Math.random() * 100) + 50
+            };
+
+            document.getElementById('usage-requests').textContent = stats.requests.toLocaleString();
+            document.getElementById('usage-success').textContent = stats.success + '%';
+            document.getElementById('usage-errors').textContent = stats.errors;
+            document.getElementById('usage-latency').textContent = stats.latency + 'ms';
+
+            // Simulated endpoint usage
+            const endpoints = [
+                { path: '/api/v1/identity/me', count: 245, avg_ms: 45 },
+                { path: '/api/v1/billing/account', count: 189, avg_ms: 62 },
+                { path: '/api/v1/auth/phone/verify', count: 156, avg_ms: 120 },
+                { path: '/api/v1/subscriptions/active', count: 98, avg_ms: 55 },
+                { path: '/api/v1/billing/ledger', count: 67, avg_ms: 78 }
+            ];
+
+            const endpointsEl = document.getElementById('usage-endpoints');
+            endpointsEl.innerHTML = endpoints.map(e => `
+                <div class="flex items-center justify-between p-3 bg-dark rounded-xl">
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs bg-blue-500/20 text-blue-400 px-2 py-1 rounded">GET</span>
+                        <code class="text-sm">${e.path}</code>
+                    </div>
+                    <div class="flex items-center gap-4 text-sm">
+                        <span class="text-gray-400">${e.count} requests</span>
+                        <span class="text-amber-400">${e.avg_ms}ms avg</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ========================================
+        // API PLAYGROUND
+        // ========================================
+
+        function setPlayground(method, endpoint, body) {
+            document.getElementById('pg-method').value = method;
+            document.getElementById('pg-endpoint').value = endpoint;
+            document.getElementById('pg-body').value = body;
+        }
+
+        async function executePlayground() {
+            const method = document.getElementById('pg-method').value;
+            const endpoint = document.getElementById('pg-endpoint').value;
+            const body = document.getElementById('pg-body').value;
+            const token = document.getElementById('pg-token').value || devToken;
+
+            const statusEl = document.getElementById('pg-status');
+            const timeEl = document.getElementById('pg-time');
+            const responseEl = document.getElementById('pg-response');
+
+            statusEl.textContent = 'Loading...';
+            statusEl.className = 'bg-amber-500/20 text-amber-400 px-3 py-1 rounded-full text-sm';
+            timeEl.textContent = '';
+            responseEl.textContent = '// Executando...';
+
+            const startTime = Date.now();
+
+            try {
+                const headers = {
+                    'Content-Type': 'application/json'
+                };
+                if (token) {
+                    headers['Authorization'] = `Bearer ${token}`;
+                }
+
+                const options = {
+                    method,
+                    headers
+                };
+
+                if (body && (method === 'POST' || method === 'PUT')) {
+                    options.body = body;
+                }
+
+                const res = await fetch(`${API_BASE}${endpoint}`, options);
+                const elapsed = Date.now() - startTime;
+                
+                let data;
+                const text = await res.text();
+                try {
+                    data = JSON.parse(text);
+                } catch {
+                    data = text;
+                }
+
+                // Update status
+                if (res.ok) {
+                    statusEl.textContent = `${res.status} OK`;
+                    statusEl.className = 'bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-full text-sm';
+                } else {
+                    statusEl.textContent = `${res.status} Error`;
+                    statusEl.className = 'bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full text-sm';
+                }
+
+                timeEl.textContent = `${elapsed}ms`;
+                responseEl.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+                hljs.highlightElement(responseEl);
+
+            } catch (err) {
+                const elapsed = Date.now() - startTime;
+                statusEl.textContent = 'Error';
+                statusEl.className = 'bg-rose-500/20 text-rose-400 px-3 py-1 rounded-full text-sm';
+                timeEl.textContent = `${elapsed}ms`;
+                responseEl.textContent = `// Error: ${err.message}`;
+            }
+        }
+
+        // ========================================
+        // INIT
+        // ========================================
+
+        document.addEventListener('DOMContentLoaded', () => {
+            updateDevAuthUI();
+            if (devToken) {
+                loadDevData();
+            }
+        });
+    </script>
+</body>
+</html>
