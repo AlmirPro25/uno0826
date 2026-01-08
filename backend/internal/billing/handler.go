@@ -378,6 +378,61 @@ func (h *BillingHandler) GetActiveSubscription(c *gin.Context) {
 	c.JSON(http.StatusOK, sub)
 }
 
+// GetSubscriptionStatus retorna status completo da assinatura para o usuário
+// Endpoint amigável para frontend mostrar estado do plano
+func (h *BillingHandler) GetSubscriptionStatus(c *gin.Context) {
+	userIDStr := c.GetString("userID")
+	if userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Não autenticado"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	// Buscar account
+	account, err := h.service.GetBillingAccount(userID)
+	if err != nil {
+		// Sem conta = sem plano
+		c.JSON(http.StatusOK, gin.H{
+			"has_subscription": false,
+			"plan":             "free",
+			"status":           "none",
+			"message":          "Você está no plano gratuito",
+		})
+		return
+	}
+
+	// Buscar subscription
+	sub, err := h.service.GetActiveSubscription(account.AccountID)
+	if err != nil {
+		// Tem conta mas sem subscription ativa
+		c.JSON(http.StatusOK, gin.H{
+			"has_subscription": false,
+			"plan":             "free",
+			"status":           "none",
+			"message":          "Você está no plano gratuito",
+		})
+		return
+	}
+
+	// Tem subscription
+	c.JSON(http.StatusOK, gin.H{
+		"has_subscription":   true,
+		"plan":               sub.PlanID,
+		"plan_name":          "PROST-QS Pro",
+		"status":             sub.Status,
+		"amount":             sub.Amount,
+		"currency":           sub.Currency,
+		"interval":           sub.Interval,
+		"current_period_end": sub.CurrentPeriodEnd,
+		"message":            "Plano ativo",
+	})
+}
+
 // CancelSubscription cancela uma assinatura
 func (h *BillingHandler) CancelSubscription(c *gin.Context) {
 	subIDStr := c.Param("subscriptionId")
@@ -814,6 +869,7 @@ func RegisterBillingRoutes(router *gin.RouterGroup, service *BillingService, gov
 		// Subscriptions
 		billing.POST("/subscriptions", authMiddleware, handler.CreateSubscription)
 		billing.GET("/subscriptions/active", authMiddleware, handler.GetActiveSubscription)
+		billing.GET("/subscriptions/status", authMiddleware, handler.GetSubscriptionStatus)
 		billing.DELETE("/subscriptions/:subscriptionId", authMiddleware, handler.CancelSubscription)
 
 		// Payouts
