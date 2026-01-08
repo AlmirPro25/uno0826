@@ -15,7 +15,7 @@ WORKDIR /app
 COPY backend/go.mod backend/go.sum ./
 RUN go mod download
 
-# Copiar código fonte
+# Copiar código fonte do backend
 COPY backend/ .
 
 # Compilar com CGO habilitado (necessário para SQLite)
