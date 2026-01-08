@@ -49,15 +49,9 @@ import (
 )
 
 func main() {
-	// Carregar variáveis de ambiente
-	// Em produção (GIN_MODE=release), as variáveis vêm do ambiente
-	// Em desenvolvimento, carrega do arquivo .env
-	if os.Getenv("GIN_MODE") != "release" {
-		err := godotenv.Load("../.env")
-		if err != nil {
-			log.Printf("⚠️  Arquivo .env não encontrado: %v (ok em produção)", err)
-		}
-	}
+	// Carregar variáveis de ambiente do arquivo .env (se existir)
+	// Em produção, as variáveis vêm do ambiente do container
+	_ = godotenv.Load("../.env") // Ignora erro se não existir
 
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == "" {
