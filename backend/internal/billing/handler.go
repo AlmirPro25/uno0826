@@ -772,11 +772,18 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 	
 	// Se tem subscription, criar/atualizar no sistema
 	if subscriptionID != "" {
-		// Buscar account pelo customer_id ou criar
+		// Buscar account pelo customer_id (deve existir - foi criada no /billing/checkout)
 		account, err := h.service.GetOrCreateAccountByStripeCustomer(customerID, customerEmail)
 		if err != nil {
-			log.Printf("❌ [CHECKOUT] Erro ao buscar/criar account: %v", err)
-			return err
+			log.Printf("⚠️ [CHECKOUT] Account não encontrada para customer=%s, tentando atualizar stripe_customer_id", customerID)
+			
+			// Fallback: tentar encontrar account sem stripe_customer_id e atualizar
+			// Isso pode acontecer se o checkout foi criado antes de termos o customer_id
+			account, err = h.service.FindAndLinkStripeCustomer(customerID, customerEmail)
+			if err != nil {
+				log.Printf("❌ [CHECKOUT] Não foi possível linkar customer: %v", err)
+				return err
+			}
 		}
 		
 		// Criar subscription local
@@ -786,7 +793,7 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 			return err
 		}
 		
-		log.Printf("✅ [CHECKOUT] Subscription criada para account %s", account.AccountID)
+		log.Printf("🎉 [CHECKOUT] Subscription criada para account %s (user=%s)", account.AccountID, account.UserID)
 	}
 	
 	return nil
