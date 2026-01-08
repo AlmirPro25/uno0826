@@ -569,11 +569,11 @@ func (h *AdminHandler) RetryJob(c *gin.Context) {
 func RegisterAdminRoutes(router *gin.RouterGroup, service *AdminService, authMiddleware gin.HandlerFunc, adminMiddleware gin.HandlerFunc) {
 	handler := NewAdminHandler(service)
 
-	// Bootstrap endpoint - DESABILITADO em produção (já existe super_admin)
-	// router.POST("/admin/bootstrap", handler.BootstrapSuperAdmin)
+	// Bootstrap endpoint - criar primeiro super_admin (sem auth)
+	router.POST("/admin/bootstrap", handler.BootstrapSuperAdmin)
 	
-	// Promote endpoint - DESABILITADO em produção (já usado)
-	// router.POST("/admin/promote-first-admin", handler.PromoteFirstAdmin)
+	// Promote endpoint - promover usuário existente a super_admin (só funciona uma vez)
+	router.POST("/admin/promote-first-admin", handler.PromoteFirstAdmin)
 
 	admin := router.Group("/admin")
 	admin.Use(authMiddleware)
