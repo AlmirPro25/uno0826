@@ -421,3 +421,62 @@ func computeHMAC(message, secret string) string {
 	mac.Write([]byte(message))
 	return hex.EncodeToString(mac.Sum(nil))
 }
+
+
+// ========================================
+// ADD-ON CHECKOUT SESSION
+// ========================================
+
+// CreateAddOnCheckoutSession cria uma sessão de checkout para add-on
+func (s *StripeService) CreateAddOnCheckoutSession(ctx context.Context, customerID, userID, addOnID, priceID, successURL, cancelURL string) (string, string, error) {
+	if !s.IsConfigured() {
+		// Mock mode
+		mockURL := "https://checkout.stripe.com/mock_addon_session"
+		return mockURL, fmt.Sprintf("cs_addon_mock_%d", time.Now().UnixNano()), nil
+	}
+
+	// Usar Stripe SDK real
+	stripe.Key = s.secretKey
+
+	params := &stripe.CheckoutSessionParams{
+		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				Price:    stripe.String(priceID),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		SuccessURL: stripe.String(successURL + "?session_id={CHECKOUT_SESSION_ID}"),
+		CancelURL:  stripe.String(cancelURL),
+		// Metadata para identificar como add-on no webhook
+		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
+			Metadata: map[string]string{
+				"grant_type": "addon",
+				"user_id":    userID,
+				"addon_id":   addOnID,
+			},
+		},
+	}
+
+	// Adicionar metadata na session também
+	params.Metadata = map[string]string{
+		"grant_type": "addon",
+		"user_id":    userID,
+		"addon_id":   addOnID,
+	}
+
+	// Se tiver customer ID válido (não mock), usar
+	if customerID != "" && !strings.HasPrefix(customerID, "cus_mock_") {
+		params.Customer = stripe.String(customerID)
+	}
+
+	sess, err := session.New(params)
+	if err != nil {
+		return "", "", fmt.Errorf("erro ao criar addon checkout session: %w", err)
+	}
+
+	log.Printf("📦 [STRIPE] Add-on checkout session criada: session=%s user=%s addon=%s", 
+		sess.ID, userID, addOnID)
+
+	return sess.URL, sess.ID, nil
+}

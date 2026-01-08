@@ -8,9 +8,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"prost-qs/backend/internal/jobs"
 	"prost-qs/backend/pkg/resilience"
@@ -770,10 +772,29 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 	paymentStatus, _ := obj["payment_status"].(string)
 	clientReferenceID, _ := obj["client_reference_id"].(string) // CRÍTICO: account_id
 	
-	log.Printf("✅ [CHECKOUT] Session completed: session=%s customer=%s subscription=%s status=%s ref=%s", 
-		sessionID, customerID, subscriptionID, paymentStatus, clientReferenceID)
+	// Extrair metadata
+	metadata := make(map[string]string)
+	if metadataObj, ok := obj["metadata"].(map[string]interface{}); ok {
+		for k, v := range metadataObj {
+			if str, ok := v.(string); ok {
+				metadata[k] = str
+			}
+		}
+	}
 	
-	// Se tem subscription, criar/atualizar no sistema
+	log.Printf("✅ [CHECKOUT] Session completed: session=%s customer=%s subscription=%s status=%s ref=%s metadata=%v", 
+		sessionID, customerID, subscriptionID, paymentStatus, clientReferenceID, metadata)
+	
+	// Verificar se é checkout de add-on
+	if grantType, ok := metadata["grant_type"]; ok && grantType == "addon" {
+		processor := h.getAddOnProcessor()
+		processed, err := processor.ProcessCheckoutCompleted(event.ID, sessionID, customerID, metadata)
+		if processed {
+			return err
+		}
+	}
+	
+	// Se tem subscription, criar/atualizar no sistema (plano, não add-on)
 	if subscriptionID != "" {
 		var account *BillingAccount
 		var err error
@@ -823,6 +844,94 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 	}
 	
 	return nil
+}
+
+// getAddOnProcessor retorna o processor de add-ons (lazy init)
+func (h *BillingHandler) getAddOnProcessor() *addOnProcessor {
+	return &addOnProcessor{db: h.service.db}
+}
+
+// addOnProcessor wrapper para evitar import circular
+type addOnProcessor struct {
+	db *gorm.DB
+}
+
+func (p *addOnProcessor) ProcessCheckoutCompleted(eventID, sessionID, customerID string, metadata map[string]string) (bool, error) {
+	// Verificar se é checkout de add-on
+	grantType, hasGrantType := metadata["grant_type"]
+	if !hasGrantType || grantType != "addon" {
+		return false, nil
+	}
+	
+	userIDStr, hasUserID := metadata["user_id"]
+	addOnID, hasAddOnID := metadata["addon_id"]
+	
+	if !hasUserID || !hasAddOnID {
+		log.Printf("⚠️ [ADDON_WEBHOOK] Metadata incompleta: user_id=%v addon_id=%v", hasUserID, hasAddOnID)
+		return true, nil
+	}
+	
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		log.Printf("❌ [ADDON_WEBHOOK] user_id inválido: %s", userIDStr)
+		return true, err
+	}
+	
+	// Verificar idempotência - já processou este evento?
+	var count int64
+	p.db.Table("addon_grant_logs").Where("stripe_event_id = ?", eventID).Count(&count)
+	if count > 0 {
+		log.Printf("⏭️ [ADDON_WEBHOOK] Evento já processado: %s", eventID)
+		return true, nil
+	}
+	
+	// Verificar se usuário já tem este add-on ativo
+	var existing struct {
+		ID uuid.UUID
+	}
+	if err := p.db.Table("user_addons").Select("id").Where("user_id = ? AND addon_id = ? AND status = ?", userID, addOnID, "active").First(&existing).Error; err == nil {
+		// Já tem - renovar
+		now := time.Now()
+		p.db.Table("user_addons").Where("id = ?", existing.ID).Updates(map[string]interface{}{
+			"expires_at": now.AddDate(0, 1, 0),
+			"updated_at": now,
+		})
+		
+		p.logGrant(userID, addOnID, "webhook_renewal", eventID, sessionID)
+		log.Printf("🔄 [ADDON_WEBHOOK] Add-on renovado: user=%s addon=%s", userID, addOnID)
+		return true, nil
+	}
+	
+	// Criar novo add-on
+	now := time.Now()
+	newID := uuid.New()
+	p.db.Table("user_addons").Create(map[string]interface{}{
+		"id":         newID,
+		"user_id":    userID,
+		"addon_id":   addOnID,
+		"status":     "active",
+		"started_at": now,
+		"expires_at": now.AddDate(0, 1, 0),
+		"created_at": now,
+		"updated_at": now,
+	})
+	
+	p.logGrant(userID, addOnID, "webhook", eventID, sessionID)
+	log.Printf("🎉 [ADDON_WEBHOOK] Add-on concedido: user=%s addon=%s", userID, addOnID)
+	
+	return true, nil
+}
+
+func (p *addOnProcessor) logGrant(userID uuid.UUID, addOnID, trigger, eventID, sessionID string) {
+	p.db.Table("addon_grant_logs").Create(map[string]interface{}{
+		"id":              uuid.New(),
+		"user_id":         userID,
+		"addon_id":        addOnID,
+		"trigger":         trigger,
+		"stripe_event_id": eventID,
+		"metadata":        fmt.Sprintf(`{"session_id":"%s"}`, sessionID),
+		"created_at":      time.Now(),
+	})
 }
 
 // ========================================
