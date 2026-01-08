@@ -6,6 +6,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"golang.org/x/crypto/bcrypt"
+	"prost-qs/backend/internal/identity"
 )
 
 // ========================================
@@ -54,6 +56,55 @@ func (h *AdminHandler) BootstrapSuperAdmin(c *gin.Context) {
 		"phone":   req.Phone,
 		"name":    req.Name,
 		"email":   req.Email,
+		"role":    "super_admin",
+	})
+}
+
+// PromoteFirstAdmin promove um usuário existente a super_admin
+// POST /api/v1/admin/promote-first-admin
+// Este endpoint só funciona se não existir nenhum super_admin com senha
+func (h *AdminHandler) PromoteFirstAdmin(c *gin.Context) {
+	var req struct {
+		Username string `json:"username" binding:"required"`
+		Password string `json:"password" binding:"required"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verificar se já existe super_admin com senha (usuário real, não bootstrap)
+	var count int64
+	h.service.db.Model(&identity.User{}).Where("role = ? AND password_hash != ''", identity.UserRoleSuperAdmin).Count(&count)
+	if count > 0 {
+		c.JSON(http.StatusConflict, gin.H{"error": "Já existe um super_admin no sistema"})
+		return
+	}
+
+	// Buscar usuário pelo username
+	var user identity.User
+	if err := h.service.db.Where("username = ?", req.Username).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Usuário não encontrado"})
+		return
+	}
+
+	// Verificar senha
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Senha incorreta"})
+		return
+	}
+
+	// Promover a super_admin
+	if err := h.service.db.Model(&user).Update("role", identity.UserRoleSuperAdmin).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao promover usuário"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Usuário promovido a super_admin com sucesso",
+		"user_id": user.ID.String(),
+		"username": req.Username,
 		"role":    "super_admin",
 	})
 }
@@ -520,6 +571,9 @@ func RegisterAdminRoutes(router *gin.RouterGroup, service *AdminService, authMid
 
 	// Bootstrap endpoint - criar primeiro super_admin (sem auth)
 	router.POST("/admin/bootstrap", handler.BootstrapSuperAdmin)
+	
+	// Promote endpoint - promover usuário existente a super_admin (só funciona uma vez)
+	router.POST("/admin/promote-first-admin", handler.PromoteFirstAdmin)
 
 	admin := router.Group("/admin")
 	admin.Use(authMiddleware)
