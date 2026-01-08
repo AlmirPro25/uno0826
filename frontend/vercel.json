@@ -1,0 +1,16 @@
+{
+  "rewrites": [
+    { "source": "/admin/(.*)", "destination": "/admin/index.html" },
+    { "source": "/dev-portal/(.*)", "destination": "/dev-portal/index.html" },
+    { "source": "/user-app/(.*)", "destination": "/user-app/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        { "key": "X-Content-Type-Options", "value": "nosniff" },
+        { "key": "X-Frame-Options", "value": "DENY" }
+      ]
+    }
+  ]
+}
