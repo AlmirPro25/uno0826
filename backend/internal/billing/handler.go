@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -757,6 +758,7 @@ func (h *BillingHandler) handlePayoutFailed(event *WebhookEvent) error {
 
 // handleCheckoutSessionCompleted processa checkout.session.completed
 // Este é o evento mais importante - confirma que o pagamento foi feito
+// Resolução determinística via client_reference_id (account_id)
 func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) error {
 	obj := event.Data.Object
 	
@@ -766,24 +768,47 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 	customerID, _ := obj["customer"].(string)
 	subscriptionID, _ := obj["subscription"].(string)
 	paymentStatus, _ := obj["payment_status"].(string)
+	clientReferenceID, _ := obj["client_reference_id"].(string) // CRÍTICO: account_id
 	
-	log.Printf("✅ [CHECKOUT] Session completed: %s, customer: %s, subscription: %s, status: %s", 
-		sessionID, customerEmail, subscriptionID, paymentStatus)
+	log.Printf("✅ [CHECKOUT] Session completed: session=%s customer=%s subscription=%s status=%s ref=%s", 
+		sessionID, customerID, subscriptionID, paymentStatus, clientReferenceID)
 	
 	// Se tem subscription, criar/atualizar no sistema
 	if subscriptionID != "" {
-		// Buscar account pelo customer_id (deve existir - foi criada no /billing/checkout)
-		account, err := h.service.GetOrCreateAccountByStripeCustomer(customerID, customerEmail)
-		if err != nil {
-			log.Printf("⚠️ [CHECKOUT] Account não encontrada para customer=%s, tentando atualizar stripe_customer_id", customerID)
-			
-			// Fallback: tentar encontrar account sem stripe_customer_id e atualizar
-			// Isso pode acontecer se o checkout foi criado antes de termos o customer_id
-			account, err = h.service.FindAndLinkStripeCustomer(customerID, customerEmail)
-			if err != nil {
-				log.Printf("❌ [CHECKOUT] Não foi possível linkar customer: %v", err)
-				return err
+		var account *BillingAccount
+		var err error
+		
+		// RESOLUÇÃO DETERMINÍSTICA: usar client_reference_id (account_id)
+		if clientReferenceID != "" {
+			accountID, parseErr := uuid.Parse(clientReferenceID)
+			if parseErr == nil {
+				account, err = h.service.GetBillingAccountByID(accountID)
+				if err == nil {
+					log.Printf("📍 [CHECKOUT] Account resolvida via client_reference_id: %s", accountID)
+				}
 			}
+		}
+		
+		// Fallback 1: stripe_customer_id (para checkouts antigos)
+		if account == nil && customerID != "" {
+			account, err = h.service.GetOrCreateAccountByStripeCustomer(customerID, customerEmail)
+			if err == nil {
+				log.Printf("📍 [CHECKOUT] Account resolvida via stripe_customer_id: %s", customerID)
+			}
+		}
+		
+		// Se ainda não encontrou, erro crítico
+		if account == nil {
+			log.Printf("❌ [CHECKOUT] ERRO CRÍTICO: Não foi possível resolver account para session=%s customer=%s ref=%s", 
+				sessionID, customerID, clientReferenceID)
+			return fmt.Errorf("account não encontrada: session=%s customer=%s ref=%s", sessionID, customerID, clientReferenceID)
+		}
+		
+		// Atualizar stripe_customer_id se necessário
+		if account.StripeCustomerID == "" && customerID != "" {
+			account.StripeCustomerID = customerID
+			h.service.db.Save(account)
+			log.Printf("🔗 [CHECKOUT] stripe_customer_id atualizado: account=%s customer=%s", account.AccountID, customerID)
 		}
 		
 		// Criar subscription local
@@ -793,7 +818,8 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 			return err
 		}
 		
-		log.Printf("🎉 [CHECKOUT] Subscription criada para account %s (user=%s)", account.AccountID, account.UserID)
+		log.Printf("🎉 [CHECKOUT] Subscription criada: account=%s user=%s subscription=%s", 
+			account.AccountID, account.UserID, subscriptionID)
 	}
 	
 	return nil
@@ -836,11 +862,14 @@ func (h *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	successURL := "https://example.com/success"
 	cancelURL := "https://example.com/cancel"
 	
-	sessionURL, sessionID, err := h.stripeService.CreateCheckoutSession(ctx, account.StripeCustomerID, successURL, cancelURL)
+	// CRÍTICO: Passar accountID como client_reference_id para resolução determinística
+	sessionURL, sessionID, err := h.stripeService.CreateCheckoutSession(ctx, account.StripeCustomerID, account.AccountID.String(), successURL, cancelURL)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar checkout: " + err.Error()})
 		return
 	}
+
+	log.Printf("🛒 [CHECKOUT] Sessão criada: user=%s account=%s session=%s", userID, account.AccountID, sessionID)
 
 	c.JSON(http.StatusOK, gin.H{
 		"checkout_url": sessionURL,

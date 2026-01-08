@@ -220,7 +220,8 @@ func (s *StripeService) CancelSubscription(ctx context.Context, subscriptionID s
 // ========================================
 
 // CreateCheckoutSession cria uma sessão de checkout do Stripe
-func (s *StripeService) CreateCheckoutSession(ctx context.Context, customerID, successURL, cancelURL string) (string, string, error) {
+// accountID é usado como client_reference_id para resolução determinística no webhook
+func (s *StripeService) CreateCheckoutSession(ctx context.Context, customerID, accountID, successURL, cancelURL string) (string, string, error) {
 	if !s.IsConfigured() {
 		// Mock mode
 		mockURL := "https://checkout.stripe.com/mock_session"
@@ -243,6 +244,8 @@ func (s *StripeService) CreateCheckoutSession(ctx context.Context, customerID, s
 		},
 		SuccessURL: stripe.String(successURL + "?session_id={CHECKOUT_SESSION_ID}"),
 		CancelURL:  stripe.String(cancelURL),
+		// CRÍTICO: client_reference_id permite resolução determinística no webhook
+		ClientReferenceID: stripe.String(accountID),
 	}
 
 	// Se tiver customer ID válido (não mock), usar
@@ -250,12 +253,15 @@ func (s *StripeService) CreateCheckoutSession(ctx context.Context, customerID, s
 		params.Customer = stripe.String(customerID)
 	}
 
-	session, err := session.New(params)
+	sess, err := session.New(params)
 	if err != nil {
 		return "", "", fmt.Errorf("erro ao criar checkout session: %w", err)
 	}
 
-	return session.URL, session.ID, nil
+	log.Printf("📦 [STRIPE] Checkout session criada: session=%s account=%s customer=%s", 
+		sess.ID, accountID, customerID)
+
+	return sess.URL, sess.ID, nil
 }
 
 // ========================================

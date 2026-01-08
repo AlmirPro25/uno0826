@@ -531,11 +531,12 @@ func (s *BillingService) CancelSubscriptionByStripeID(stripeSubID, reason string
 		}).Error
 }
 
-// GetOrCreateAccountByStripeCustomer busca ou cria account por Stripe customer ID
+// GetOrCreateAccountByStripeCustomer busca account por Stripe customer ID
+// NÃO cria nova account - apenas busca
 func (s *BillingService) GetOrCreateAccountByStripeCustomer(stripeCustomerID, email string) (*BillingAccount, error) {
 	var account BillingAccount
 	
-	// Tentar buscar por stripe_customer_id
+	// Buscar por stripe_customer_id
 	if stripeCustomerID != "" {
 		if err := s.db.Where("stripe_customer_id = ?", stripeCustomerID).First(&account).Error; err == nil {
 			log.Printf("📍 [ACCOUNT] Encontrada por stripe_customer_id: %s → account=%s user=%s", 
@@ -544,41 +545,8 @@ func (s *BillingService) GetOrCreateAccountByStripeCustomer(stripeCustomerID, em
 		}
 	}
 	
-	// Se não encontrou por stripe_customer_id, NÃO criar nova account
-	// O checkout deveria ter criado a account antes
-	// Isso evita criar accounts órfãs
-	log.Printf("⚠️ [ACCOUNT] Não encontrada para stripe_customer_id=%s email=%s", stripeCustomerID, email)
+	log.Printf("⚠️ [ACCOUNT] Não encontrada para stripe_customer_id=%s", stripeCustomerID)
 	return nil, ErrAccountNotFound
-}
-
-// FindAndLinkStripeCustomer encontra uma account recente sem stripe_customer_id e linka
-// Usado como fallback quando o webhook chega antes do customer_id ser salvo
-func (s *BillingService) FindAndLinkStripeCustomer(stripeCustomerID, email string) (*BillingAccount, error) {
-	var account BillingAccount
-	
-	// Buscar account mais recente sem stripe_customer_id (criada nos últimos 10 minutos)
-	cutoff := time.Now().Add(-10 * time.Minute)
-	err := s.db.Where("stripe_customer_id = '' OR stripe_customer_id IS NULL").
-		Where("created_at > ?", cutoff).
-		Order("created_at DESC").
-		First(&account).Error
-	
-	if err != nil {
-		return nil, fmt.Errorf("nenhuma account recente encontrada para linkar: %w", err)
-	}
-	
-	// Atualizar com o stripe_customer_id
-	account.StripeCustomerID = stripeCustomerID
-	account.UpdatedAt = time.Now()
-	
-	if err := s.db.Save(&account).Error; err != nil {
-		return nil, err
-	}
-	
-	log.Printf("🔗 [ACCOUNT] Linkada stripe_customer_id=%s → account=%s user=%s", 
-		stripeCustomerID, account.AccountID, account.UserID)
-	
-	return &account, nil
 }
 
 // CreateSubscriptionFromStripe cria subscription local a partir de dados do Stripe
