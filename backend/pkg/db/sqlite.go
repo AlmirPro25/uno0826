@@ -298,6 +298,7 @@ func MigrateSchema(db *gorm.DB) error {
 		// "Capability primeiro. Preço depois. Agora: preço."
 		// ========================================
 		&capabilities.UserAddOn{},
+		&capabilities.AddOnGrantLog{},
 	)
 	if err != nil {
 		return fmt.Errorf("falha ao executar migrações: %w", err)

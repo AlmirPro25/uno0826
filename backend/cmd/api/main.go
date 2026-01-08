@@ -619,6 +619,7 @@ func main() {
 		// "Capability primeiro. Preço depois. Agora: preço."
 		// ========================================
 		capabilities.RegisterAddOnRoutes(v1, gormDB, middleware.AuthMiddleware())
+		capabilities.RegisterAddOnAdminRoutes(v1, gormDB, middleware.AuthMiddleware(), middleware.AdminOnly())
 
 		// ========================================
 		// LOGIN EVENTS - Fase 26.8

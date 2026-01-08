@@ -171,3 +171,24 @@ func ListAddOnsForPlan(planID string) []AddOn {
 	}
 	return addons
 }
+
+
+// ========================================
+// ADD-ON GRANT LOG
+// "Toda concessão é um fato registrado"
+// ========================================
+
+// AddOnGrantLog registra concessões de add-ons para auditoria
+type AddOnGrantLog struct {
+	ID            uuid.UUID `gorm:"type:text;primaryKey" json:"id"`
+	UserID        uuid.UUID `gorm:"type:text;not null;index:idx_grant_user" json:"user_id"`
+	AddOnID       string    `gorm:"type:text;not null;index:idx_grant_addon" json:"addon_id"`
+	Trigger       string    `gorm:"type:text;not null" json:"trigger"` // "purchase", "webhook", "promotion", "trial", "admin"
+	StripeEventID string    `gorm:"type:text" json:"stripe_event_id"`
+	Metadata      string    `gorm:"type:text" json:"metadata"` // JSON com contexto adicional
+	CreatedAt     time.Time `gorm:"not null;index:idx_grant_created" json:"created_at"`
+}
+
+func (AddOnGrantLog) TableName() string {
+	return "addon_grant_logs"
+}

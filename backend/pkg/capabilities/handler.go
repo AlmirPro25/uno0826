@@ -1,6 +1,7 @@
 package capabilities
 
 import (
+	"encoding/json"
 	"net/http"
 	"time"
 
@@ -109,7 +110,7 @@ func (h *AddOnHandler) GetMyAddOns(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"addons": enriched})
 }
 
-// PurchaseAddOn inicia compra de um add-on
+// PurchaseAddOn inicia compra de um add-on via Stripe Checkout
 // POST /addons/:id/purchase
 func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 	userIDStr := c.GetString("userID")
@@ -157,8 +158,35 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 		return
 	}
 	
-	// Por agora, criar add-on diretamente (sem Stripe)
-	// TODO: Integrar com Stripe checkout para add-ons
+	// Buscar billing account para o Stripe customer ID
+	var billingAccount struct {
+		AccountID        uuid.UUID `gorm:"column:account_id"`
+		StripeCustomerID string    `gorm:"column:stripe_customer_id"`
+	}
+	if err := h.db.Table("billing_accounts").
+		Select("account_id, stripe_customer_id").
+		Where("user_id = ?", userID).
+		First(&billingAccount).Error; err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Você precisa ter uma conta de billing primeiro",
+			"hint":  "Assine o plano Pro antes de comprar add-ons",
+		})
+		return
+	}
+	
+	// Se add-on tem Stripe Price ID, criar checkout session
+	if addon.StripePriceIDMonthly != "" {
+		// TODO: Criar checkout session real quando tivermos os Price IDs no Stripe
+		c.JSON(http.StatusOK, gin.H{
+			"message":   "Checkout session seria criada aqui",
+			"addon":     addon,
+			"price_id":  addon.StripePriceIDMonthly,
+			"note":      "Configure STRIPE_ADDON_PRICE_IDS para ativar",
+		})
+		return
+	}
+	
+	// Sem Stripe configurado: ativar diretamente (modo desenvolvimento/teste)
 	now := time.Now()
 	userAddOn := UserAddOn{
 		ID:        uuid.New(),
@@ -176,10 +204,20 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 		return
 	}
 	
+	// Registrar grant para auditoria
+	h.logAddOnGrantWithMetadata(userID, addOnID, "direct_purchase", "", nil)
+	
 	c.JSON(http.StatusCreated, gin.H{
 		"message": "Add-on ativado com sucesso",
 		"addon":   userAddOn,
-		"note":    "Integração com pagamento será adicionada em breve",
+		"grant": CapabilityGrant{
+			Capability: addon.Capability,
+			Source:     "addon",
+			SourceID:   addon.ID,
+			SourceName: addon.Name,
+			ExpiresAt:  &userAddOn.ExpiresAt,
+		},
+		"mode": "development",
 	})
 }
 
@@ -321,4 +359,166 @@ func RegisterAddOnRoutes(router *gin.RouterGroup, db *gorm.DB, authMiddleware gi
 	
 	// Explicar origem de uma capability (debug/suporte)
 	router.GET("/capabilities/:capability/explain", authMiddleware, handler.ExplainCapability)
+}
+
+// RegisterAddOnAdminRoutes registra rotas admin de add-ons
+func RegisterAddOnAdminRoutes(router *gin.RouterGroup, db *gorm.DB, authMiddleware, adminMiddleware gin.HandlerFunc) {
+	handler := NewAddOnHandler(db)
+
+	admin := router.Group("/admin/addons")
+	admin.Use(authMiddleware, adminMiddleware)
+	{
+		// Conceder trial de add-on
+		admin.POST("/grant-trial", handler.GrantTrial)
+		
+		// Listar grants recentes
+		admin.GET("/grants", handler.ListRecentGrants)
+		
+		// Revogar add-on de usuário
+		admin.DELETE("/users/:userId/addons/:addonId", handler.AdminRevokeAddOn)
+	}
+}
+
+// GrantTrial concede um trial de add-on para um usuário
+// POST /admin/addons/grant-trial
+func (h *AddOnHandler) GrantTrial(c *gin.Context) {
+	var req struct {
+		UserID   string `json:"user_id" binding:"required"`
+		AddOnID  string `json:"addon_id" binding:"required"`
+		Days     int    `json:"days" binding:"required,min=1,max=90"`
+		Reason   string `json:"reason"`
+	}
+	
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	userID, err := uuid.Parse(req.UserID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id inválido"})
+		return
+	}
+	
+	addon := GetAddOn(req.AddOnID)
+	if addon == nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Add-on não encontrado"})
+		return
+	}
+	
+	// Verificar se já tem ativo
+	var existing UserAddOn
+	if err := h.db.Where("user_id = ? AND addon_id = ? AND status = ?", userID, req.AddOnID, "active").First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{"error": "Usuário já possui este add-on ativo"})
+		return
+	}
+	
+	now := time.Now()
+	expiresAt := now.AddDate(0, 0, req.Days)
+	
+	userAddOn := UserAddOn{
+		ID:        uuid.New(),
+		UserID:    userID,
+		AddOnID:   req.AddOnID,
+		Status:    "active",
+		StartedAt: now,
+		ExpiresAt: expiresAt,
+		CreatedAt: now,
+		UpdatedAt: now,
+	}
+	
+	if err := h.db.Create(&userAddOn).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar trial"})
+		return
+	}
+	
+	// Registrar grant
+	adminID := c.GetString("userID")
+	h.logAddOnGrantWithMetadata(userID, req.AddOnID, "trial", "", map[string]interface{}{
+		"days":     req.Days,
+		"reason":   req.Reason,
+		"admin_id": adminID,
+	})
+	
+	c.JSON(http.StatusCreated, gin.H{
+		"message":    "Trial concedido com sucesso",
+		"addon":      userAddOn,
+		"expires_at": expiresAt,
+		"grant": CapabilityGrant{
+			Capability: addon.Capability,
+			Source:     "trial",
+			SourceID:   addon.ID,
+			SourceName: addon.Name + " (Trial)",
+			ExpiresAt:  &expiresAt,
+		},
+	})
+}
+
+// ListRecentGrants lista grants recentes
+// GET /admin/addons/grants
+func (h *AddOnHandler) ListRecentGrants(c *gin.Context) {
+	var logs []AddOnGrantLog
+	h.db.Order("created_at DESC").Limit(100).Find(&logs)
+	c.JSON(http.StatusOK, gin.H{"grants": logs})
+}
+
+// AdminRevokeAddOn revoga add-on de um usuário (admin)
+// DELETE /admin/addons/users/:userId/addons/:addonId
+func (h *AddOnHandler) AdminRevokeAddOn(c *gin.Context) {
+	userIDStr := c.Param("userId")
+	addOnID := c.Param("addonId")
+	
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "user_id inválido"})
+		return
+	}
+	
+	var userAddOn UserAddOn
+	if err := h.db.Where("user_id = ? AND addon_id = ? AND status = ?", userID, addOnID, "active").First(&userAddOn).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Add-on não encontrado ou já cancelado"})
+		return
+	}
+	
+	now := time.Now()
+	userAddOn.Status = "revoked"
+	userAddOn.CanceledAt = now
+	userAddOn.UpdatedAt = now
+	
+	if err := h.db.Save(&userAddOn).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao revogar add-on"})
+		return
+	}
+	
+	// Registrar revogação
+	adminID := c.GetString("userID")
+	h.logAddOnGrantWithMetadata(userID, addOnID, "admin_revoke", "", map[string]interface{}{
+		"admin_id": adminID,
+	})
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Add-on revogado",
+		"addon":   userAddOn,
+	})
+}
+
+// logAddOnGrantWithMetadata registra grant com metadata
+func (h *AddOnHandler) logAddOnGrantWithMetadata(userID uuid.UUID, addOnID, trigger, stripeEventID string, metadata map[string]interface{}) {
+	metadataJSON := ""
+	if metadata != nil {
+		if data, err := json.Marshal(metadata); err == nil {
+			metadataJSON = string(data)
+		}
+	}
+	
+	log := AddOnGrantLog{
+		ID:            uuid.New(),
+		UserID:        userID,
+		AddOnID:       addOnID,
+		Trigger:       trigger,
+		StripeEventID: stripeEventID,
+		Metadata:      metadataJSON,
+		CreatedAt:     time.Now(),
+	}
+	h.db.Create(&log)
 }
