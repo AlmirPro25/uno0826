@@ -20,9 +20,9 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: AES_SECRET_KEY
-        value: "12345678901234567890123456789012"
+        value: "ProstQS2024SecretKey32Bytes!!"
       - key: SECRETS_MASTER_KEY
-        value: "abcdefghijklmnopqrstuvwxyz123456"
+        value: "ProstQSMasterKey32BytesSecure!"
     disk:
       name: prostqs-data
       mountPath: /data
