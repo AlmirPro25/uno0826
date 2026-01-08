@@ -8,6 +8,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"github.com/stripe/stripe-go/v76"
+	"github.com/stripe/stripe-go/v76/checkout/session"
 	"gorm.io/gorm"
 )
 
@@ -170,19 +172,45 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 		First(&billingAccount).Error; err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "Você precisa ter uma conta de billing primeiro",
-			"hint":  "Assine o plano Pro antes de comprar add-ons",
+			"hint":  "Crie uma conta de billing primeiro via POST /api/v1/billing/account",
 		})
 		return
 	}
 	
-	// PRODUÇÃO: Se add-on tem Stripe Price ID, criar checkout session
+	// PRODUÇÃO: Se add-on tem Stripe Price ID, criar checkout session real
 	if addon.StripePriceIDMonthly != "" {
+		// URLs de sucesso e cancelamento
+		frontendURL := os.Getenv("FRONTEND_URL")
+		if frontendURL == "" {
+			frontendURL = "https://uno0826.vercel.app"
+		}
+		successURL := frontendURL + "/admin/success.html"
+		cancelURL := frontendURL + "/admin/cancel.html"
+		
+		// Criar checkout session via Stripe
+		checkoutURL, sessionID, err := createAddOnCheckoutSession(
+			billingAccount.StripeCustomerID,
+			userIDStr,
+			addOnID,
+			addon.StripePriceIDMonthly,
+			successURL,
+			cancelURL,
+		)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"error":   "Erro ao criar checkout session",
+				"details": err.Error(),
+			})
+			return
+		}
+		
 		c.JSON(http.StatusOK, gin.H{
-			"message":      "Checkout session disponível",
+			"message":      "Checkout session criada",
+			"checkout_url": checkoutURL,
+			"session_id":   sessionID,
 			"addon":        addon,
 			"price_id":     addon.StripePriceIDMonthly,
-			"checkout_url": "Configure no Stripe Dashboard e atualize o catálogo",
-			"mode":         "production_ready",
+			"mode":         "production",
 		})
 		return
 	}
@@ -236,6 +264,60 @@ func (h *AddOnHandler) PurchaseAddOn(c *gin.Context) {
 		"mode":    "development",
 		"warning": "Em produção, isso requer pagamento via Stripe",
 	})
+}
+
+// createAddOnCheckoutSession cria checkout session para add-on via Stripe
+func createAddOnCheckoutSession(customerID, userID, addOnID, priceID, successURL, cancelURL string) (string, string, error) {
+	stripeKey := os.Getenv("STRIPE_SECRET_KEY")
+	if stripeKey == "" {
+		// Mock mode
+		return "https://checkout.stripe.com/mock_addon_session", "cs_addon_mock_" + userID, nil
+	}
+	
+	// Importar stripe inline para evitar dependência circular
+	// O stripe já está configurado no billing service
+	stripe.Key = stripeKey
+	
+	params := &stripe.CheckoutSessionParams{
+		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		LineItems: []*stripe.CheckoutSessionLineItemParams{
+			{
+				Price:    stripe.String(priceID),
+				Quantity: stripe.Int64(1),
+			},
+		},
+		SuccessURL: stripe.String(successURL + "?session_id={CHECKOUT_SESSION_ID}"),
+		CancelURL:  stripe.String(cancelURL),
+		// Metadata para identificar como add-on no webhook
+		SubscriptionData: &stripe.CheckoutSessionSubscriptionDataParams{
+			Metadata: map[string]string{
+				"grant_type": "addon",
+				"user_id":    userID,
+				"addon_id":   addOnID,
+			},
+		},
+	}
+
+	// Adicionar metadata na session também
+	params.Metadata = map[string]string{
+		"grant_type": "addon",
+		"user_id":    userID,
+		"addon_id":   addOnID,
+	}
+
+	// Se tiver customer ID válido (não mock), usar
+	if customerID != "" && len(customerID) > 4 && customerID[:4] != "cus_" {
+		// customerID inválido, ignorar
+	} else if customerID != "" && len(customerID) > 9 && customerID[:9] != "cus_mock_" {
+		params.Customer = stripe.String(customerID)
+	}
+
+	sess, err := session.New(params)
+	if err != nil {
+		return "", "", err
+	}
+
+	return sess.URL, sess.ID, nil
 }
 
 // CancelAddOn cancela um add-on
