@@ -1,0 +1,14 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/frontend/index.html" },
+    { "source": "/admin", "destination": "/frontend/admin/index.html" },
+    { "source": "/admin/", "destination": "/frontend/admin/index.html" },
+    { "source": "/admin/(.*)", "destination": "/frontend/admin/index.html" },
+    { "source": "/dev-portal", "destination": "/frontend/dev-portal/index.html" },
+    { "source": "/dev-portal/", "destination": "/frontend/dev-portal/index.html" },
+    { "source": "/dev-portal/(.*)", "destination": "/frontend/dev-portal/index.html" },
+    { "source": "/user-app", "destination": "/frontend/user-app/index.html" },
+    { "source": "/user-app/", "destination": "/frontend/user-app/index.html" },
+    { "source": "/user-app/(.*)", "destination": "/frontend/user-app/index.html" }
+  ]
+}
