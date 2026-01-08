@@ -530,6 +530,75 @@ func (s *BillingService) CancelSubscriptionByStripeID(stripeSubID, reason string
 		}).Error
 }
 
+// GetOrCreateAccountByStripeCustomer busca ou cria account por Stripe customer ID
+func (s *BillingService) GetOrCreateAccountByStripeCustomer(stripeCustomerID, email string) (*BillingAccount, error) {
+	var account BillingAccount
+	
+	// Tentar buscar por stripe_customer_id
+	if stripeCustomerID != "" {
+		if err := s.db.Where("stripe_customer_id = ?", stripeCustomerID).First(&account).Error; err == nil {
+			return &account, nil
+		}
+	}
+	
+	// Se não encontrou e tem email, criar nova account
+	// Nota: Em produção, isso deveria vincular a um user existente
+	now := time.Now()
+	account = BillingAccount{
+		AccountID:        uuid.New(),
+		UserID:           uuid.New(), // Placeholder - deveria buscar user por email
+		StripeCustomerID: stripeCustomerID,
+		Balance:          0,
+		Currency:         string(CurrencyBRL),
+		CreatedAt:        now,
+		UpdatedAt:        now,
+	}
+	
+	if err := s.db.Create(&account).Error; err != nil {
+		return nil, err
+	}
+	
+	return &account, nil
+}
+
+// CreateSubscriptionFromStripe cria subscription local a partir de dados do Stripe
+func (s *BillingService) CreateSubscriptionFromStripe(accountID uuid.UUID, stripeSubID, planID, status string) (*Subscription, error) {
+	// Verificar se já existe
+	var existing Subscription
+	if err := s.db.Where("stripe_subscription_id = ?", stripeSubID).First(&existing).Error; err == nil {
+		// Já existe, atualizar status
+		existing.Status = status
+		existing.UpdatedAt = time.Now()
+		s.db.Save(&existing)
+		return &existing, nil
+	}
+	
+	now := time.Now()
+	sub := &Subscription{
+		SubscriptionID:       uuid.New(),
+		AccountID:            accountID,
+		PlanID:               planID,
+		Status:               string(SubStatusActive),
+		Amount:               2990, // R$ 29,90 - hardcoded por agora
+		Currency:             "brl",
+		Interval:             "month",
+		StripeSubscriptionID: stripeSubID,
+		StartedAt:            now,
+		CurrentPeriodEnd:     now.AddDate(0, 1, 0), // +1 mês
+		CreatedAt:            now,
+		UpdatedAt:            now,
+	}
+	
+	if err := s.db.Create(sub).Error; err != nil {
+		return nil, err
+	}
+	
+	// Adicionar entrada no ledger
+	s.addLedgerEntry(accountID, "credit", 2990, "brl", "Subscription PROST-QS Pro", stripeSubID)
+	
+	return sub, nil
+}
+
 // ========================================
 // PAYOUT UPDATES (para webhooks)
 // ========================================

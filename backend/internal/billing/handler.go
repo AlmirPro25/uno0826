@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -526,6 +527,9 @@ func (h *BillingHandler) HandleStripeWebhook(c *gin.Context) {
 func (h *BillingHandler) processWebhookSync(c *gin.Context, event *WebhookEvent) {
 	var processErr error
 	switch event.Type {
+	case "checkout.session.completed":
+		processErr = h.handleCheckoutSessionCompleted(event)
+
 	case "payment_intent.succeeded":
 		processErr = h.handlePaymentIntentSucceeded(event)
 
@@ -694,6 +698,43 @@ func (h *BillingHandler) handlePayoutFailed(event *WebhookEvent) error {
 	failureMsg, _ := obj["failure_message"].(string)
 
 	return h.service.FailPayoutByStripeID(stripePayoutID, failureCode, failureMsg)
+}
+
+// handleCheckoutSessionCompleted processa checkout.session.completed
+// Este é o evento mais importante - confirma que o pagamento foi feito
+func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) error {
+	obj := event.Data.Object
+	
+	// Extrair dados do checkout session
+	sessionID, _ := obj["id"].(string)
+	customerEmail, _ := obj["customer_email"].(string)
+	customerID, _ := obj["customer"].(string)
+	subscriptionID, _ := obj["subscription"].(string)
+	paymentStatus, _ := obj["payment_status"].(string)
+	
+	log.Printf("✅ [CHECKOUT] Session completed: %s, customer: %s, subscription: %s, status: %s", 
+		sessionID, customerEmail, subscriptionID, paymentStatus)
+	
+	// Se tem subscription, criar/atualizar no sistema
+	if subscriptionID != "" {
+		// Buscar account pelo customer_id ou criar
+		account, err := h.service.GetOrCreateAccountByStripeCustomer(customerID, customerEmail)
+		if err != nil {
+			log.Printf("❌ [CHECKOUT] Erro ao buscar/criar account: %v", err)
+			return err
+		}
+		
+		// Criar subscription local
+		_, err = h.service.CreateSubscriptionFromStripe(account.AccountID, subscriptionID, "pro", paymentStatus)
+		if err != nil {
+			log.Printf("❌ [CHECKOUT] Erro ao criar subscription: %v", err)
+			return err
+		}
+		
+		log.Printf("✅ [CHECKOUT] Subscription criada para account %s", account.AccountID)
+	}
+	
+	return nil
 }
 
 // ========================================
