@@ -480,31 +480,27 @@ func (h *ApplicationHandler) GetAppEvents(c *gin.Context) {
 // ========================================
 
 // RegisterApplicationRoutes registra as rotas de aplicações
-func RegisterApplicationRoutes(router *gin.RouterGroup, service *ApplicationService, authMiddleware, adminMiddleware gin.HandlerFunc) {
+func RegisterApplicationRoutes(router *gin.RouterGroup, service *ApplicationService, authMiddleware, adminMiddleware, subscriptionGuard gin.HandlerFunc) {
 	handler := NewApplicationHandler(service)
 
 	apps := router.Group("/apps")
 	apps.Use(authMiddleware)
 	{
-		// CRUD de apps (owner)
-		apps.POST("", handler.CreateApplication)
+		// Leitura - livre para todos autenticados
 		apps.GET("/mine", handler.ListMyApplications)
 		apps.GET("/:id", handler.GetApplication)
-		apps.PUT("/:id", handler.UpdateApplication)
 		apps.GET("/:id/metrics", handler.GetAppMetrics)
-
-		// Credentials
-		apps.POST("/:id/credentials", handler.CreateCredential)
 		apps.GET("/:id/credentials", handler.ListCredentials)
-		apps.DELETE("/:id/credentials/:credId", handler.RevokeCredential)
-
-		// App Users
 		apps.GET("/:id/users", handler.ListAppUsers)
-
-		// Sessions
 		apps.GET("/:id/users/:userId/sessions", handler.ListActiveSessions)
-		apps.DELETE("/:id/users/:userId/sessions", handler.RevokeAllSessions)
-		apps.DELETE("/sessions/:sessionId", handler.RevokeSession)
+
+		// Criação/Modificação - requer assinatura ativa
+		apps.POST("", subscriptionGuard, handler.CreateApplication)
+		apps.PUT("/:id", subscriptionGuard, handler.UpdateApplication)
+		apps.POST("/:id/credentials", subscriptionGuard, handler.CreateCredential)
+		apps.DELETE("/:id/credentials/:credId", subscriptionGuard, handler.RevokeCredential)
+		apps.DELETE("/:id/users/:userId/sessions", subscriptionGuard, handler.RevokeAllSessions)
+		apps.DELETE("/sessions/:sessionId", subscriptionGuard, handler.RevokeSession)
 
 		// Admin only
 		apps.GET("", adminMiddleware, handler.ListAllApplications)

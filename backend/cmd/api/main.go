@@ -517,7 +517,7 @@ func main() {
 		// APPLICATION IDENTITY - Fase 15
 		// "O PROST-QS não serve usuários. Ele serve aplicativos."
 		// ========================================
-		application.RegisterApplicationRoutes(v1, applicationService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		application.RegisterApplicationRoutes(v1, applicationService, middleware.AuthMiddleware(), middleware.AdminOnly(), middleware.SubscriptionGuard(gormDB))
 
 		// ========================================
 		// PAYMENT PROVIDER PER APP - Fase 26.8
