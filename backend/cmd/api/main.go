@@ -105,9 +105,9 @@ func main() {
 		c.JSON(200, gin.H{"status": "ok", "service": "prost-qs"})
 	})
 
-	// Configuração CORS - Permite todas as portas dos frontends
+	// Configuração CORS - Permite todas as portas dos frontends + Vercel
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://127.0.0.1:3003"},
+		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://127.0.0.1:3003", "https://uno0826-pr57.vercel.app", "https://uno0826.vercel.app", "https://*.vercel.app"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "X-Requested-With", "X-HTTP-Method-Override", "Cache-Control", "X-Verification-ID"},
 		ExposeHeaders:    []string{"Content-Length"},

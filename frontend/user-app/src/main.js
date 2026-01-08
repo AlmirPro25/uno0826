@@ -3,7 +3,7 @@
  * Interface do usuário final - Fase 10
  */
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'https://uno0826.onrender.com/api/v1';
 const STORAGE = {
     TOKEN: 'pq_token',
     USER: 'pq_user',

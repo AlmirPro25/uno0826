@@ -20,7 +20,7 @@
  * - Jobs (background tasks)
  */
 
-const API_BASE = 'http://localhost:8080/api/v1';
+const API_BASE = 'https://uno0826.onrender.com/api/v1';
 const STORAGE = {
     TOKEN: 'pq_sovereign_token',
     USER: 'pq_sovereign_user'
