@@ -32,7 +32,8 @@ const ContextSubscriptionKey = "subscription"
 // Retorna 402 Payment Required se não tiver
 func SubscriptionGuard(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userIDStr := c.GetString(ContextUserIDKey)
+		// Usa a mesma key do AuthMiddleware
+		userIDStr := c.GetString("userID")
 		if userIDStr == "" {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Não autenticado"})
 			c.Abort()
@@ -102,7 +103,7 @@ func SubscriptionGuard(db *gorm.DB) gin.HandlerFunc {
 // Útil para endpoints que funcionam diferente com/sem assinatura
 func OptionalSubscription(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		userIDStr := c.GetString(ContextUserIDKey)
+		userIDStr := c.GetString("userID")
 		if userIDStr == "" {
 			c.Next()
 			return
