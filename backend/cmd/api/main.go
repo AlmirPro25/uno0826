@@ -608,6 +608,12 @@ func main() {
 		identity.RegisterIdentityRoutes(v1, identityService, middleware.AuthMiddleware())
 
 		// ========================================
+		// CAPABILITIES - Entitlements API
+		// "O que eu posso fazer? Quanto posso criar?"
+		// ========================================
+		identity.RegisterCapabilitiesRoutes(v1, gormDB, middleware.AuthMiddleware())
+
+		// ========================================
 		// LOGIN EVENTS - Fase 26.8
 		// "Auditoria de logins: quem, quando, de onde"
 		// ========================================
