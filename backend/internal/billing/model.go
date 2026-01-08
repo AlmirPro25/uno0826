@@ -144,3 +144,27 @@ type ReconciliationLog struct {
 func (ReconciliationLog) TableName() string {
 	return "reconciliation_logs"
 }
+
+
+// ========================================
+// SUBSCRIPTION STATE TRANSITIONS
+// "Toda mudança de estado é um fato registrado"
+// ========================================
+
+// SubscriptionStateTransition registra transições de estado da subscription
+// Imutável - append-only para auditoria completa
+type SubscriptionStateTransition struct {
+	ID             uuid.UUID `gorm:"type:text;primaryKey" json:"id"`
+	SubscriptionID uuid.UUID `gorm:"type:text;not null;index:idx_transition_sub" json:"subscription_id"`
+	AccountID      uuid.UUID `gorm:"type:text;not null;index:idx_transition_account" json:"account_id"`
+	FromState      string    `gorm:"type:text;not null" json:"from_state"`
+	ToState        string    `gorm:"type:text;not null" json:"to_state"`
+	Trigger        string    `gorm:"type:text;not null" json:"trigger"` // "webhook", "api", "system"
+	TriggerEventID string    `gorm:"type:text" json:"trigger_event_id"` // Stripe event ID se webhook
+	Metadata       string    `gorm:"type:text" json:"metadata"`         // JSON com contexto adicional
+	CreatedAt      time.Time `gorm:"not null;index:idx_transition_created" json:"created_at"`
+}
+
+func (SubscriptionStateTransition) TableName() string {
+	return "subscription_state_transitions"
+}

@@ -907,12 +907,16 @@ func RegisterBillingRoutes(router *gin.RouterGroup, service *BillingService, gov
 		billing.GET("/subscriptions/active", authMiddleware, handler.GetActiveSubscription)
 		billing.GET("/subscriptions/status", authMiddleware, handler.GetSubscriptionStatus)
 		billing.DELETE("/subscriptions/:subscriptionId", authMiddleware, handler.CancelSubscription)
+		billing.GET("/subscriptions/:subscriptionId/transitions", authMiddleware, handler.GetSubscriptionTransitions)
 
 		// Payouts
 		billing.POST("/payouts", authMiddleware, handler.RequestPayout)
 
 		// Webhook (público - Stripe precisa acessar)
 		billing.POST("/webhook", handler.HandleStripeWebhook)
+
+		// Metrics (admin - observabilidade)
+		billing.GET("/metrics/subscriptions", authMiddleware, handler.GetSubscriptionMetrics)
 
 		// Reconciliation (admin only)
 		billing.POST("/reconcile", authMiddleware, handler.RunReconciliation)
@@ -966,4 +970,60 @@ func (h *BillingHandler) GetReconciliationLogs(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, logs)
+}
+
+// ========================================
+// SUBSCRIPTION METRICS
+// "Observabilidade do ciclo de vida"
+// ========================================
+
+// GetSubscriptionMetrics retorna métricas de transições de estado
+func (h *BillingHandler) GetSubscriptionMetrics(c *gin.Context) {
+	// Últimas 24h por padrão
+	since := time.Now().Add(-24 * time.Hour)
+	if sinceParam := c.Query("since"); sinceParam != "" {
+		if parsed, err := time.Parse(time.RFC3339, sinceParam); err == nil {
+			since = parsed
+		}
+	}
+	
+	stats, err := h.service.GetTransitionStats(since)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar métricas"})
+		return
+	}
+	
+	// Contar totais
+	var totalActive, totalCanceled, totalPastDue int64
+	h.service.db.Model(&Subscription{}).Where("status = ?", "active").Count(&totalActive)
+	h.service.db.Model(&Subscription{}).Where("status = ?", "canceled").Count(&totalCanceled)
+	h.service.db.Model(&Subscription{}).Where("status = ?", "past_due").Count(&totalPastDue)
+	
+	c.JSON(http.StatusOK, gin.H{
+		"transitions": stats,
+		"totals": gin.H{
+			"active":   totalActive,
+			"canceled": totalCanceled,
+			"past_due": totalPastDue,
+		},
+		"since": since,
+	})
+}
+
+// GetSubscriptionTransitions retorna histórico de transições de uma subscription
+func (h *BillingHandler) GetSubscriptionTransitions(c *gin.Context) {
+	subIDStr := c.Param("subscriptionId")
+	subID, err := uuid.Parse(subIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+	
+	transitions, err := h.service.GetSubscriptionTransitions(subID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar transições"})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{"transitions": transitions})
 }

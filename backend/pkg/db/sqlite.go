@@ -99,6 +99,7 @@ func MigrateSchema(db *gorm.DB) error {
 		&billing.Payout{},
 		&billing.ProcessedWebhook{},
 		&billing.ReconciliationLog{},
+		&billing.SubscriptionStateTransition{},
 
 		// ========================================
 		// FEDERATION KERNEL - OAuth Models

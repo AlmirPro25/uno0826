@@ -511,6 +511,19 @@ func (s *BillingService) MarkWebhookProcessed(eventID, eventType string, success
 
 // UpdateSubscriptionStatus atualiza status de subscription por Stripe ID
 func (s *BillingService) UpdateSubscriptionStatus(stripeSubID, status string) error {
+	var sub Subscription
+	if err := s.db.Where("stripe_subscription_id = ?", stripeSubID).First(&sub).Error; err != nil {
+		return err
+	}
+	
+	oldStatus := sub.Status
+	if oldStatus == status {
+		return nil // Sem mudança
+	}
+	
+	// Registrar transição
+	s.RecordStateTransition(sub.SubscriptionID, sub.AccountID, oldStatus, status, "webhook", stripeSubID, "")
+	
 	return s.db.Model(&Subscription{}).
 		Where("stripe_subscription_id = ?", stripeSubID).
 		Updates(map[string]interface{}{
@@ -521,6 +534,16 @@ func (s *BillingService) UpdateSubscriptionStatus(stripeSubID, status string) er
 
 // CancelSubscriptionByStripeID cancela subscription por Stripe ID
 func (s *BillingService) CancelSubscriptionByStripeID(stripeSubID, reason string) error {
+	var sub Subscription
+	if err := s.db.Where("stripe_subscription_id = ?", stripeSubID).First(&sub).Error; err != nil {
+		return err
+	}
+	
+	oldStatus := sub.Status
+	
+	// Registrar transição
+	s.RecordStateTransition(sub.SubscriptionID, sub.AccountID, oldStatus, "canceled", "webhook", stripeSubID, fmt.Sprintf(`{"reason":"%s"}`, reason))
+	
 	now := time.Now()
 	return s.db.Model(&Subscription{}).
 		Where("stripe_subscription_id = ?", stripeSubID).
@@ -554,11 +577,18 @@ func (s *BillingService) CreateSubscriptionFromStripe(accountID uuid.UUID, strip
 	// Verificar se já existe
 	var existing Subscription
 	if err := s.db.Where("stripe_subscription_id = ?", stripeSubID).First(&existing).Error; err == nil {
-		// Já existe, atualizar status
-		existing.Status = status
-		existing.UpdatedAt = time.Now()
-		s.db.Save(&existing)
-		log.Printf("📝 [SUBSCRIPTION] Atualizada: account=%s stripe_sub=%s status=%s", accountID, stripeSubID, status)
+		// Já existe, atualizar status se mudou
+		if existing.Status != status {
+			oldStatus := existing.Status
+			existing.Status = status
+			existing.UpdatedAt = time.Now()
+			s.db.Save(&existing)
+			
+			// Registrar transição de estado
+			s.RecordStateTransition(existing.SubscriptionID, accountID, oldStatus, status, "webhook", stripeSubID, "")
+			
+			log.Printf("📝 [SUBSCRIPTION] Atualizada: account=%s stripe_sub=%s %s→%s", accountID, stripeSubID, oldStatus, status)
+		}
 		return &existing, nil
 	}
 	
@@ -581,6 +611,9 @@ func (s *BillingService) CreateSubscriptionFromStripe(accountID uuid.UUID, strip
 	if err := s.db.Create(sub).Error; err != nil {
 		return nil, err
 	}
+	
+	// Registrar transição de estado: none → active
+	s.RecordStateTransition(sub.SubscriptionID, accountID, "none", string(SubStatusActive), "webhook", stripeSubID, fmt.Sprintf(`{"plan":"%s","amount":2990}`, planID))
 	
 	// Adicionar entrada no ledger
 	s.addLedgerEntry(accountID, "credit", 2990, "brl", "Subscription PROST-QS Pro", stripeSubID)
@@ -743,4 +776,70 @@ func (s *BillingService) LogReconciliation(result *ReconciliationResult, err err
 	}
 
 	s.db.Create(log)
+}
+
+
+// ========================================
+// SUBSCRIPTION STATE TRANSITIONS
+// "Toda mudança de estado é um fato registrado"
+// ========================================
+
+// RecordStateTransition registra uma transição de estado da subscription
+func (s *BillingService) RecordStateTransition(subscriptionID, accountID uuid.UUID, fromState, toState, trigger, triggerEventID, metadata string) error {
+	transition := &SubscriptionStateTransition{
+		ID:             uuid.New(),
+		SubscriptionID: subscriptionID,
+		AccountID:      accountID,
+		FromState:      fromState,
+		ToState:        toState,
+		Trigger:        trigger,
+		TriggerEventID: triggerEventID,
+		Metadata:       metadata,
+		CreatedAt:      time.Now(),
+	}
+	
+	if err := s.db.Create(transition).Error; err != nil {
+		log.Printf("❌ [TRANSITION] Erro ao registrar: %v", err)
+		return err
+	}
+	
+	log.Printf("📊 [TRANSITION] sub=%s %s→%s trigger=%s", subscriptionID, fromState, toState, trigger)
+	return nil
+}
+
+// GetSubscriptionTransitions retorna histórico de transições de uma subscription
+func (s *BillingService) GetSubscriptionTransitions(subscriptionID uuid.UUID) ([]SubscriptionStateTransition, error) {
+	var transitions []SubscriptionStateTransition
+	err := s.db.Where("subscription_id = ?", subscriptionID).
+		Order("created_at ASC").
+		Find(&transitions).Error
+	return transitions, err
+}
+
+// GetTransitionStats retorna estatísticas de transições (para métricas)
+func (s *BillingService) GetTransitionStats(since time.Time) (map[string]int64, error) {
+	type Result struct {
+		FromState string
+		ToState   string
+		Count     int64
+	}
+	
+	var results []Result
+	err := s.db.Model(&SubscriptionStateTransition{}).
+		Select("from_state, to_state, COUNT(*) as count").
+		Where("created_at > ?", since).
+		Group("from_state, to_state").
+		Find(&results).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	stats := make(map[string]int64)
+	for _, r := range results {
+		key := r.FromState + "_to_" + r.ToState
+		stats[key] = r.Count
+	}
+	
+	return stats, nil
 }
