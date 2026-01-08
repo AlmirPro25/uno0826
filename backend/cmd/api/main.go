@@ -82,7 +82,7 @@ func main() {
 
 	sqliteDBPath := os.Getenv("SQLITE_DB_PATH")
 	if sqliteDBPath == "" {
-		sqliteDBPath = "./data/prostqs.db" // Caminho padrão para o DB SQLite
+		sqliteDBPath = "/data/prostqs.db" // Caminho padrão para o DB SQLite (absoluto para produção)
 	}
 
 	// Inicializar banco de dados SQLite
