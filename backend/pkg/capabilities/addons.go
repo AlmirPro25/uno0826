@@ -1,6 +1,9 @@
 package capabilities
 
 import (
+	"fmt"
+	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -72,67 +75,72 @@ func (UserAddOn) TableName() string {
 // Catálogo de add-ons disponíveis
 var AddOnCatalog = map[string]AddOn{
 	"export_data": {
-		ID:           "export_data",
-		Name:         "Exportação de Dados",
-		Description:  "Exporte dados em CSV, JSON e Excel",
-		Type:         AddOnTypeCapability,
-		Capability:   CanExportData,
-		PriceMonthly: 990,  // R$ 9,90
-		PriceYearly:  9900, // R$ 99,00 (2 meses grátis)
-		Currency:     "brl",
-		Active:       true,
-		RequiresPlan: []string{"free", "pro"}, // Enterprise já tem
+		ID:                   "export_data",
+		Name:                 "Exportação de Dados",
+		Description:          "Exporte dados em CSV, JSON e Excel",
+		Type:                 AddOnTypeCapability,
+		Capability:           CanExportData,
+		PriceMonthly:         990,  // R$ 9,90
+		PriceYearly:          9900, // R$ 99,00 (2 meses grátis)
+		Currency:             "brl",
+		StripePriceIDMonthly: "price_1SnOCVInQBs0OE9D2XlffrVt",
+		Active:               true,
+		RequiresPlan:         []string{"free", "pro"}, // Enterprise já tem
 	},
 	"audit_logs": {
-		ID:           "audit_logs",
-		Name:         "Logs de Auditoria",
-		Description:  "Acesso completo aos logs de auditoria",
-		Type:         AddOnTypeCapability,
-		Capability:   CanViewAuditLogs,
-		PriceMonthly: 1990, // R$ 19,90
-		PriceYearly:  19900,
-		Currency:     "brl",
-		Active:       true,
-		RequiresPlan: []string{"pro"},
+		ID:                   "audit_logs",
+		Name:                 "Logs de Auditoria",
+		Description:          "Acesso completo aos logs de auditoria",
+		Type:                 AddOnTypeCapability,
+		Capability:           CanViewAuditLogs,
+		PriceMonthly:         1990, // R$ 19,90
+		PriceYearly:          19900,
+		Currency:             "brl",
+		StripePriceIDMonthly: "price_1SnODjInQBs0OE9DhdSXDRjb",
+		Active:               true,
+		RequiresPlan:         []string{"pro"},
 	},
 	"extra_apps_5": {
-		ID:           "extra_apps_5",
-		Name:         "+5 Apps",
-		Description:  "Adiciona 5 apps ao seu limite",
-		Type:         AddOnTypeLimit,
-		LimitType:    "apps",
-		LimitBonus:   5,
-		PriceMonthly: 1490, // R$ 14,90
-		PriceYearly:  14900,
-		Currency:     "brl",
-		Active:       true,
-		RequiresPlan: []string{"pro"},
+		ID:                   "extra_apps_5",
+		Name:                 "+5 Apps",
+		Description:          "Adiciona 5 apps ao seu limite",
+		Type:                 AddOnTypeLimit,
+		LimitType:            "apps",
+		LimitBonus:           5,
+		PriceMonthly:         1490, // R$ 14,90
+		PriceYearly:          14900,
+		Currency:             "brl",
+		StripePriceIDMonthly: "price_1SnOF1InQBs0OE9DXoz5ohH5",
+		Active:               true,
+		RequiresPlan:         []string{"pro"},
 	},
 	"extra_apps_20": {
-		ID:           "extra_apps_20",
-		Name:         "+20 Apps",
-		Description:  "Adiciona 20 apps ao seu limite",
-		Type:         AddOnTypeLimit,
-		LimitType:    "apps",
-		LimitBonus:   20,
-		PriceMonthly: 4990, // R$ 49,90
-		PriceYearly:  49900,
-		Currency:     "brl",
-		Active:       true,
-		RequiresPlan: []string{"pro"},
+		ID:                   "extra_apps_20",
+		Name:                 "+20 Apps",
+		Description:          "Adiciona 20 apps ao seu limite",
+		Type:                 AddOnTypeLimit,
+		LimitType:            "apps",
+		LimitBonus:           20,
+		PriceMonthly:         4990, // R$ 49,90
+		PriceYearly:          49900,
+		Currency:             "brl",
+		StripePriceIDMonthly: "price_1SnOG4InQBs0OE9D4OO2fKVw",
+		Active:               true,
+		RequiresPlan:         []string{"pro"},
 	},
 	"extra_users_5000": {
-		ID:           "extra_users_5000",
-		Name:         "+5.000 Usuários por App",
-		Description:  "Aumenta limite de usuários por app",
-		Type:         AddOnTypeLimit,
-		LimitType:    "app_users",
-		LimitBonus:   5000,
-		PriceMonthly: 2990, // R$ 29,90
-		PriceYearly:  29900,
-		Currency:     "brl",
-		Active:       true,
-		RequiresPlan: []string{"pro"},
+		ID:                   "extra_users_5000",
+		Name:                 "+5.000 Usuários por App",
+		Description:          "Aumenta limite de usuários por app",
+		Type:                 AddOnTypeLimit,
+		LimitType:            "app_users",
+		LimitBonus:           5000,
+		PriceMonthly:         2990, // R$ 29,90
+		PriceYearly:          29900,
+		Currency:             "brl",
+		StripePriceIDMonthly: "price_1SnOHYInQBs0OE9DctaQ8r2X",
+		Active:               true,
+		RequiresPlan:         []string{"pro"},
 	},
 }
 
@@ -142,6 +150,56 @@ func GetAddOn(id string) *AddOn {
 		return &addon
 	}
 	return nil
+}
+
+// ========================================
+// VERIFICAÇÃO DE CONFIGURAÇÃO - FAIL FAST
+// "Configuração inválida não é estado aceitável"
+// ========================================
+
+// ValidateAddOnCatalog verifica se todos os add-ons ativos têm Price IDs configurados
+// Deve ser chamado no startup da aplicação
+// Em produção (ADDON_DEV_MODE != true): panic se faltar configuração
+// Em dev: apenas warning
+func ValidateAddOnCatalog() error {
+	devMode := os.Getenv("ADDON_DEV_MODE") == "true"
+	var missing []string
+
+	for id, addon := range AddOnCatalog {
+		if !addon.Active {
+			continue
+		}
+
+		if addon.StripePriceIDMonthly == "" {
+			missing = append(missing, fmt.Sprintf("%s (mensal)", id))
+		}
+	}
+
+	if len(missing) == 0 {
+		log.Println("✅ [CATALOG] Todos os add-ons ativos têm Price IDs configurados")
+		return nil
+	}
+
+	msg := fmt.Sprintf("❌ [CATALOG] Add-ons sem Stripe Price ID: %v", missing)
+
+	if devMode {
+		log.Printf("⚠️ %s (ignorado: ADDON_DEV_MODE=true)", msg)
+		return nil
+	}
+
+	// Produção: fail fast
+	log.Printf("🚨 FATAL: %s", msg)
+	log.Println("🚨 Configure os Price IDs no Stripe Dashboard e atualize o catálogo")
+	log.Println("🚨 Ou defina ADDON_DEV_MODE=true para ambiente de desenvolvimento")
+	
+	return fmt.Errorf("configuração inválida: add-ons sem Price ID em produção")
+}
+
+// MustValidateAddOnCatalog valida e faz panic se falhar (para uso no init)
+func MustValidateAddOnCatalog() {
+	if err := ValidateAddOnCatalog(); err != nil {
+		panic(err)
+	}
 }
 
 // ListActiveAddOns retorna todos os add-ons ativos

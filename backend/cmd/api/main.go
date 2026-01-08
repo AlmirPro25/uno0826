@@ -618,6 +618,13 @@ func main() {
 		// ADD-ONS - Capabilities como SKUs
 		// "Capability primeiro. Preço depois. Agora: preço."
 		// ========================================
+		
+		// FAIL FAST: Validar catálogo de add-ons antes de aceitar tráfego
+		// Em produção, add-on sem Price ID = sistema não sobe
+		if err := capabilities.ValidateAddOnCatalog(); err != nil {
+			log.Fatalf("🚨 FATAL: %v", err)
+		}
+		
 		capabilities.RegisterAddOnRoutes(v1, gormDB, middleware.AuthMiddleware())
 		capabilities.RegisterAddOnAdminRoutes(v1, gormDB, middleware.AuthMiddleware(), middleware.AdminOnly())
 
