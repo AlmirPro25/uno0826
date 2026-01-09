@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, MoreHorizontal, Loader2, X, Globe, Lock, ShieldAlert } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Loader2, X, Globe, Lock, ShieldAlert, Cpu, Rocket } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface App {
     id: string;
@@ -23,7 +24,6 @@ export default function AppsPage() {
     const [error, setError] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Create App Form State
     const [newName, setNewName] = useState("");
     const [newSlug, setNewSlug] = useState("");
     const [newDesc, setNewDesc] = useState("");
@@ -34,7 +34,7 @@ export default function AppsPage() {
             const res = await api.get("/apps/mine");
             setApps(res.data.apps || []);
         } catch (err) {
-            setError("Failed to load applications.");
+            setError("Falha ao carregar aplicações do Kernel.");
         } finally {
             setLoading(false);
         }
@@ -53,17 +53,17 @@ export default function AppsPage() {
                 slug: newSlug || newName.toLowerCase().replace(/ /g, "-"),
                 description: newDesc
             });
-            toast.success("Application created successfully!");
+            toast.success("Aplicação orquestrada com sucesso!");
             setIsModalOpen(false);
             setNewName("");
             setNewSlug("");
             setNewDesc("");
             fetchApps();
         } catch (err: any) {
-            const msg = err.response?.data?.error || "Failed to create application.";
+            const msg = err.response?.data?.error || "Falha ao criar aplicação.";
             if (err.response?.status === 403) {
-                toast.error("Pro subscription required to create apps.", {
-                    description: "Please check your billing settings."
+                toast.error("Assinatura PRO necessária.", {
+                    description: "Verifique suas configurações de billing."
                 });
             } else {
                 toast.error(msg);
@@ -74,90 +74,101 @@ export default function AppsPage() {
     };
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-10 pb-20">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Applications</h1>
-                    <p className="text-muted-foreground mt-1">Manage all your registered applications and API keys.</p>
+                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
+                        ORQUESTRADOR DE <span className="text-indigo-500">APPS</span>
+                    </h1>
+                    <p className="text-slate-500 mt-2 font-medium">Gerencie suas instâncias e chaves de acesso ao Kernel.</p>
                 </div>
-                <Button className="shrink-0" onClick={() => setIsModalOpen(true)}>
-                    <Plus className="w-4 h-4 mr-2" /> Create New App
+                <Button className="h-14 px-8 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all" onClick={() => setIsModalOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" /> Criar Novo App
                 </Button>
             </div>
 
-            {/* Filter Bar */}
-            <div className="flex items-center gap-4 bg-card p-2 rounded-lg border border-border shrink-0">
-                <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-4">
+                <div className="flex-1 flex items-center gap-3 bg-white/[0.02] border border-white/5 px-4 py-2 rounded-2xl focus-within:border-indigo-500/50 transition-all">
+                    <Search className="w-5 h-5 text-slate-600" />
                     <Input
-                        placeholder="Search applications..."
-                        className="pl-9 bg-background border-none focus-visible:ring-0"
+                        placeholder="Buscar aplicações..."
+                        className="bg-transparent border-none focus-visible:ring-0 text-white placeholder:text-slate-600 font-medium h-10"
                     />
                 </div>
             </div>
 
-            {/* App Grid/Table */}
             {loading ? (
-                <div className="flex justify-center py-20">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                <div className="flex flex-col items-center justify-center py-32 gap-4">
+                    <Loader2 className="w-10 h-10 animate-spin text-indigo-500/20" />
+                    <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando Módulos...</p>
                 </div>
             ) : error ? (
-                <div className="text-center py-20 text-destructive">{error}</div>
+                <div className="text-center py-32 text-rose-500 font-bold uppercase tracking-widest text-[10px] border border-rose-500/10 rounded-3xl bg-rose-500/5">{error}</div>
             ) : apps.length === 0 ? (
-                <div className="text-center py-20 border border-dashed rounded-xl">
-                    <h3 className="text-lg font-medium">No applications found</h3>
-                    <p className="text-muted-foreground mb-4">Get started by creating your first app.</p>
-                    <Button onClick={() => setIsModalOpen(true)}>Create App</Button>
+                <div className="text-center py-32 border-2 border-dashed border-white/5 rounded-[40px] bg-white/[0.01]">
+                    <div className="h-20 w-20 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-8">
+                        <Cpu className="w-10 h-10 text-slate-700" />
+                    </div>
+                    <h3 className="text-2xl font-black text-white uppercase tracking-tight mb-2">Vazio Absoluto</h3>
+                    <p className="text-slate-500 font-medium mb-10 max-w-xs mx-auto">Nenhuma aplicação está sob a governança deste kernel no momento.</p>
+                    <Button className="h-12 px-8 rounded-xl bg-white text-black hover:bg-slate-200 font-black uppercase tracking-widest text-[10px]" onClick={() => setIsModalOpen(true)}>Implantar Primeiro App</Button>
                 </div>
             ) : (
-                <div className="rounded-xl border border-border bg-card overflow-hidden">
-                    <table className="w-full text-sm text-left">
-                        <thead className="bg-muted text-muted-foreground font-medium border-b border-border">
-                            <tr>
-                                <th className="px-6 py-3">Application Name</th>
-                                <th className="px-6 py-3">App ID</th>
-                                <th className="px-6 py-3">Status</th>
-                                <th className="px-6 py-3">Created At</th>
-                                <th className="px-6 py-3"></th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-border">
-                            {apps.map((app) => (
-                                <motion.tr
-                                    key={app.id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="hover:bg-muted/30 transition-colors group"
-                                >
-                                    <td className="px-6 py-4 font-medium">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-8 h-8 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
-                                                {app.name.substring(0, 2).toUpperCase()}
+                <div className="rounded-[32px] border border-white/5 bg-white/[0.01] overflow-hidden">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse">
+                            <thead>
+                                <tr className="border-b border-white/5 bg-white/[0.02]">
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Aplicação</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Kernel ID</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
+                                    <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Deploy</th>
+                                    <th className="px-8 py-6 w-20"></th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-white/5">
+                                {apps.map((app, idx) => (
+                                    <motion.tr
+                                        key={app.id}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: idx * 0.05 }}
+                                        className="hover:bg-white/[0.02] transition-colors group"
+                                    >
+                                        <td className="px-8 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400 font-black text-lg group-hover:scale-110 transition-transform">
+                                                    {app.name.substring(0, 2).toUpperCase()}
+                                                </div>
+                                                <div>
+                                                    <div className="text-white font-bold tracking-tight">{app.name}</div>
+                                                    <div className="text-xs text-slate-500 font-medium">{app.description || "Sem descrição"}</div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                {app.name}
-                                                <div className="text-xs text-muted-foreground font-normal">{app.description || "No description"}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 font-mono text-xs text-muted-foreground">{app.id}</td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${app.status === 'suspended' ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-green-500/10 text-green-500 border border-green-500/20'}`}>
-                                            {app.status || 'Active'}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-muted-foreground">
-                                        {new Date(app.created_at).toLocaleDateString()}
-                                    </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <MoreHorizontal className="w-4 h-4" />
-                                        </Button>
-                                    </td>
-                                </motion.tr>
-                            ))}
-                        </tbody>
-                    </table>
+                                        </td>
+                                        <td className="px-8 py-6 font-mono text-[10px] text-indigo-400/70">{app.id}</td>
+                                        <td className="px-8 py-6">
+                                            <span className={cn(
+                                                "inline-flex items-center px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border",
+                                                app.status === 'suspended' ? 'bg-rose-500/10 text-rose-500 border-rose-500/20' : 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                            )}>
+                                                <div className={cn("h-1.5 w-1.5 rounded-full mr-2", app.status === 'suspended' ? 'bg-rose-500 text-rose-500/50' : 'bg-emerald-500 text-emerald-500/50')} />
+                                                {app.status || 'Active'}
+                                            </span>
+                                        </td>
+                                        <td className="px-8 py-6 text-xs text-slate-500 font-medium">
+                                            {new Date(app.created_at).toLocaleDateString()}
+                                        </td>
+                                        <td className="px-8 py-6 text-right">
+                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-600 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                                                <MoreHorizontal className="w-4 h-4" />
+                                            </Button>
+                                        </td>
+                                    </motion.tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             )}
 
@@ -169,32 +180,34 @@ export default function AppsPage() {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
-                            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                            className="absolute inset-0 bg-black/80 backdrop-blur-xl"
                             onClick={() => setIsModalOpen(false)}
                         />
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                            initial={{ opacity: 0, scale: 0.95, y: 40 }}
                             animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                            className="relative w-full max-w-lg bg-zinc-900 border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
+                            exit={{ opacity: 0, scale: 0.95, y: 40 }}
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                            className="relative w-full max-w-lg bg-[#020617] border border-white/10 rounded-[40px] shadow-2xl overflow-hidden p-8 space-y-8"
                         >
-                            <div className="p-6 border-b border-white/5 flex items-center justify-between bg-zinc-800/50">
-                                <h2 className="text-xl font-bold flex items-center gap-2">
-                                    <Plus className="w-5 h-5 text-primary" /> Create New Application
-                                </h2>
-                                <button onClick={() => setIsModalOpen(false)} className="text-zinc-500 hover:text-white transition-colors">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-1">
+                                    <h2 className="text-2xl font-black text-white uppercase tracking-tighter leading-none">Novo Componente</h2>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Registrar aplicação no Kernel</p>
+                                </div>
+                                <button onClick={() => setIsModalOpen(false)} className="h-10 w-10 flex items-center justify-center rounded-full hover:bg-white/5 transition-colors text-slate-500 hover:text-white">
                                     <X className="w-5 h-5" />
                                 </button>
                             </div>
 
-                            <form onSubmit={handleCreateApp} className="p-6 space-y-4">
+                            <form onSubmit={handleCreateApp} className="space-y-6">
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-400">Application Name</label>
-                                    <div className="relative">
-                                        <Globe className="absolute left-3 top-3 w-4 h-4 text-zinc-600" />
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nome da Aplicação</label>
+                                    <div className="relative group">
+                                        <Globe className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-indigo-500 transition-colors" />
                                         <Input
-                                            placeholder="My Awesome App"
-                                            className="pl-10 bg-black/50 border-white/10 focus:border-primary"
+                                            placeholder="Ex: Vision Engine v2"
+                                            className="h-14 pl-12 bg-white/[0.02] border-white/5 focus:border-indigo-500/50 rounded-2xl text-white font-medium"
                                             value={newName}
                                             onChange={(e) => setNewName(e.target.value)}
                                             required
@@ -203,45 +216,44 @@ export default function AppsPage() {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-400">Slug (Optional)</label>
-                                    <div className="relative">
-                                        <Lock className="absolute left-3 top-3 w-4 h-4 text-zinc-600" />
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Slug do Identificador</label>
+                                    <div className="relative group">
+                                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600 group-focus-within:text-emerald-500 transition-colors" />
                                         <Input
-                                            placeholder="my-awesome-app"
-                                            className="pl-10 bg-black/50 border-white/10 focus:border-primary font-mono text-sm"
+                                            placeholder="vision-engine"
+                                            className="h-14 pl-12 bg-white/[0.02] border-white/5 focus:border-emerald-500/50 rounded-2xl text-emerald-400 font-mono text-sm"
                                             value={newSlug}
                                             onChange={(e) => setNewSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-'))}
                                         />
                                     </div>
-                                    <p className="text-[10px] text-zinc-600 uppercase tracking-wider">Unique identifier for API access</p>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-sm font-medium text-zinc-400">Description</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Descrição Técnica</label>
                                     <textarea
-                                        className="w-full h-24 bg-black/50 border border-white/10 rounded-lg p-3 text-sm focus:outline-none focus:border-primary transition-colors text-white"
-                                        placeholder="What does this app do?"
+                                        className="w-full h-32 bg-white/[0.02] border border-white/5 rounded-2xl p-4 text-sm focus:outline-none focus:border-indigo-500/50 transition-colors text-white font-medium resize-none placeholder:text-slate-700"
+                                        placeholder="Breve descrição dos privilégios e escopo deste app..."
                                         value={newDesc}
                                         onChange={(e) => setNewDesc(e.target.value)}
                                     />
                                 </div>
 
-                                <div className="pt-4 flex items-center gap-3">
+                                <div className="pt-6 grid grid-cols-2 gap-4">
                                     <Button
                                         type="button"
                                         variant="ghost"
-                                        className="flex-1"
+                                        className="h-14 rounded-2xl font-black uppercase tracking-widest text-[10px] text-slate-500 hover:text-white hover:bg-white/5 transition-all"
                                         onClick={() => setIsModalOpen(false)}
                                         disabled={creating}
                                     >
-                                        Cancel
+                                        Cancelar
                                     </Button>
                                     <Button
                                         type="submit"
-                                        className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground font-bold"
+                                        className="h-14 rounded-2xl bg-white text-black hover:bg-slate-200 font-black uppercase tracking-widest text-[10px] shadow-2xl transition-all active:scale-95"
                                         disabled={creating || !newName}
                                     >
-                                        {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create Application"}
+                                        {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : "Orquestrar App"}
                                     </Button>
                                 </div>
                             </form>

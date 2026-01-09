@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { CreditCard, Zap, FileText, Download, CheckCircle2, TrendingUp, AlertTriangle, BarChart } from "lucide-react";
+import { CreditCard, Zap, FileText, Download, CheckCircle2, TrendingUp, AlertTriangle, BarChart, ArrowUpRight, History, Wallet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
 
 type BillingAccount = {
@@ -33,7 +34,7 @@ export default function BillingPage() {
         const fetchData = async () => {
             try {
                 const [accRes, subRes] = await Promise.all([
-                    api.get("/billing/account").catch(() => ({ data: null })), // Account might not exist
+                    api.get("/billing/account").catch(() => ({ data: null })),
                     api.get("/billing/subscriptions/status")
                 ]);
                 setAccount(accRes.data);
@@ -52,129 +53,158 @@ export default function BillingPage() {
         return new Date(dateStr).toLocaleDateString();
     };
 
-    if (loading) return <div className="p-8">Loading billing info...</div>;
+    if (loading) return (
+        <div className="flex items-center justify-center h-[60vh]">
+            <Zap className="w-8 h-8 text-indigo-500 animate-pulse" />
+        </div>
+    );
 
     const isPro = subStatus?.has_subscription && subStatus?.status === 'active';
 
     return (
-        <div className="space-y-8">
-            <div className="flex items-center justify-between">
+        <div className="space-y-10 pb-20">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-zinc-400">Billing & Plans</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Manage your subscription and usage.</p>
+                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
+                        ECONOMIA DO <span className="text-indigo-500">KERNEL</span>
+                    </h1>
+                    <p className="text-slate-500 mt-2 font-medium">Gestão soberana de fluxos financeiros e subscrições.</p>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="hidden border-white/10 hover:bg-white/5">
-                        <FileText className="w-4 h-4 mr-2" /> Invoices
+                <div className="flex gap-3">
+                    <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl px-6 font-bold uppercase tracking-widest text-[10px]">
+                        <FileText className="w-4 h-4 mr-2" /> Faturas
                     </Button>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Current Plan Card */}
-                <div className="md:col-span-2 p-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-3 opacity-10">
-                        <Zap className="w-24 h-24 text-purple-500" />
+                <div className="lg:col-span-2 p-10 rounded-[32px] bg-white/[0.02] border border-white/5 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 opacity-[0.03] group-hover:opacity-[0.07] transition-opacity">
+                        <Zap className="w-48 h-48 text-indigo-500 -rotate-12" />
                     </div>
 
                     <div className="relative z-10">
-                        <div className="flex items-center gap-2 text-purple-400 mb-2">
-                            <Zap className="w-5 h-5" />
-                            <span className="text-sm font-semibold tracking-wider uppercase">Current Plan</span>
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                            Plan Status
                         </div>
-                        <h2 className="text-3xl font-bold text-white mb-1">
+                        <h2 className="text-5xl font-black text-white mb-2 tracking-tighter uppercase leading-none">
                             {subStatus?.plan_name || "Free Tier"}
                         </h2>
-                        <p className="text-zinc-400 text-sm mb-6">
+                        <p className="text-slate-400 font-medium mb-10 max-w-md">
                             {isPro
-                                ? `Renews on ${formatDate(subStatus?.current_period_end)}`
-                                : "Upgrade to PROST-QS Pro for advanced features."
+                                ? `Renovação automática programada para ${formatDate(subStatus?.current_period_end)}.`
+                                : "Acesse o poder total do Kernel. Identidade ilimitada e governança avançada."
                             }
                         </p>
 
-                        <div className="flex items-center gap-4">
-                            {isPro ? (
-                                <Button className="bg-white text-black hover:bg-zinc-200">
-                                    Manage Subscription
-                                </Button>
-                            ) : (
-                                <Button className="bg-purple-600 hover:bg-purple-700 text-white">
-                                    Upgrade to Pro
-                                </Button>
-                            )}
+                        <div className="flex items-center gap-6">
+                            <Button className={cn(
+                                "h-14 px-10 rounded-2xl font-black uppercase tracking-widest text-xs transition-all",
+                                isPro ? "bg-white text-black hover:bg-slate-200" : "bg-indigo-600 text-white hover:bg-indigo-500 shadow-xl shadow-indigo-600/20"
+                            )}>
+                                {isPro ? "Gerenciar Assinatura" : "Upgrade para Pro"}
+                            </Button>
                             {isPro && (
-                                <span className="text-sm text-green-500 flex items-center gap-1">
-                                    <CheckCircle2 className="w-4 h-4" /> Active
-                                </span>
+                                <div className="flex items-center gap-2 text-emerald-400 font-black uppercase tracking-widest text-[10px]">
+                                    <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                                    Ativo
+                                </div>
                             )}
                         </div>
                     </div>
                 </div>
 
                 {/* Balance Card */}
-                <div className="p-6 rounded-xl border border-white/10 bg-zinc-900/50 flex flex-col justify-between">
-                    <div>
-                        <div className="flex items-center justify-between mb-4">
-                            <span className="text-zinc-500 text-sm font-medium">Account Balance</span>
-                            <CreditCard className="w-5 h-5 text-zinc-600" />
+                <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/5 flex flex-col justify-between relative overflow-hidden">
+                    <div className="absolute top-[-20px] right-[-20px] w-32 h-32 bg-indigo-600/10 blur-[60px] rounded-full" />
+
+                    <div className="relative z-10">
+                        <div className="flex items-center justify-between mb-8">
+                            <span className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Sovereign Balance</span>
+                            <Wallet className="w-5 h-5 text-indigo-500" />
                         </div>
-                        <div className="text-3xl font-mono text-white">
+                        <div className="text-5xl font-black text-white tracking-tighter leading-none mb-2">
                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: account?.currency || 'BRL' }).format((account?.balance || 0) / 100)}
                         </div>
-                        <p className="text-xs text-zinc-500 mt-2">Available for payouts</p>
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Disponível para Repasse</p>
                     </div>
 
-                    {account && account.balance > 0 && (
-                        <Button variant="secondary" className="mt-4 w-full">
-                            Request Payout
-                        </Button>
-                    )}
-                    {!account && (
-                        <div className="mt-4 text-xs text-yellow-500 flex items-center gap-1">
-                            <AlertTriangle className="w-3 h-3" /> No billing account
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Invoices Mock - To be replaced with ListPayouts or ListInvoices if available */}
-            <div className="rounded-xl border border-white/10 bg-black/40 overflow-hidden">
-                <div className="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
-                    <h3 className="font-semibold text-zinc-300">Recent History</h3>
-                    <Button variant="ghost" size="sm" className="h-8 text-xs text-zinc-500">View All</Button>
-                </div>
-                <div className="divide-y divide-white/5">
-                    {/* Placeholder for no history */}
-                    <div className="p-8 text-center text-zinc-600 italic">
-                        No transactions recorded.
+                    <div className="mt-12 relative z-10">
+                        {account && account.balance > 0 ? (
+                            <Button className="w-full h-12 rounded-xl bg-white/5 border border-white/10 text-white hover:bg-white/10 font-bold uppercase tracking-widest text-[10px]">
+                                Solicitar Resgate
+                            </Button>
+                        ) : (
+                            <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/10 text-amber-500 text-[10px] font-black uppercase tracking-widest text-center">
+                                <AlertTriangle className="w-3 h-3 inline mr-1" /> Sem Saldo Acumulado
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
-            {/* Usage Section */}
-            <div className="mt-12">
-                <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
-                    <BarChart className="w-4 h-4" /> Usage Consumption
-                </h3>
 
-                <div className="glass-card p-6 rounded-xl border border-border space-y-6">
-                    <div>
-                        <div className="flex justify-between text-sm mb-2">
-                            <span className="font-medium">API Requests</span>
-                            <span className="text-muted-foreground">754,320 / 1,000,000</span>
-                        </div>
-                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary w-[75%] rounded-full" />
-                        </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Usage Section */}
+                <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/5">
+                    <div className="flex items-center justify-between mb-10">
+                        <h3 className="text-xl font-bold text-white uppercase tracking-tight flex items-center gap-3">
+                            <BarChart className="w-5 h-5 text-indigo-500" /> Consumo de Telemetria
+                        </h3>
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Este mês</span>
                     </div>
 
-                    <div>
-                        <div className="flex justify-between text-sm mb-2">
-                            <span className="font-medium">Storage (GB)</span>
-                            <span className="text-muted-foreground">45.2 / 50 GB</span>
+                    <div className="space-y-10">
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">API Requests</p>
+                                    <p className="text-xl font-black text-white">754,320 <span className="text-slate-600 text-sm">/ 1.0M</span></p>
+                                </div>
+                                <span className="text-indigo-400 font-black text-sm">75%</span>
+                            </div>
+                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: "75%" }}
+                                    className="h-full bg-indigo-500 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)]"
+                                />
+                            </div>
                         </div>
-                        <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-yellow-500 w-[90%] rounded-full" />
+
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-end">
+                                <div>
+                                    <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Storage Utilizado</p>
+                                    <p className="text-xl font-black text-white">45.2GB <span className="text-slate-600 text-sm">/ 50GB</span></p>
+                                </div>
+                                <span className="text-amber-400 font-black text-sm">90%</span>
+                            </div>
+                            <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: "90%" }}
+                                    className="h-full bg-amber-500 rounded-full shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                                />
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* History Section */}
+                <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/5 flex flex-col">
+                    <div className="flex items-center justify-between mb-10">
+                        <h3 className="text-xl font-bold text-white uppercase tracking-tight flex items-center gap-3">
+                            <History className="w-5 h-5 text-indigo-500" /> Histórico Financeiro
+                        </h3>
+                        <Button variant="ghost" className="text-[10px] font-black text-slate-500 uppercase tracking-widest hover:text-white transition-colors">Ver Tudo</Button>
+                    </div>
+
+                    <div className="flex-1 flex flex-col justify-center items-center text-center p-10 border-2 border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
+                        <div className="h-16 w-16 rounded-full bg-white/5 flex items-center justify-center mb-6">
+                            <TrendingUp className="w-8 h-8 text-slate-700" />
+                        </div>
+                        <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">Nenhuma transação registrada no ledger imutável.</p>
                     </div>
                 </div>
             </div>
