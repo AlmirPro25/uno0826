@@ -108,9 +108,22 @@ func main() {
 
 	// Configuração CORS - Permite todas as portas dos frontends + Vercel
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003", "http://127.0.0.1:3000", "http://127.0.0.1:3001", "http://127.0.0.1:3002", "http://127.0.0.1:3003", "https://uno0826-pr57.vercel.app", "https://uno0826.vercel.app", "https://*.vercel.app"},
-		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "X-Requested-With", "X-HTTP-Method-Override", "Cache-Control", "X-Verification-ID"},
+		AllowOrigins:     []string{
+			"http://localhost:3000", 
+			"http://localhost:3001", 
+			"http://localhost:3002", 
+			"http://localhost:3003", 
+			"http://127.0.0.1:3000", 
+			"http://127.0.0.1:3001", 
+			"http://127.0.0.1:3002", 
+			"http://127.0.0.1:3003", 
+			"https://uno0826-pr57.vercel.app", 
+			"https://uno0826.vercel.app",
+			"https://frontend-lime-seven-48.vercel.app",
+			"https://vox-bridge-ivory.vercel.app",
+		},
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "X-Requested-With", "X-HTTP-Method-Override", "Cache-Control", "X-Verification-ID", "X-Prost-App-Key", "X-Prost-App-Secret", "X-App-Key", "X-App-Secret"},
 		ExposeHeaders:    []string{"Content-Length"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
