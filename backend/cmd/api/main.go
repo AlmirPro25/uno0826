@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-contrib/cors"
@@ -108,19 +109,26 @@ func main() {
 
 	// Configuração CORS - Permite todas as portas dos frontends + Vercel
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{
-			"http://localhost:3000", 
-			"http://localhost:3001", 
-			"http://localhost:3002", 
-			"http://localhost:3003", 
-			"http://127.0.0.1:3000", 
-			"http://127.0.0.1:3001", 
-			"http://127.0.0.1:3002", 
-			"http://127.0.0.1:3003", 
-			"https://uno0826-pr57.vercel.app", 
-			"https://uno0826.vercel.app",
-			"https://frontend-lime-seven-48.vercel.app",
-			"https://vox-bridge-ivory.vercel.app",
+		AllowOriginFunc: func(origin string) bool {
+			// Permitir localhost em qualquer porta
+			if strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "http://127.0.0.1:") {
+				return true
+			}
+			// Permitir qualquer subdomínio do Vercel
+			if strings.HasSuffix(origin, ".vercel.app") {
+				return true
+			}
+			// Permitir domínios específicos
+			allowedOrigins := []string{
+				"https://uno0826.onrender.com",
+				"https://vox-bridge-api.onrender.com",
+			}
+			for _, allowed := range allowedOrigins {
+				if origin == allowed {
+					return true
+				}
+			}
+			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
 		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "X-Requested-With", "X-HTTP-Method-Override", "Cache-Control", "X-Verification-ID", "X-Prost-App-Key", "X-Prost-App-Secret", "X-App-Key", "X-App-Secret"},
