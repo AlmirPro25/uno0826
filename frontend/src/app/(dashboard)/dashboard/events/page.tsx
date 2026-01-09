@@ -1,21 +1,50 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, Filter, Download, Terminal, PlayCircle, PauseCircle } from "lucide-react";
+import { Search, Filter, Download, Terminal, PlayCircle, PauseCircle, Loader2 } from "lucide-react";
+import { api } from "@/lib/api";
+import { useAuth } from "@/contexts/auth-context";
 
-// Mock data for events
-const mockEvents = Array.from({ length: 20 }).map((_, i) => ({
-    id: `evt_${Math.random().toString(36).substr(2, 9)}`,
-    type: ["user.created", "order.paid", "page.view", "api.request"][Math.floor(Math.random() * 4)],
-    source: ["app_billing", "app_storefront", "app_ios"][Math.floor(Math.random() * 3)],
-    payload: { size: Math.floor(Math.random() * 1024) + "b", status: 200 },
-    timestamp: new Date(Date.now() - Math.floor(Math.random() * 10000000)).toISOString(),
-}));
+interface Event {
+    id: string;
+    type: string;
+    timestamp: number;
+    payload: any;
+    source?: string;
+}
 
 export default function EventsPage() {
+    const { user } = useAuth();
+    const [events, setEvents] = useState<Event[]>([]);
+    const [loading, setLoading] = useState(true);
     const [isLive, setIsLive] = useState(true);
+
+    const fetchEvents = async () => {
+        if (!user?.id) return;
+        try {
+            const res = await api.get(`/events/${user.id}?limit=50`);
+            setEvents(res.data || []);
+        } catch (error) {
+            console.error("Failed to fetch events", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchEvents();
+        let interval: any;
+        if (isLive) {
+            interval = setInterval(fetchEvents, 5000);
+        }
+        return () => clearInterval(interval);
+    }, [user, isLive]);
+
+    const formatTimestamp = (ts: number) => {
+        return new Date(ts).toLocaleString();
+    };
 
     return (
         <div className="space-y-6 h-[calc(100vh-8rem)] flex flex-col">
@@ -25,7 +54,7 @@ export default function EventsPage() {
                     <p className="text-muted-foreground mt-1">Real-time audit trail and event ingestion log.</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="secondary" onClick={() => setIsLive(!isLive)}>
+                    <Button variant="secondary" onClick={() => setIsLive(!isLive)} disabled={loading}>
                         {isLive ? <PauseCircle className="w-4 h-4 mr-2" /> : <PlayCircle className="w-4 h-4 mr-2" />}
                         {isLive ? "Pause Stream" : "Resume Stream"}
                     </Button>
@@ -48,11 +77,6 @@ export default function EventsPage() {
                 <Button variant="ghost" size="sm" className="gap-2 text-muted-foreground">
                     <Filter className="w-4 h-4" /> Filter
                 </Button>
-                <select className="bg-transparent text-sm font-medium focus:outline-none">
-                    <option>Last 15 minutes</option>
-                    <option>Last Hour</option>
-                    <option>Last 24 Hours</option>
-                </select>
             </div>
 
             {/* Console Viewer */}
@@ -70,25 +94,26 @@ export default function EventsPage() {
                 </div>
 
                 <div className="flex-1 overflow-auto p-4 space-y-1">
-                    {mockEvents.map((evt) => (
-                        <div key={evt.id} className="flex gap-4 hover:bg-white/5 p-1 rounded cursor-pointer group">
-                            <span className="text-gray-500 whitespace-nowrap w-[180px]">{evt.timestamp}</span>
-                            <span className={`w-[120px] font-bold ${evt.type === 'user.created' ? 'text-blue-400' :
-                                    evt.type === 'order.paid' ? 'text-green-400' :
-                                        evt.type === 'api.request' ? 'text-purple-400' : 'text-gray-300'
-                                }`}>
-                                {evt.type}
-                            </span>
-                            <span className="text-yellow-600/80 w-[100px]">{evt.source}</span>
-                            <span className="text-gray-400 truncate flex-1 opacity-70 group-hover:opacity-100 transition-opacity">
-                                {JSON.stringify(evt.payload)}
-                            </span>
-                            <span className="text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {evt.id}
-                            </span>
+                    {loading && events.length === 0 ? (
+                        <div className="flex items-center justify-center h-full">
+                            <Loader2 className="w-6 h-6 animate-spin text-zinc-500" />
                         </div>
-                    ))}
-                    {isLive && (
+                    ) : (
+                        events.map((evt) => (
+                            <div key={evt.id} className="flex gap-4 hover:bg-white/5 p-1 rounded cursor-pointer group">
+                                <span className="text-gray-500 whitespace-nowrap w-[180px]">{formatTimestamp(evt.timestamp)}</span>
+                                <span className={`w-[120px] font-bold ${evt.type.includes('created') ? 'text-blue-400' :
+                                    evt.type.includes('paid') ? 'text-green-400' :
+                                        evt.type.includes('api') ? 'text-purple-400' : 'text-gray-300'
+                                    }`}>
+                                    {evt.type}
+                                </span>
+                                <span className="text-gray-400 truncate flex-1 opacity-70 group-hover:opacity-100 transition-opacity">
+                                    {JSON.stringify(evt.payload)}
+                                </span>
+                            </div>
+                        ))
+                    )}                    {isLive && (
                         <div className="animate-pulse flex gap-2 p-1">
                             <span className="text-gray-600">_</span>
                         </div>
