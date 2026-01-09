@@ -3,9 +3,9 @@
 ## Estado Atual: PRODUCTION READY ✅
 
 ### URLs de Produção
-- **Frontend**: https://frontend-lime-seven-48.vercel.app
-- **Backend**: https://vox-api-hq2l.onrender.com
-- **GitHub**: https://github.com/AlmirPro25/vox.git
+- **Frontend**: https://vox-bridge-ivory.vercel.app
+- **Backend**: https://vox-bridge-api.onrender.com
+- **GitHub**: https://github.com/AlmirPro25/uno0826
 
 ---
 

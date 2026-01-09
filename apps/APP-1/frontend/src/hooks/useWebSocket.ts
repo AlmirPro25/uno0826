@@ -73,7 +73,7 @@ export function useWebSocket() {
       reconnectTimeout.current = null
     }
 
-    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://vox-api-hq2l.onrender.com'
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://vox-bridge-api.onrender.com'
     const isReconnect = reconnectAttempts.current > 0
     
     console.log('🔌 Connecting to:', wsUrl, isReconnect ? `(attempt ${reconnectAttempts.current})` : '')

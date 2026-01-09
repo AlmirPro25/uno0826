@@ -24,7 +24,7 @@ const getIceServers = async (): Promise<RTCIceServer[]> => {
   
   try {
     // Tentar buscar TURN do backend (futuro: tokens dinâmicos)
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://vox-api-hq2l.onrender.com'}/turn-credentials`)
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://vox-bridge-api.onrender.com'}/turn-credentials`)
     if (res.ok) {
       const turnServers = await res.json()
       return [...baseServers, ...turnServers]

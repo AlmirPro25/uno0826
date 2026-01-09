@@ -18,8 +18,8 @@
 | Garbage collection | ✅ OK | Rooms, queue, peers |
 
 ### URLs de Produção:
-- Frontend: https://frontend-lime-seven-48.vercel.app
-- Backend: https://vox-api-hq2l.onrender.com
+- Frontend: https://vox-bridge-ivory.vercel.app
+- Backend: https://vox-bridge-api.onrender.com
 
 ### Stack:
 - Frontend: Next.js 14 + TypeScript + Tailwind
