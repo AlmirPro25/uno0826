@@ -4,6 +4,7 @@ package auth
 import (
 	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +29,7 @@ func NewAuthService(userRepo identity.UserRepository, loginEventService *identit
 }
 
 // RegisterUser registra um novo usuário.
+// Se o email for igual a SUPER_ADMIN_EMAIL, o usuário nasce como super_admin.
 func (s *AuthService) RegisterUser(username, password, email string) (*identity.User, error) {
 	// Verificar se o usuário já existe
 	existingUser, _ := s.userRepo.GetUserByUsername(username)
@@ -41,15 +43,26 @@ func (s *AuthService) RegisterUser(username, password, email string) (*identity.
 		return nil, fmt.Errorf("falha ao gerar hash da senha: %w", err)
 	}
 
+	// Determinar role inicial
+	// Bootstrap de autoridade: se email == SUPER_ADMIN_EMAIL, nasce super_admin
+	role := "user"
+	superAdminEmail := os.Getenv("SUPER_ADMIN_EMAIL")
+	if superAdminEmail != "" && email == superAdminEmail {
+		role = "super_admin"
+		log.Printf("🔐 BOOTSTRAP: Usuário %s (%s) criado como super_admin via SUPER_ADMIN_EMAIL", username, email)
+	}
+
 	user := &identity.User{
-		ID:        uuid.New(),
-		Username:  username,
-		Email:     email,
+		ID:           uuid.New(),
+		Username:     username,
+		Email:        email,
 		PasswordHash: string(hashedPassword),
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-		Roles:     "[]", // Default role
-		Version:   1,
+		Role:         role,
+		Status:       "active",
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		Roles:        "[]",
+		Version:      1,
 	}
 
 	if err := s.userRepo.CreateUser(user); err != nil {
