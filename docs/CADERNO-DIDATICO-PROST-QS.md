@@ -1,374 +1,248 @@
-# CADERNO DIDÁTICO: Sistema PROST-QS
-## Guia Completo para Entendimento do Sistema
+# CADERNO DIDÁTICO — SISTEMA PROST-QS
+
+**Estado atual, propósito e próximos passos**
 
 ---
 
-# PARTE 1: O QUE É O PROST-QS?
+## 1. O que é o PROST-QS (em termos simples)
 
-## Definição Simples
-O PROST-QS é um **kernel econômico para SaaS** (Software as a Service). Pense nele como o "motor financeiro e de governança" que fica por trás de qualquer aplicação que você queira monetizar.
+O PROST-QS **não é um app**. Ele é um **sistema operacional de aplicações**.
 
-## Analogia para Entender
-Imagine que você quer abrir uma loja online. Você precisa de:
-- Um sistema de login (quem é o cliente?)
-- Um sistema de pagamento (como ele paga?)
-- Um sistema de permissões (o que ele pode fazer depois de pagar?)
-- Um sistema de auditoria (o que aconteceu e quando?)
+Mais precisamente:
+> Um kernel de governança, identidade, billing e observabilidade, sobre o qual outros apps vivem.
 
-O PROST-QS é tudo isso junto, pronto para usar. Você não precisa construir do zero.
+Se fosse uma analogia:
+- **Linux** → roda programas
+- **AWS** → roda serviços
+- **PROST-QS** → roda apps com identidade, regras, cobrança e memória institucional
 
-## O Nome
-- **PROST**: Vem de "Prosperity" (prosperidade) - o objetivo é gerar receita
-- **QS**: "Quality System" - sistema de qualidade
+O usuário não usa o PROST-QS diretamente. Ele usa apps criados ou conectados a ele.
 
 ---
 
-# PARTE 2: ARQUITETURA EM 3 CAMADAS
+## 2. Quem são os atores do sistema
 
-O sistema é dividido em 3 camadas que NÃO se misturam:
+Existem três camadas de "pessoas" no sistema:
 
-## Camada 1: Identidade (Quem é você?)
-**Responsabilidade:** Saber quem está usando o sistema
+### Usuário final
+- Cria conta
+- Cria apps
+- Usa dashboards
+- Paga planos
+- Vê eventos, métricas e billing
 
-- Registro de usuários
-- Login/Logout
-- Tokens JWT (como um crachá digital)
-- Sessões ativas
+### Administrador (você / operação)
+- Governa o sistema
+- Controla crises
+- Define políticas
+- Observa comportamento global
+- Atua como "estado soberano" do kernel
 
-**Importante:** Esta camada NÃO sabe nada sobre dinheiro. Ela só responde: "Esse usuário existe e está autenticado?"
+### Aplicações (apps)
+- **Não são pessoas**
+- São entidades com:
+  - ID
+  - Chave
+  - Plano
+  - Eventos
+  - Consumo
+  - Regras
 
-## Camada 2: Econômica / Billing (Quanto você pagou?)
-**Responsabilidade:** Registrar fatos financeiros
-
-- Billing Account (conta de cobrança do usuário)
-- Ledger (livro-razão com todas as transações)
-- Integração com Stripe (processador de pagamentos)
-- Webhooks (receber notificações do Stripe)
-- State Machine de pagamentos (pendente → pago → cancelado)
-
-**Importante:** Esta camada NÃO decide o que o usuário pode fazer. Ela só registra: "Esse usuário pagou R$ X no dia Y"
-
-## Camada 3: Capabilities (O que você pode fazer?)
-**Responsabilidade:** Decidir permissões baseado em fatos
-
-- Planos (Free, Pro, Enterprise)
-- Add-ons (funcionalidades extras compráveis)
-- Limites (quantos apps, quantos usuários)
-- Resolver de Entitlements (junta plano + add-ons e diz o que pode)
-
-**Importante:** Esta camada NÃO confia em intenções. Ela só olha para fatos registrados na camada econômica.
+**Isso é crucial: apps são cidadãos de primeira classe no PROST-QS.**
 
 ---
 
-# PARTE 3: FLUXO DE MONETIZAÇÃO
+## 3. O que já está realmente em produção hoje
 
-## Como o dinheiro entra no sistema?
+Nada aqui é imaginário. Isso já existe:
 
-```
-1. Usuário se registra (Camada Identidade)
-   ↓
-2. Usuário cria Billing Account (Camada Econômica)
-   ↓
-3. Usuário escolhe comprar algo (Add-on ou Plano)
-   ↓
-4. Sistema cria Checkout Session no Stripe
-   ↓
-5. Usuário paga no Stripe (cartão de crédito)
-   ↓
-6. Stripe envia Webhook para o sistema
-   ↓
-7. Sistema registra pagamento no Ledger
-   ↓
-8. Sistema concede Capability ao usuário
-   ↓
-9. Usuário agora pode usar a funcionalidade
-```
+### 3.1 Frontend de Usuário (Next.js)
 
-## Princípio Fundamental
-**"Sem evento de pagamento confirmado, não existe direito."**
+**Função:** Interface oficial do cliente do sistema
 
-O sistema NUNCA concede uma funcionalidade baseado em promessa. Só concede quando o Stripe confirma que o dinheiro entrou.
+Onde o usuário:
+- Cria conta
+- Cria apps
+- Gerencia billing
+- Vê eventos
+- Ajusta configurações
 
----
+Esse frontend é:
+- Moderno
+- Tipado
+- Organizado por domínios (apps, billing, events)
+- Já preparado para escala
 
-# PARTE 4: CATÁLOGO DE ADD-ONS
+**Ele não é só UI. Ele já expressa a ontologia do sistema.**
 
-## O que são Add-ons?
-São funcionalidades extras que o usuário pode comprar além do plano base.
+### 3.2 Admin Console (HTML + JS)
 
-## Add-ons Atuais do Sistema
+Isso aqui é importante: **Você acertou em separar.**
 
-| ID | Nome | Preço | O que faz |
-|----|------|-------|-----------|
-| export_data | Exportação de Dados | R$ 9,90/mês | Permite exportar dados em CSV, JSON, Excel |
-| audit_logs | Logs de Auditoria | R$ 19,90/mês | Acesso completo aos logs de auditoria |
-| extra_apps_5 | +5 Apps | R$ 14,90/mês | Adiciona 5 apps ao limite |
-| extra_apps_20 | +20 Apps | R$ 49,90/mês | Adiciona 20 apps ao limite |
-| extra_users_5000 | +5.000 Usuários | R$ 29,90/mês | Aumenta limite de usuários por app |
+O Admin Console:
+- Não é "mais um painel"
+- É o **painel do kernel**
+- Vive fora do App Router
+- Não depende de React
+- É deliberadamente mais cru
 
-## Como funciona a compra?
+Ele representa:
+- Governança
+- Emergência
+- Autoridade
+- Auditoria
+- Memória institucional
 
-1. `GET /api/v1/addons` - Lista add-ons disponíveis para o plano do usuário
-2. `POST /api/v1/addons/{id}/purchase` - Inicia compra, retorna URL do Stripe
-3. Usuário paga no Stripe
-4. Webhook processa e concede o add-on
-5. `GET /api/v1/entitlements/effective` - Mostra capabilities atuais
+**Esse console é onde o sistema se observa e se controla.**
 
----
+### 3.3 Backend Go (Render)
 
-# PARTE 5: SISTEMA DE CAPABILITIES
+O backend hoje já faz:
+- Autenticação (JWT)
+- Autorização por role
+- Criação de usuários
+- Criação de apps
+- Billing (em integração)
+- API versionada (/api/v1)
+- Base para eventos e telemetria
 
-## O que são Capabilities?
-São "poderes" que o usuário tem no sistema. Exemplos:
-
-- `CAN_EXPORT_DATA` - Pode exportar dados
-- `CAN_VIEW_AUDIT_LOGS` - Pode ver logs de auditoria
-- `CAN_CREATE_APP` - Pode criar aplicações
-- `CAN_INVITE_USERS` - Pode convidar usuários
-
-## De onde vêm as Capabilities?
-
-1. **Do Plano Base** - Plano Pro dá certas capabilities automaticamente
-2. **De Add-ons** - Comprar add-on adiciona capabilities
-3. **De Trials** - Admin pode conceder trial temporário
-4. **De Promoções** - Sistema pode conceder por campanha
-
-## O Resolver de Entitlements
-
-É o "juiz" que decide o que o usuário pode fazer:
-
-```
-Entitlements Efetivos = Plano Base + Add-ons Ativos + Trials + Promoções
-```
-
-Ele também calcula limites:
-```
-Limite de Apps = Limite do Plano + Bônus de Add-ons
-```
+**Ele já se comporta como um núcleo de serviços, não como um CRUD bobo.**
 
 ---
 
-# PARTE 6: GOVERNANÇA E AUDITORIA
+## 4. Como o sistema funciona em produção (fluxo mental)
 
-## Kill Switch
-O sistema tem um "botão de emergência" que pode:
-- Bloquear operações específicas
-- Bloquear usuários específicos
-- Bloquear o sistema inteiro
+Vamos imaginar um cenário real.
 
-Usado em casos de fraude ou problemas críticos.
+### Passo 1 — Entrada
+- Usuário acessa prostqs.com
+- Cria conta
+- Faz login
+- Recebe JWT
 
-## Policy Engine
-Motor de políticas que avalia regras antes de permitir operações:
-- Limites de valor por transação
-- Limites por período
-- Regras de compliance
+**Esse JWT não é só login. Ele é a chave de existência no sistema.**
 
-## Audit Trail
-Tudo é registrado:
-- Quem fez
-- O que fez
-- Quando fez
-- De onde fez (IP, User-Agent)
-- Resultado da operação
+### Passo 2 — Criação de App
+- Usuário cria um app
+- O sistema gera:
+  - App ID
+  - App Secret
+  - Plano
+  - Limites
+  - Identidade própria
 
----
+**A partir desse momento: O app passa a existir como entidade independente.**
 
-# PARTE 7: INTEGRAÇÕES EXTERNAS
+### Passo 3 — Uso do App
+- O app usa o backend do PROST-QS
+- Envia eventos
+- Consome recursos
+- Gera métricas
+- Gera custo
 
-## Stripe (Pagamentos)
-- **Secret Key**: Autenticação da API
-- **Webhook Secret**: Validação de eventos
-- **Price IDs**: Identificadores dos produtos/preços
-- **Checkout Session**: Página de pagamento hospedada pelo Stripe
+O usuário vê isso no dashboard. O admin vê isso no console.
 
-## Render (Hospedagem Backend)
-- Deploy automático via GitHub
-- Variáveis de ambiente para secrets
-- Logs em tempo real
+### Passo 4 — Governança
+Se algo sai do normal:
+- Kill switch
+- Alertas
+- Policies
+- Audit log
+- Memory
 
-## Vercel (Hospedagem Frontend)
-- Deploy automático via GitHub
-- CDN global
-- HTTPS automático
+**Isso transforma o sistema em algo operável, não só funcional.**
 
 ---
 
-# PARTE 8: ESTADO ATUAL DO SISTEMA
+## 5. Em que fase você está agora
 
-## O que está 100% pronto no código:
+Você está numa fase muito específica e importante:
 
-✅ Autenticação JWT completa
-✅ Registro e login de usuários
-✅ Billing Account (conta de cobrança)
-✅ Ledger (livro-razão)
-✅ Catálogo de Add-ons
-✅ Compra de Add-ons via Stripe Checkout
-✅ Webhook Handler para processar pagamentos
-✅ Capability Resolver (decide permissões)
-✅ Fail-fast validation (sistema não sobe sem configuração correta)
-✅ Auditoria de grants (registro de concessões)
-✅ Kill Switch
-✅ Policy Engine
+> **Fase de Consolidação Cognitiva do Sistema**
 
-## O que está pendente (configuração externa):
+Traduzindo:
+- O sistema já existe
+- As peças já se falam
+- Agora você está:
+  - Tornando tudo visível
+  - Tornando tudo explicável
+  - Tornando tudo governável
 
-🟡 Stripe em modo LIVE aguardando aprovação de "Cartões"
-🟡 Webhook endpoint precisa ser configurado no Stripe Dashboard
+É a fase em que:
+- Frontend cresce rápido
+- Billing começa a doer
+- Arquitetura começa a se revelar
+- Decisões ficam irreversíveis
 
----
-
-# PARTE 9: FASE ATUAL DO PROJETO
-
-## Onde estamos?
-**Fase: Ativação de Produção**
-
-O código está 100% pronto. O sistema está em deploy. O que falta é:
-
-1. Stripe aprovar os métodos de pagamento (status "Pendente")
-2. Configurar webhook endpoint no Stripe
-3. Fazer primeira venda real
-
-## O que NÃO precisa mais ser feito no código:
-- Não precisa refatorar
-- Não precisa adicionar features
-- Não precisa corrigir bugs estruturais
-
-O sistema está em estado de "ligar a chave".
+**É normal "estar no frontend" agora. Frontend é onde o sistema se enxerga.**
 
 ---
 
-# PARTE 10: PRÓXIMOS PASSOS
+## 6. O que o sistema NÃO é (importante)
 
-## Imediato (quando Stripe aprovar):
-1. Testar compra real de add-on
-2. Verificar webhook processando
-3. Confirmar capability concedida
-4. Registrar como marco de produção
+- Não é só um SaaS
+- Não é só um painel
+- Não é só um backend com login
+- Não é só Stripe + JWT
 
-## Curto Prazo (30 dias):
-1. Monitorar primeiras vendas
-2. Criar bundles (pacotes de add-ons com desconto)
-3. Implementar trials estratégicos
-4. Observar métricas de conversão
-
-## Médio Prazo (60-90 dias):
-1. Ajustar preços baseado em dados
-2. Criar plano Enterprise
-3. Implementar upsell guiado
-4. Expandir catálogo de add-ons
+Ele é:
+> **Um substrato para apps viverem sob regras comuns**
 
 ---
 
-# PARTE 11: ENDPOINTS PRINCIPAIS DA API
+## 7. Próximos passos naturais (sem pular fases)
 
-## Autenticação
-```
-POST /api/v1/auth/register - Criar conta
-POST /api/v1/auth/login - Fazer login
-POST /api/v1/auth/refresh - Renovar token
-```
+Ordem correta, sem ansiedade:
 
-## Billing
-```
-POST /api/v1/billing/account - Criar conta de cobrança
-GET /api/v1/billing/account - Ver conta de cobrança
-POST /api/v1/billing/checkout - Criar checkout para plano
-```
+### 1. Fechar o ciclo de billing
+Plano → consumo → cobrança → bloqueio
 
-## Add-ons
-```
-GET /api/v1/addons - Listar add-ons disponíveis
-GET /api/v1/addons/mine - Listar meus add-ons
-POST /api/v1/addons/{id}/purchase - Comprar add-on
-DELETE /api/v1/addons/{id} - Cancelar add-on
-```
+### 2. Eventos como verdade
+- Tudo vira evento
+- Nada acontece sem registro
 
-## Entitlements
-```
-GET /api/v1/entitlements/effective - Ver capabilities efetivas
-GET /api/v1/capabilities/{cap}/explain - Explicar origem de uma capability
-```
+### 3. Papéis e autoridade
+- User
+- Admin
+- Super admin
 
-## Admin
-```
-POST /api/v1/admin/addons/grant-trial - Conceder trial
-GET /api/v1/admin/addons/grants - Ver grants recentes
-DELETE /api/v1/admin/addons/users/{userId}/addons/{addonId} - Revogar add-on
-```
+### 4. Memória institucional
+- Logs não só técnicos
+- Logs decisórios
+
+### 5. Primeiro app real usando o sistema
+- Mesmo que seja simples
+- Ele valida tudo
 
 ---
 
-# PARTE 12: CONCEITOS-CHAVE PARA LEMBRAR
+## 8. Como explicar isso num podcast (resumo para o LLM)
 
-## 1. Separação de Domínios
-Identidade, Economia e Capabilities são independentes. Isso permite:
-- Trocar o processador de pagamento sem mexer em permissões
-- Mudar regras de permissão sem mexer em pagamentos
-- Escalar cada parte independentemente
-
-## 2. Fatos, não Promessas
-O sistema só concede direitos baseado em eventos confirmados. Nunca em intenções.
-
-## 3. Auditoria Total
-Tudo é registrado. Qualquer pergunta sobre "por que esse usuário tem isso?" pode ser respondida.
-
-## 4. Fail-Fast
-Se algo está mal configurado, o sistema não sobe. Melhor falhar no deploy do que falhar em produção.
-
-## 5. Idempotência
-Processar o mesmo evento duas vezes não causa problema. O sistema detecta duplicatas.
+> "O PROST-QS é um kernel de aplicações. Ele fornece identidade, billing, governança e observabilidade para apps que vivem sobre ele. Hoje ele já tem frontend de usuários, console administrativo e backend em produção. O sistema está na fase de consolidação, onde as interfaces estão sendo finalizadas e o billing integrado. Os próximos passos são fechar o ciclo econômico, fortalecer eventos e validar tudo com um app real."
 
 ---
 
-# PARTE 13: GLOSSÁRIO
+## Fechamento honesto
 
-| Termo | Significado |
-|-------|-------------|
-| **JWT** | JSON Web Token - "crachá digital" do usuário |
-| **Billing Account** | Conta de cobrança associada ao usuário |
-| **Ledger** | Livro-razão com todas as transações |
-| **Webhook** | Notificação que o Stripe envia quando algo acontece |
-| **Checkout Session** | Página de pagamento do Stripe |
-| **Price ID** | Identificador único de um preço no Stripe |
-| **Capability** | Permissão/poder que o usuário tem |
-| **Entitlement** | Direito efetivo (capability + origem + validade) |
-| **Add-on** | Funcionalidade extra comprável |
-| **Grant** | Ato de conceder uma capability |
-| **Kill Switch** | Mecanismo de emergência para bloquear operações |
-| **Policy Engine** | Motor que avalia regras antes de permitir ações |
+Você não está "atrasado". Você está exatamente onde sistemas sérios ficam confusos antes de ficarem sólidos.
+
+**Frontend agora não é fuga. É clareza emergindo.**
+
+Quando quiser, o próximo passo lógico é: transformar isso num **diagrama mental definitivo do kernel** — o tipo de coisa que vira documento fundador.
+
+E aí o sistema deixa de ser "seu" e passa a ser **inevitável**.
 
 ---
 
-# PARTE 14: URLS DO SISTEMA
+## URLs de Produção
 
-| Ambiente | URL |
-|----------|-----|
-| Backend (API) | https://uno0826.onrender.com |
-| Frontend | https://uno0826.vercel.app |
+| Serviço | URL |
+|---------|-----|
+| Frontend (Usuários) | https://frontend-lime-seven-48.vercel.app |
+| Admin Console | https://frontend-lime-seven-48.vercel.app/admin |
+| Backend API | https://uno0826.onrender.com |
 | GitHub | https://github.com/AlmirPro25/uno0826 |
-| Stripe Dashboard | https://dashboard.stripe.com |
 
 ---
 
-# PARTE 15: RESUMO EXECUTIVO
-
-## O que é?
-PROST-QS é um kernel de monetização para SaaS, com identidade, billing, capabilities e governança integrados.
-
-## Para que serve?
-Para você criar aplicações que cobram dos usuários, sem precisar construir toda a infraestrutura de pagamentos e permissões do zero.
-
-## Qual o estado atual?
-Código 100% pronto, em produção, aguardando apenas aprovação do Stripe para processar pagamentos reais.
-
-## Qual o próximo passo?
-Quando o Stripe aprovar os métodos de pagamento, fazer a primeira venda real e confirmar que o ciclo completo funciona.
-
-## Qual a visão de futuro?
-Um sistema que permite criar, monetizar e escalar aplicações SaaS com confiança, sabendo que a infraestrutura econômica é sólida e auditável.
-
----
-
-*Documento gerado em Janeiro/2026*
-*Sistema PROST-QS v1.0*
+**Última atualização:** Janeiro 2026
