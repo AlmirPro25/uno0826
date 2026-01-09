@@ -1,6 +1,7 @@
 import axios from "axios";
 
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+// IMPORTANTE: Em produção, usar a URL completa com /api/v1
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://uno0826.onrender.com/api/v1";
 
 export const api = axios.create({
     baseURL: API_URL,
