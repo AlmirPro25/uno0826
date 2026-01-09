@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, MoreHorizontal, Loader2, X, Globe, Lock, ShieldAlert, Cpu, Rocket } from "lucide-react";
+import { Plus, Search, MoreHorizontal, Loader2, X, Globe, Lock, ShieldAlert, Cpu, Rocket, ExternalLink } from "lucide-react";
+import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { motion, AnimatePresence } from "framer-motion";
@@ -160,9 +161,11 @@ export default function AppsPage() {
                                             {new Date(app.created_at).toLocaleDateString()}
                                         </td>
                                         <td className="px-8 py-6 text-right">
-                                            <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-600 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-                                                <MoreHorizontal className="w-4 h-4" />
-                                            </Button>
+                                            <Link href={`/dashboard/apps/${app.id}`}>
+                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-600 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                                                    <ExternalLink className="w-4 h-4" />
+                                                </Button>
+                                            </Link>
                                         </td>
                                     </motion.tr>
                                 ))}
