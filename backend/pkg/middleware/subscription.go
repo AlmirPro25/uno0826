@@ -32,8 +32,16 @@ const ContextSubscriptionKey = "subscription"
 // Retorna 402 Payment Required se não tiver
 // Estados válidos: active, trialing
 // Estados bloqueados: past_due, canceled, expired, none
+// BYPASS: admin e super_admin não precisam de assinatura
 func SubscriptionGuard(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Bypass para admins - eles não precisam de assinatura
+		role := c.GetString("userRole")
+		if role == "admin" || role == "super_admin" {
+			c.Next()
+			return
+		}
+
 		// Usa a mesma key do AuthMiddleware
 		userIDStr := c.GetString("userID")
 		if userIDStr == "" {
