@@ -651,21 +651,33 @@ func (h *BillingHandler) ProcessWebhookJob(ctx context.Context, job *jobs.Job) e
 	}
 
 	// Processar evento
+	var processErr error
 	switch event.Type {
+	case "checkout.session.completed":
+		processErr = h.handleCheckoutSessionCompleted(event)
 	case "payment_intent.succeeded":
-		return h.handlePaymentIntentSucceeded(event)
+		processErr = h.handlePaymentIntentSucceeded(event)
 	case "payment_intent.payment_failed":
-		return h.handlePaymentIntentFailed(event)
+		processErr = h.handlePaymentIntentFailed(event)
+	case "customer.subscription.created":
+		processErr = h.handleSubscriptionCreated(event)
 	case "customer.subscription.updated":
-		return h.handleSubscriptionUpdated(event)
+		processErr = h.handleSubscriptionUpdated(event)
 	case "customer.subscription.deleted":
-		return h.handleSubscriptionDeleted(event)
+		processErr = h.handleSubscriptionDeleted(event)
+	case "invoice.paid":
+		processErr = h.handleInvoicePaid(event)
 	case "invoice.payment_failed":
-		return h.handleInvoicePaymentFailed(event)
+		processErr = h.handleInvoicePaymentFailed(event)
 	case "payout.paid":
-		return h.handlePayoutPaid(event)
+		processErr = h.handlePayoutPaid(event)
 	case "payout.failed":
-		return h.handlePayoutFailed(event)
+		processErr = h.handlePayoutFailed(event)
+	}
+
+	if processErr != nil {
+		h.service.MarkWebhookProcessed(event.ID, event.Type, false, processErr.Error())
+		return processErr
 	}
 
 	// Marcar como processado
