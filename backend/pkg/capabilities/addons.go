@@ -83,7 +83,7 @@ var AddOnCatalog = map[string]AddOn{
 		PriceMonthly:         990,  // R$ 9,90
 		PriceYearly:          9900, // R$ 99,00 (2 meses grátis)
 		Currency:             "brl",
-		StripePriceIDMonthly: "price_1SnRCnIYhyBfQ2dRNBpNNBS9",
+		StripePriceIDMonthly: "price_1SnQc0IYhyBfQ2dRRiklubXJ", // Modo TESTE
 		Active:               true,
 		RequiresPlan:         []string{"free", "pro"}, // Enterprise já tem
 	},
