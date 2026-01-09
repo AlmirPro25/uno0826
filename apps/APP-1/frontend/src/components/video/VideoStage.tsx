@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react'
 import { useNexusStore } from '@/store/useNexusStore'
 import { useTheme } from '@/hooks/useTheme'
+import { useElevatorMusic } from '@/hooks/useElevatorMusic'
 
 // ============================================================================
 // VERSÃO GOLD - WEBRTC NÍVEL OMEGLE/CHATROULETTE
@@ -60,6 +61,7 @@ interface VideoStageProps {
 export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
   const { status, partnerInfo } = useNexusStore()
   const { theme } = useTheme()
+  const elevatorMusic = useElevatorMusic()
 
   // Refs - 1 PeerConnection por match, NUNCA recriar
   const localVideoRef = useRef<HTMLVideoElement>(null)
@@ -503,10 +505,20 @@ export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
     if (status === 'connected') {
       pendingCandidates.current = []
       initializeConnection()
+      elevatorMusic.stop() // Para a música quando conecta
     } else if (status === 'idle' || status === 'searching') {
       endCall()
     }
-  }, [status, initializeConnection, endCall])
+  }, [status, initializeConnection, endCall, elevatorMusic])
+
+  // 🎵 Elevator music durante busca
+  useEffect(() => {
+    if (status === 'searching') {
+      elevatorMusic.play()
+    } else {
+      elevatorMusic.stop()
+    }
+  }, [status, elevatorMusic])
 
   // Cleanup
   useEffect(() => () => endCall(), [endCall])
@@ -566,11 +578,36 @@ export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
               </div>
             </div>
             <h2 className="text-2xl font-bold text-cyan-400 mb-2">Buscando...</h2>
-            <div className="flex justify-center gap-1">
+            <div className="flex justify-center gap-1 mb-4">
               <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce" />
               <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.2s]" />
               <span className="w-2 h-2 rounded-full bg-cyan-500 animate-bounce [animation-delay:0.4s]" />
             </div>
+            {/* 🎵 Music indicator with mute button */}
+            <button 
+              onClick={() => elevatorMusic.toggleMute()}
+              className="flex items-center justify-center gap-2 text-gray-400 text-xs hover:text-cyan-400 transition-colors mx-auto"
+            >
+              {!elevatorMusic.isMuted ? (
+                <>
+                  <div className="flex items-end gap-0.5 h-4">
+                    <span className="w-1 bg-cyan-500/60 rounded-full animate-pulse" style={{ height: '40%', animationDelay: '0ms' }} />
+                    <span className="w-1 bg-cyan-500/60 rounded-full animate-pulse" style={{ height: '70%', animationDelay: '150ms' }} />
+                    <span className="w-1 bg-cyan-500/60 rounded-full animate-pulse" style={{ height: '50%', animationDelay: '300ms' }} />
+                    <span className="w-1 bg-cyan-500/60 rounded-full animate-pulse" style={{ height: '80%', animationDelay: '450ms' }} />
+                  </div>
+                  <span>🎵 Música de espera</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" />
+                  </svg>
+                  <span>Música mutada (clique pra ativar)</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
       )}
@@ -584,43 +621,57 @@ export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
             <span className="text-white text-xs">{qualityConfig[quality].text}</span>
           </div>
 
-          {/* SPLIT 50/50 */}
+          {/* SPLIT 50/50 - Mobile: stacked vertical com padding pras barras */}
           {viewMode === 'split' && (
-            <div className="h-full w-full flex flex-col md:flex-row bg-black">
-              <div className="flex-1 relative min-h-[50%] md:min-h-0 border-b md:border-b-0 md:border-r border-white/10">
-                <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <div className="absolute inset-0 flex flex-col md:flex-row bg-black pt-12 pb-20 md:pt-0 md:pb-0">
+              {/* Remote Video - 50% */}
+              <div className="relative flex-1 min-h-0 border-b md:border-b-0 md:border-r border-white/10 overflow-hidden">
+                <video 
+                  ref={remoteVideoRef} 
+                  autoPlay 
+                  playsInline 
+                  className="w-full h-full object-cover bg-black" 
+                />
                 {!remoteConnected && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-900/90">
                     <div className="text-center">
-                      <div className="w-20 h-20 mx-auto mb-3 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center animate-pulse">
-                        <span className="text-2xl font-bold text-white">{partnerInfo?.anonymousId?.slice(0, 2) || '?'}</span>
+                      <div className="w-14 h-14 md:w-20 md:h-20 mx-auto mb-2 md:mb-3 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center animate-pulse">
+                        <span className="text-lg md:text-2xl font-bold text-white">{partnerInfo?.anonymousId?.slice(0, 2) || '?'}</span>
                       </div>
-                      <p className="text-white font-medium">{partnerInfo?.anonymousId || 'Conectando...'}</p>
+                      <p className="text-white font-medium text-xs md:text-base">{partnerInfo?.anonymousId || 'Conectando...'}</p>
                     </div>
                   </div>
                 )}
                 {remoteMuted && remoteConnected && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/60">
                     <div className="text-center">
-                      <div className="w-16 h-16 mx-auto mb-2 rounded-full bg-gray-800 flex items-center justify-center">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="w-12 h-12 md:w-16 md:h-16 mx-auto mb-2 rounded-full bg-gray-800 flex items-center justify-center">
+                        <svg className="w-6 h-6 md:w-8 md:h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
                         </svg>
                       </div>
-                      <p className="text-gray-400 text-sm">Câmera desligada</p>
+                      <p className="text-gray-400 text-[10px] md:text-sm">Câmera desligada</p>
                     </div>
                   </div>
                 )}
-                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/50 flex items-center gap-2">
-                  <div className={`w-2 h-2 rounded-full ${remoteConnected ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
-                  <span className="text-white text-xs">{partnerInfo?.anonymousId || 'Parceiro'}</span>
+                <div className="absolute top-2 left-2 px-2 py-1 rounded-full bg-black/50 flex items-center gap-1.5">
+                  <div className={`w-1.5 h-1.5 rounded-full ${remoteConnected ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
+                  <span className="text-white text-[10px]">{partnerInfo?.anonymousId || 'Parceiro'}</span>
                 </div>
               </div>
-              <div className="flex-1 relative min-h-[50%] md:min-h-0">
-                <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-                <div className="absolute top-3 left-3 px-3 py-1 rounded-full bg-black/50 flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-cyan-500" />
-                  <span className="text-white text-xs">Você</span>
+              {/* Local Video - 50% */}
+              <div className="relative flex-1 min-h-0 overflow-hidden">
+                <video 
+                  ref={localVideoRef} 
+                  autoPlay 
+                  playsInline 
+                  muted 
+                  className="w-full h-full object-cover bg-black" 
+                  style={{ transform: 'scaleX(-1)' }} 
+                />
+                <div className="absolute top-2 left-2 px-2 py-1 rounded-full bg-black/50 flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-cyan-500" />
+                  <span className="text-white text-[10px]">Você</span>
                 </div>
               </div>
             </div>
@@ -628,34 +679,34 @@ export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
 
           {/* PIP Remote */}
           {viewMode === 'pip-remote' && (
-            <>
+            <div className="absolute inset-0 pt-12 pb-20 md:pt-0 md:pb-0">
               <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
               {!remoteConnected && (
                 <div className="absolute inset-0 flex items-center justify-center bg-black/80">
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center">
-                    <span className="text-2xl font-bold text-white">{partnerInfo?.anonymousId?.slice(0, 2) || '?'}</span>
+                  <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center">
+                    <span className="text-xl md:text-2xl font-bold text-white">{partnerInfo?.anonymousId?.slice(0, 2) || '?'}</span>
                   </div>
                 </div>
               )}
-              <div className="absolute bottom-24 md:bottom-6 right-4 w-28 h-36 md:w-36 md:h-48 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl">
+              <div className="absolute bottom-4 right-4 w-24 h-32 md:w-36 md:h-48 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl">
                 <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
               </div>
-            </>
+            </div>
           )}
 
           {/* PIP Local */}
           {viewMode === 'pip-local' && (
-            <>
+            <div className="absolute inset-0 pt-12 pb-20 md:pt-0 md:pb-0">
               <video ref={localVideoRef} autoPlay playsInline muted className="w-full h-full object-cover" style={{ transform: 'scaleX(-1)' }} />
-              <div className="absolute bottom-24 md:bottom-6 right-4 w-28 h-36 md:w-36 md:h-48 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl">
+              <div className="absolute bottom-4 right-4 w-24 h-32 md:w-36 md:h-48 rounded-xl overflow-hidden border-2 border-white/30 shadow-2xl">
                 <video ref={remoteVideoRef} autoPlay playsInline className="w-full h-full object-cover" />
               </div>
-            </>
+            </div>
           )}
 
-          {/* CONTROLS */}
-          <div className={`absolute inset-x-0 bottom-0 transition-all duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-            <div className="bg-gradient-to-t from-black/80 to-transparent pt-16 pb-4 md:pb-6 px-4">
+          {/* CONTROLS - Fixed bottom bar */}
+          <div className={`absolute inset-x-0 bottom-0 z-30 transition-all duration-300 ${showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+            <div className="bg-gradient-to-t from-black via-black/80 to-transparent pt-8 pb-4 md:pb-6 px-4">
               <div className="flex items-center justify-center gap-3 md:gap-4">
                 <button onClick={toggleMic} className={`p-3 md:p-4 rounded-full ${micOn ? 'bg-white/20' : 'bg-red-500'} text-white transition-all`}>
                   <svg className="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

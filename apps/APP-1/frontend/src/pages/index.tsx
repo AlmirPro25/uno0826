@@ -6,12 +6,15 @@ import { TranslationPanel } from '@/components/chat/TranslationPanel'
 import { MobileHeader } from '@/components/nav/MobileHeader'
 import { ReportModal } from '@/components/ui/ReportModal'
 import { ConnectionStatus } from '@/components/ui/ConnectionStatus'
+import { OnboardingScreen } from '@/components/onboarding/OnboardingScreen'
 import { useNexusStore } from '@/store/useNexusStore'
+import { useUserStore } from '@/store/useUserStore'
 import { useWebSocket } from '@/hooks/useWebSocket'
 import { useTheme } from '@/hooks/useTheme'
 
 export default function NexusApp() {
   const { setUser, setToken, setStatus, status, user, token, partnerInfo } = useNexusStore()
+  const { isOnboarded, profile } = useUserStore()
   const { theme } = useTheme()
   const [mobileTab, setMobileTab] = useState<'video' | 'chat'>('video')
   const [showReport, setShowReport] = useState(false)
@@ -23,10 +26,12 @@ export default function NexusApp() {
 
   useEffect(() => {
     const savedUser = useNexusStore.getState().user
+    // Usar nome do perfil se disponível
+    const displayName = profile?.name || savedUser?.anonymousId || `NX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
     const anonId = savedUser?.anonymousId || `NX-${Math.random().toString(36).substr(2, 9).toUpperCase()}`
     setUser({
       id: anonId,
-      anonymousId: anonId,
+      anonymousId: displayName,
       nativeLanguage: savedUser?.nativeLanguage || 'pt',
       targetLanguage: savedUser?.targetLanguage || 'en',
       interests: savedUser?.interests || [],
@@ -35,7 +40,7 @@ export default function NexusApp() {
     })
     setToken('direct')
     wsRef.current.connect()
-  }, [setUser, setToken])
+  }, [setUser, setToken, profile])
 
   // Mobile: ficar na câmera (não ir pro chat automaticamente)
   useEffect(() => {
@@ -84,6 +89,11 @@ export default function NexusApp() {
   const handleReport = (reason: string, details: string) => {
     wsRef.current.reportUser(reason, details)
     setShowReport(false)
+  }
+
+  // Mostrar onboarding se usuário não completou
+  if (!isOnboarded) {
+    return <OnboardingScreen />
   }
 
   return (

@@ -1,18 +1,30 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useNexusStore } from '@/store/useNexusStore'
 import { useTheme } from '@/hooks/useTheme'
 import { useSound } from '@/hooks/useSound'
+import { MediaUpload, MediaType } from './MediaUpload'
+import { MediaPreview } from './MediaPreview'
+
+interface MediaFile {
+  type: MediaType
+  file: File
+  preview: string
+  duration?: number
+}
 
 interface Props {
   onSendMessage?: (message: string) => void
+  onSendMedia?: (type: MediaType, data: string, fileName: string) => void
   onTyping?: () => void
 }
 
-export function TranslationPanel({ onSendMessage, onTyping }: Props) {
+export function TranslationPanel({ onSendMessage, onSendMedia, onTyping }: Props) {
   const { status, messages, partnerInfo, user, partnerTyping, sessionStats } = useNexusStore()
   const { theme } = useTheme()
   const { playMessage } = useSound()
   const [input, setInput] = useState('')
+  const [showMediaUpload, setShowMediaUpload] = useState(false)
+  const [selectedMedia, setSelectedMedia] = useState<MediaFile | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const prevMessageCount = useRef(messages.length)
 
@@ -47,6 +59,59 @@ export function TranslationPanel({ onSendMessage, onTyping }: Props) {
     setInput(e.target.value)
     if (e.target.value && onTyping) onTyping()
   }
+
+  // Handle paste event for images
+  const handlePaste = useCallback((e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i]
+      if (item.type.startsWith('image/')) {
+        e.preventDefault()
+        const file = item.getAsFile()
+        if (file) {
+          const preview = URL.createObjectURL(file)
+          setSelectedMedia({ type: 'image', file, preview })
+        }
+        return
+      }
+    }
+  }, [])
+
+  // Handle media selection
+  const handleMediaSelect = useCallback((media: MediaFile) => {
+    setSelectedMedia(media)
+    setShowMediaUpload(false)
+  }, [])
+
+  // Send media
+  const handleSendMedia = useCallback(async () => {
+    if (!selectedMedia || !onSendMedia) return
+
+    // Convert to base64
+    const reader = new FileReader()
+    reader.onload = () => {
+      const base64 = reader.result as string
+      onSendMedia(selectedMedia.type, base64, selectedMedia.file.name)
+      
+      // Add to local messages (cast to any to add media fields)
+      const newMessage: any = {
+        id: Date.now().toString(),
+        senderId: user?.anonymousId || 'me',
+        originalText: `[${selectedMedia.type === 'image' ? '📷 Imagem' : selectedMedia.type === 'video' ? '🎬 Vídeo' : '🎤 Áudio'}]`,
+        translatedText: '',
+        timestamp: new Date(),
+        isAiOptimized: false,
+        mediaType: selectedMedia.type,
+        mediaUrl: selectedMedia.preview
+      }
+      useNexusStore.getState().addMessage(newMessage)
+      
+      setSelectedMedia(null)
+    }
+    reader.readAsDataURL(selectedMedia.file)
+  }, [selectedMedia, onSendMedia, user?.anonymousId])
 
   const formatDuration = () => {
     if (!sessionStats.startTime) return '0:00'
@@ -139,6 +204,7 @@ export function TranslationPanel({ onSendMessage, onTyping }: Props) {
 
         {messages.map((msg) => {
           const isMe = msg.senderId === user?.anonymousId
+          const hasMedia = (msg as any).mediaType && (msg as any).mediaUrl
           return (
             <div key={msg.id} className={`flex ${isMe ? 'justify-end' : 'justify-start'} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
               <div className={`max-w-[85%] ${isMe ? 'items-end' : 'items-start'} flex flex-col`}>
@@ -148,22 +214,52 @@ export function TranslationPanel({ onSendMessage, onTyping }: Props) {
                   </span>
                 )}
                 <div className={`
-                  px-4 py-3 rounded-2xl shadow-sm text-sm leading-relaxed
+                  rounded-2xl shadow-sm overflow-hidden
                   ${isMe
                     ? 'bg-gradient-to-br from-cyan-500 to-blue-600 text-white rounded-br-none shadow-cyan-500/20'
                     : `${isDark ? 'bg-[#1a1a1a] text-white border border-white/5' : 'bg-gray-100 text-gray-800'} rounded-bl-none`
                   }
                 `}>
-                  <p>{msg.originalText}</p>
-                  {msg.translatedText && msg.translatedText !== msg.originalText && (
-                    <div className={`mt-2 pt-2 border-t ${isMe ? 'border-white/20' : 'border-white/5'} text-[13px] italic opacity-90`}>
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <svg className="w-3 h-3 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Neural Bridge</span>
-                      </div>
-                      <p>{msg.translatedText}</p>
+                  {/* Media content */}
+                  {hasMedia && (
+                    <div className="max-w-[280px]">
+                      {(msg as any).mediaType === 'image' && (
+                        <img 
+                          src={(msg as any).mediaUrl} 
+                          alt="Imagem" 
+                          className="w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                          onClick={() => window.open((msg as any).mediaUrl, '_blank')}
+                        />
+                      )}
+                      {(msg as any).mediaType === 'video' && (
+                        <video 
+                          src={(msg as any).mediaUrl} 
+                          controls 
+                          className="w-full h-auto max-h-64"
+                        />
+                      )}
+                      {(msg as any).mediaType === 'audio' && (
+                        <div className="p-3">
+                          <audio src={(msg as any).mediaUrl} controls className="w-full h-10" />
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  {/* Text content */}
+                  {!hasMedia && (
+                    <div className="px-4 py-3 text-sm leading-relaxed">
+                      <p>{msg.originalText}</p>
+                      {msg.translatedText && msg.translatedText !== msg.originalText && (
+                        <div className={`mt-2 pt-2 border-t ${isMe ? 'border-white/20' : 'border-white/5'} text-[13px] italic opacity-90`}>
+                          <div className="flex items-center gap-1.5 mb-1">
+                            <svg className="w-3 h-3 text-cyan-400" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-cyan-500">Neural Bridge</span>
+                          </div>
+                          <p>{msg.translatedText}</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -198,15 +294,52 @@ export function TranslationPanel({ onSendMessage, onTyping }: Props) {
 
       {/* Input - fixed at bottom */}
       {status === 'connected' && (
-        <div className="shrink-0 p-4 border-t" style={{ borderColor: isDark ? '#222' : '#eee' }}>
+        <div className="shrink-0 p-4 border-t relative" style={{ borderColor: isDark ? '#222' : '#eee' }}>
+          {/* Media Upload Panel */}
+          {showMediaUpload && (
+            <MediaUpload
+              onMediaSelect={handleMediaSelect}
+              onClose={() => setShowMediaUpload(false)}
+              isDark={isDark}
+            />
+          )}
+
+          {/* Media Preview */}
+          {selectedMedia && (
+            <MediaPreview
+              type={selectedMedia.type}
+              preview={selectedMedia.preview}
+              onSend={handleSendMedia}
+              onCancel={() => setSelectedMedia(null)}
+              isDark={isDark}
+            />
+          )}
+
           <div className="flex items-center gap-2 bg-transparent">
+            {/* Attach button */}
+            <button
+              onClick={() => setShowMediaUpload(!showMediaUpload)}
+              className={`h-[48px] w-[48px] flex items-center justify-center rounded-2xl transition-all ${
+                showMediaUpload
+                  ? 'bg-cyan-500 text-white'
+                  : isDark 
+                    ? 'bg-[#161616] text-gray-400 hover:text-white hover:bg-[#222]' 
+                    : 'bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+              </svg>
+            </button>
+
             <div className="flex-1 relative group">
               <input
                 type="text"
                 value={input}
                 onChange={handleInputChange}
                 onKeyPress={handleKeyPress}
-                placeholder="Escreva sua mensagem..."
+                onPaste={handlePaste}
+                placeholder="Escreva ou cole uma imagem..."
                 className={`
                   w-full px-5 py-3.5 rounded-2xl text-sm outline-none transition-all
                   ${isDark
