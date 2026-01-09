@@ -279,6 +279,7 @@ func createAddOnCheckoutSession(customerID, userID, addOnID, priceID, successURL
 	
 	params := &stripe.CheckoutSessionParams{
 		Mode: stripe.String(string(stripe.CheckoutSessionModeSubscription)),
+		PaymentMethodTypes: stripe.StringSlice([]string{"card"}), // Forçar cartão
 		LineItems: []*stripe.CheckoutSessionLineItemParams{
 			{
 				Price:    stripe.String(priceID),
