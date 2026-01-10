@@ -6,6 +6,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
+import { prostqs } from '../lib/prostqs-client.js';
 
 const prisma = new PrismaClient();
 const logEmitter = new EventEmitter();
@@ -38,6 +39,9 @@ export class DeploymentService {
       },
     });
 
+    // 🔗 PROST-QS: Deploy iniciado
+    prostqs.deployStarted(deployment.id, projectId, project.name, project.branch);
+
     // Executa pipeline em background
     this.runPipeline(deployment.id, project);
 
@@ -45,6 +49,7 @@ export class DeploymentService {
   }
 
   private async runPipeline(deploymentId: string, project: any) {
+    const startTime = Date.now();
     const emit = (msg: string) => {
       logEmitter.emit(`logs-${deploymentId}`, msg);
       this.appendLog(deploymentId, msg);
@@ -60,6 +65,9 @@ export class DeploymentService {
       emit('✅ Docker Engine conectado');
 
       await this.updateStatus(deploymentId, 'BUILDING');
+      
+      // 🔗 PROST-QS: Building
+      prostqs.deployBuilding(deploymentId, project.id);
 
       // 2. Garantir rede existe
       await dockerService.ensureNetwork();
@@ -110,18 +118,28 @@ export class DeploymentService {
       });
 
       emit(`✅ Container iniciado: ${containerId.substring(0, 12)}`);
+      
+      // 🔗 PROST-QS: Container started
+      prostqs.containerStarted(containerId, project.id, imageTag);
 
       // 8. Limpar build
       await fs.rm(buildPath, { recursive: true, force: true });
 
       // 9. Finalizar
       await this.updateStatus(deploymentId, 'HEALTHY');
+      const duration = Date.now() - startTime;
       emit(`🎉 Deploy concluído! Acesse: https://${project.subdomain}.${process.env.SUPER_DOMAIN || 'sce.local'}`);
+      
+      // 🔗 PROST-QS: Deploy healthy
+      prostqs.deployHealthy(deploymentId, project.id, duration);
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
       emit(`❌ FALHA: ${errorMsg}`);
       await this.updateStatus(deploymentId, 'FAILED');
+      
+      // 🔗 PROST-QS: Deploy failed
+      prostqs.deployFailed(deploymentId, project.id, errorMsg, 'pipeline');
     }
   }
 

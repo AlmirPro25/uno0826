@@ -1,6 +1,8 @@
 # 🏛️ Sovereign Cloud Engine (SCE)
 
-> **Sua infraestrutura, suas regras.** Uma plataforma PaaS privada para deploy ilimitado de aplicações.
+> **APP-2 do Ecossistema PROST-QS** — Sua infraestrutura, suas regras.
+
+Uma plataforma PaaS privada para deploy ilimitado de aplicações, totalmente integrada ao PROST-QS para observabilidade e governança.
 
 ## O que é?
 
@@ -11,6 +13,7 @@ O SCE é um **Railway/Vercel self-hosted** que permite:
 - Variáveis de ambiente criptografadas (AES-256)
 - Logs em tempo real via SSE
 - Métricas de CPU/RAM por container
+- **Telemetria completa via PROST-QS**
 
 ## Stack
 
@@ -104,13 +107,53 @@ Serviços disponíveis:
 | GET | /deployments/:id/logs/stream | SSE de logs |
 | GET | /infra/stats | Métricas do sistema |
 
-## Integração com Prost-QS
+## Integração com PROST-QS
 
-O SCE foi projetado para integrar com o Prost-QS como Identity Provider:
+O SCE envia eventos de telemetria para o PROST-QS automaticamente:
 
-1. Usuários autenticam no Prost-QS
-2. Token JWT é validado no SCE
-3. Billing de projetos registrado no ledger do Prost-QS
+### Eventos de Deploy
+| Evento | Quando |
+|--------|--------|
+| `deploy.started` | Deploy iniciado |
+| `deploy.building` | Build em progresso |
+| `deploy.healthy` | Deploy concluído com sucesso |
+| `deploy.failed` | Deploy falhou |
+
+### Eventos de Container
+| Evento | Quando |
+|--------|--------|
+| `container.started` | Container iniciado |
+| `container.stopped` | Container parado |
+| `container.crashed` | Container crashou |
+| `container.metrics` | Métricas de CPU/RAM |
+
+### Eventos de Projeto
+| Evento | Quando |
+|--------|--------|
+| `project.created` | Projeto criado |
+| `project.deleted` | Projeto deletado |
+
+### Configuração
+
+1. Criar app "SCE" no admin dashboard do PROST-QS
+2. Copiar App ID e API Keys
+3. Configurar no `.env`:
+
+```env
+PROSTQS_URL=https://uno0826.onrender.com
+PROSTQS_APP_ID=seu_app_id
+PROSTQS_APP_KEY=pq_pk_xxx
+PROSTQS_APP_SECRET=pq_sk_xxx
+```
+
+### Regras Sugeridas
+
+No PROST-QS, criar regras para o SCE:
+
+- **Deploy Falhou**: Alerta quando `deploy.failed` acontece
+- **Container Crash**: Alerta crítico quando `container.crashed`
+- **CPU Alta**: Alerta quando `container.metrics.cpu > 80%`
+- **Muitos Deploys**: Alerta quando mais de 10 deploys/hora
 
 ## Licença
 

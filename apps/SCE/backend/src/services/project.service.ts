@@ -2,6 +2,7 @@
 import { PrismaClient } from '@prisma/client';
 import { CryptoUtil } from '../utils/crypto.util.js';
 import { z } from 'zod';
+import { prostqs } from '../lib/prostqs-client.js';
 
 const prisma = new PrismaClient();
 
@@ -24,7 +25,7 @@ export const createProjectSchema = z.object({
 
 export class ProjectService {
   async createProject(data: z.infer<typeof createProjectSchema> & { ownerId: string }) {
-    return await prisma.$transaction(async (tx) => {
+    const project = await prisma.$transaction(async (tx) => {
       const project = await tx.project.create({
         data: {
           name: data.name,
@@ -48,6 +49,11 @@ export class ProjectService {
 
       return project;
     });
+    
+    // 🔗 PROST-QS: Project created
+    prostqs.projectCreated(project.id, project.name, project.type, data.ownerId);
+    
+    return project;
   }
 
   async listAll() {
@@ -79,10 +85,20 @@ export class ProjectService {
   }
   
   async deleteProject(id: string) {
+    // Buscar projeto antes de deletar para ter o nome
+    const project = await prisma.project.findUnique({ where: { id } });
+    
     // Cascade delete já configurado no Prisma (envVars e deployments)
-    return await prisma.project.delete({
+    const deleted = await prisma.project.delete({
       where: { id }
     });
+    
+    // 🔗 PROST-QS: Project deleted
+    if (project) {
+      prostqs.projectDeleted(id, project.name, project.ownerId);
+    }
+    
+    return deleted;
   }
   
   async updateProject(id: string, data: Partial<{
