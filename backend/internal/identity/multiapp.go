@@ -435,7 +435,7 @@ func RegisterMultiAppIdentityRoutes(router *gin.RouterGroup, db *gorm.DB, jwtSec
 		identity.POST("/register", appContextMiddleware, handler.Register)
 		identity.POST("/login", appContextMiddleware, handler.Login)
 		identity.POST("/link-app", authMiddleware, handler.LinkApp)
-		identity.GET("/me", authMiddleware, handler.GetProfile)
-		identity.GET("/me/apps", authMiddleware, handler.GetLinkedApps)
+		identity.GET("/profile", authMiddleware, handler.GetProfile)
+		identity.GET("/profile/apps", authMiddleware, handler.GetLinkedApps)
 	}
 }

@@ -666,7 +666,7 @@ func main() {
 		// "Uma conta global, vínculos locais por app"
 		// ========================================
 		identity.RegisterMultiAppIdentityRoutes(v1, gormDB, jwtSecret, middleware.AuthMiddleware(), application.AppContextMiddleware(applicationService))
-		log.Println("✅ Multi-App Identity routes registradas (/identity/register, /identity/login, /identity/link-app, /identity/me)")
+		log.Println("✅ Multi-App Identity routes registradas (/identity/register, /identity/login, /identity/link-app, /identity/profile)")
 
 		// ========================================
 		// TELEMETRY - Fase 30
