@@ -87,10 +87,26 @@ func main() {
 		sqliteDBPath = "/data/prostqs.db" // Caminho padrão para o DB SQLite (absoluto para produção)
 	}
 
-	// Inicializar banco de dados SQLite
-	gormDB, err := db.InitSQLite(sqliteDBPath)
-	if err != nil {
-		log.Fatalf("Falha ao inicializar o banco de dados SQLite: %v", err)
+	// ========================================
+	// DATABASE INITIALIZATION
+	// Prioridade: DATABASE_URL (Postgres) > SQLITE_DB_PATH (SQLite)
+	// ========================================
+	var gormDB *gorm.DB
+	var err error
+
+	databaseURL := os.Getenv("DATABASE_URL")
+	if databaseURL != "" {
+		// Usar PostgreSQL (Neon, Supabase, etc.)
+		gormDB, err = db.InitPostgres(databaseURL)
+		if err != nil {
+			log.Fatalf("Falha ao conectar ao PostgreSQL: %v", err)
+		}
+	} else {
+		// Fallback para SQLite (desenvolvimento local)
+		gormDB, err = db.InitSQLite(sqliteDBPath)
+		if err != nil {
+			log.Fatalf("Falha ao inicializar o banco de dados SQLite: %v", err)
+		}
 	}
 
 	// Migrar schemas
