@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Search, MoreHorizontal, Loader2, X, Globe, Lock, ShieldAlert, Cpu, Rocket, ExternalLink } from "lucide-react";
+import { Plus, Search, Loader2, X, Globe, Lock, Cpu, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
+import { AppHeader } from "@/components/dashboard/app-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -34,7 +35,7 @@ export default function AppsPage() {
         try {
             const res = await api.get("/apps/mine");
             setApps(res.data.apps || []);
-        } catch (err) {
+        } catch {
             setError("Falha ao carregar aplicações do Kernel.");
         } finally {
             setLoading(false);
@@ -60,7 +61,8 @@ export default function AppsPage() {
             setNewSlug("");
             setNewDesc("");
             fetchApps();
-        } catch (err: any) {
+        } catch (error: unknown) {
+            const err = error as { response?: { status?: number; data?: { error?: string } } };
             const msg = err.response?.data?.error || "Falha ao criar aplicação.";
             if (err.response?.status === 403) {
                 toast.error("Assinatura PRO necessária.", {
@@ -76,12 +78,14 @@ export default function AppsPage() {
 
     return (
         <div className="space-y-10 pb-20">
+            <AppHeader />
+            
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
-                        ORQUESTRADOR DE <span className="text-indigo-500">APPS</span>
+                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                        Aplicações
                     </h1>
-                    <p className="text-slate-500 mt-2 font-medium">Gerencie suas instâncias e chaves de acesso ao Kernel.</p>
+                    <p className="text-slate-500 mt-1 font-medium">Gerencie suas instâncias e chaves de acesso ao Kernel.</p>
                 </div>
                 <Button className="h-14 px-8 rounded-2xl bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-indigo-500 shadow-xl shadow-indigo-600/20 transition-all" onClick={() => setIsModalOpen(true)}>
                     <Plus className="w-4 h-4 mr-2" /> Criar Novo App

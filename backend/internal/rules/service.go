@@ -408,7 +408,7 @@ func (s *RulesService) getAppMetrics(appID uuid.UUID) (map[string]float64, error
 		TotalUsers        int64
 	}
 	
-	err := s.db.Table("app_metrics_snapshots").
+	err := s.db.Table("telemetry_metrics_snapshots").
 		Where("app_id = ?", appID).
 		Select("online_now, active_sessions, total_sessions, total_events, events_per_minute, total_interactions, active_users_24h, total_users").
 		Scan(&snapshot).Error

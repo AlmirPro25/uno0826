@@ -7,13 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { api } from "@/lib/api";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import { LoginResponse } from "@/types";
 import { Lock, Mail, ArrowRight, Loader2 } from "lucide-react";
 
 export default function LoginPage() {
     const { login } = useAuth();
-    const router = useRouter();
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
@@ -33,13 +31,13 @@ export default function LoginPage() {
 
             await login(
                 res.data.token,
-                res.data.refreshToken,
-                res.data.expiresAt
+                res.data.refreshToken
             );
-        } catch (err: any) {
+        } catch (err: unknown) {
             console.error(err);
+            const error = err as { response?: { data?: { error?: string } } };
             setError(
-                err.response?.data?.error || "Invalid credentials. Please try again."
+                error.response?.data?.error || "Invalid credentials. Please try again."
             );
         } finally {
             setLoading(false);

@@ -41,8 +41,7 @@ export default function RegisterPage() {
             // 3. Set Auth State
             await login(
                 loginRes.data.token,
-                loginRes.data.refreshToken,
-                loginRes.data.expiresAt
+                loginRes.data.refreshToken
             );
         } catch (err: any) {
             console.error("Registration error:", err);

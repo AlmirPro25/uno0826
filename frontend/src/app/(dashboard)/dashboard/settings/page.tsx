@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { User, Lock, Bell, Shield, Fingerprint, Loader2, CheckCircle2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
+import { AppHeader } from "@/components/dashboard/app-header";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
 
@@ -21,7 +22,7 @@ export default function SettingsPage() {
         try {
             await api.put("/identity/me", { name });
             toast.success("Perfil atualizado com sucesso!");
-        } catch (error) {
+        } catch {
             toast.error("Falha ao atualizar perfil");
         } finally {
             setSaving(false);
@@ -42,8 +43,9 @@ export default function SettingsPage() {
             toast.success("Senha alterada com sucesso!");
             setCurrentPassword("");
             setNewPassword("");
-        } catch (error: any) {
-            toast.error(error.response?.data?.error || "Falha ao alterar senha");
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { error?: string } } };
+            toast.error(err.response?.data?.error || "Falha ao alterar senha");
         } finally {
             setChangingPassword(false);
         }
@@ -51,11 +53,13 @@ export default function SettingsPage() {
 
     return (
         <div className="max-w-4xl space-y-12 pb-20">
+            <AppHeader />
+            
             <div>
-                <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
-                    PREFERÊNCIAS DO <span className="text-indigo-500">KERNEL</span>
+                <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                    Configurações
                 </h1>
-                <p className="text-slate-500 mt-2 font-medium">Configure sua identidade soberana e protocolos de segurança.</p>
+                <p className="text-slate-500 mt-1 font-medium">Configure sua identidade soberana e protocolos de segurança.</p>
             </div>
 
             <div className="grid gap-8">

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User } from "@/types";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 interface AuthContextType {
     user: User | null;
     loading: boolean;
-    login: (token: string, refreshToken: string, expiresAt: string) => Promise<void>;
+    login: (token: string, refreshToken: string) => Promise<void>;
     logout: () => void;
     isAuthenticated: boolean;
 }
@@ -26,6 +26,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
+    const logout = useCallback(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+        localStorage.removeItem("user");
+        setUser(null);
+        router.push("/login");
+    }, [router]);
+
     useEffect(() => {
         const initializeAuth = async () => {
             const token = localStorage.getItem("token");
@@ -33,8 +41,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             if (token && storedUser) {
                 try {
-                    // Optional: Validate token with backend here
-                    // await api.get("/auth/me");
                     setUser(JSON.parse(storedUser));
                 } catch (error) {
                     console.error("Auth validation failed", error);
@@ -45,9 +51,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
 
         initializeAuth();
-    }, []);
+    }, [logout]);
 
-    const login = async (token: string, refreshToken: string, expiresAt: string) => {
+    const login = async (token: string, refreshToken: string) => {
         localStorage.setItem("token", token);
         localStorage.setItem("refreshToken", refreshToken);
 
@@ -59,25 +65,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             localStorage.setItem("user", JSON.stringify(userData));
             setUser(userData);
 
-            // Redirect based on role
+            // Check if onboarding is complete
+            const onboardingComplete = localStorage.getItem("onboarding_complete");
+
+            // Redirect based on role and onboarding status
             if (userData.role === 'admin' || userData.role === 'super_admin') {
                 router.push("/admin");
+            } else if (!onboardingComplete) {
+                // New user - send to onboarding
+                router.push("/onboarding");
             } else {
                 router.push("/dashboard");
             }
         } catch (error) {
             console.error("Failed to fetch user profile", error);
-            // Fallback (should not happen if token is valid)
             logout();
         }
-    };
-
-    const logout = () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
-        setUser(null);
-        router.push("/login");
     };
 
     return (

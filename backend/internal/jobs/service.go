@@ -31,6 +31,9 @@ type JobService struct {
 
 // NewJobService cria nova instância do serviço
 func NewJobService(db *gorm.DB) *JobService {
+	// Criar índice composto para otimizar a query de polling
+	db.Exec(`CREATE INDEX IF NOT EXISTS idx_jobs_polling ON jobs(status, next_run_at, locked_at) WHERE status IN ('pending', 'retrying')`)
+	
 	return &JobService{
 		db:       db,
 		handlers: make(map[string]JobHandler),

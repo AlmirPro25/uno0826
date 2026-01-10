@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { CreditCard, Zap, FileText, CheckCircle2, BarChart, History, Wallet, Loader2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useApp } from "@/contexts/app-context";
+import { AppHeader } from "@/components/dashboard/app-header";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { api } from "@/lib/api";
@@ -27,6 +29,7 @@ type SubscriptionStatus = {
 }
 
 export default function BillingPage() {
+    const { activeApp } = useApp();
     const [account, setAccount] = useState<BillingAccount | null>(null);
     const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
     const [loading, setLoading] = useState(true);
@@ -93,12 +96,14 @@ export default function BillingPage() {
 
     return (
         <div className="space-y-10 pb-20">
+            <AppHeader />
+            
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter leading-none">
-                        ECONOMIA DO <span className="text-indigo-500">KERNEL</span>
+                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                        Economia {activeApp ? `de ${activeApp.name}` : "do Kernel"}
                     </h1>
-                    <p className="text-slate-500 mt-2 font-medium">Gestão soberana de fluxos financeiros e subscrições.</p>
+                    <p className="text-slate-500 mt-1 font-medium">Gestão soberana de fluxos financeiros e subscrições.</p>
                 </div>
                 <div className="flex gap-3">
                     <Button 
