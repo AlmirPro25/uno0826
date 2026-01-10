@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { API } from '@/lib/api';
 import { Project, DeploymentStatus } from '@/types';
 import { 
@@ -41,6 +42,7 @@ export default function ProjectsPage() {
   });
 
   return (
+    <AuthGuard>
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-8">
@@ -178,5 +180,6 @@ export default function ProjectsPage() {
         )}
       </main>
     </div>
+    </AuthGuard>
   );
 }

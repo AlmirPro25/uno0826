@@ -1,4 +1,4 @@
-// File: C:\Users\almir\Desktop\infra\meu-projeto-ia\ospedagem\frontend\src\app\security\page.tsx
+// File: D:\DEV\Desktop\UNO-main\UNO-main\apps\SCE\frontend\src\app\security\page.tsx
 import * as entry from '../../../../src/app/security/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 

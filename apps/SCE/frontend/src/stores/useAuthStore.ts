@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { User } from '@/types';
 
 interface AuthState {
@@ -9,6 +9,8 @@ interface AuthState {
   token: string | null;
   setAuth: (user: User, token: string) => void;
   logout: () => void;
+  _hasHydrated: boolean;
+  setHasHydrated: (state: boolean) => void;
 }
 
 /**
@@ -20,17 +22,27 @@ export const useAuthStore = create<AuthState>()(
       user: null,
       isAuthenticated: false,
       token: null,
+      _hasHydrated: false,
+      setHasHydrated: (state) => set({ _hasHydrated: state }),
       setAuth: (user, token) => {
-        localStorage.setItem('sce_token', token);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('sce_token', token);
+        }
         set({ user, token, isAuthenticated: true });
       },
       logout: () => {
-        localStorage.removeItem('sce_token');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('sce_token');
+        }
         set({ user: null, token: null, isAuthenticated: false });
       },
     }),
     {
       name: 'sce_user_store',
+      storage: createJSONStorage(() => localStorage),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true);
+      },
     }
   )
 );

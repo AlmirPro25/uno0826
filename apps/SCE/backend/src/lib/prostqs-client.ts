@@ -1,244 +1,238 @@
 /**
  * PROST-QS Client for Sovereign Cloud Engine (SCE)
+ * Baseado no cliente do VOX-BRIDGE que FUNCIONA
  * 
- * Integração com o kernel de observabilidade e governança
- * Eventos de lifecycle: deploy, container, project
+ * Headers corretos:
+ * - X-Prost-App-Key: pq_pk_xxx
+ * - X-Prost-App-Secret: pq_sk_xxx
  */
 
-import { randomUUID } from 'crypto';
+const PROSTQS_URL = process.env.PROSTQS_URL || 'https://uno0826.onrender.com';
+const PROSTQS_APP_KEY = process.env.PROSTQS_APP_KEY || '';
+const PROSTQS_APP_SECRET = process.env.PROSTQS_APP_SECRET || '';
+const APP_ID = process.env.PROSTQS_APP_ID || '';
 
-interface ProstQSConfig {
-  url: string;
-  appId: string;
-  appKey: string;
-  appSecret: string;
+// Validar configuração
+const isConfigured = !!(PROSTQS_URL && PROSTQS_APP_KEY && PROSTQS_APP_SECRET);
+
+if (isConfigured) {
+  console.log(`✅ [PROST-QS] SCE Client configured`);
+  console.log(`   URL: ${PROSTQS_URL}`);
+  console.log(`   APP_ID: ${APP_ID}`);
+  console.log(`   KEY: ${PROSTQS_APP_KEY.substring(0, 20)}...`);
+} else {
+  console.warn('⚠️ [PROST-QS] Client disabled - missing PROSTQS_APP_KEY or PROSTQS_APP_SECRET');
 }
 
-interface TelemetryEvent {
-  type: string;
-  user_id?: string;
-  session_id?: string;
-  data?: Record<string, any>;
-  timestamp?: string;
-}
+/**
+ * Emite evento de telemetria para o PROST-QS
+ */
+async function emitTelemetry(
+  type: string,
+  userId: string = '00000000-0000-0000-0000-000000000000',
+  sessionId: string = '00000000-0000-0000-0000-000000000000',
+  options: {
+    feature?: string;
+    targetId?: string;
+    targetType?: string;
+    context?: Record<string, any>;
+    metadata?: Record<string, any>;
+  } = {}
+): Promise<boolean> {
+  if (!isConfigured) {
+    console.log(`⏭️ [PROST-QS] Skipped (not configured): ${type}`);
+    return false;
+  }
 
-class ProstQSClient {
-  private config: ProstQSConfig;
-  private enabled: boolean = false;
-
-  constructor() {
-    this.config = {
-      url: process.env.PROSTQS_URL || 'https://uno0826.onrender.com',
-      appId: process.env.PROSTQS_APP_ID || '',
-      appKey: process.env.PROSTQS_APP_KEY || '',
-      appSecret: process.env.PROSTQS_APP_SECRET || '',
+  try {
+    const event = {
+      user_id: userId || '00000000-0000-0000-0000-000000000000',
+      session_id: sessionId || '00000000-0000-0000-0000-000000000000',
+      type,
+      feature: options.feature || '',
+      target_id: options.targetId || '',
+      target_type: options.targetType || '',
+      context: JSON.stringify(options.context || {}),
+      metadata: JSON.stringify(options.metadata || {}),
+      timestamp: new Date().toISOString()
     };
 
-    this.enabled = !!(this.config.appId && this.config.appKey);
-    
-    if (this.enabled) {
-      console.log('🔗 [PROST-QS] Client initialized for SCE');
-    } else {
-      console.log('⚠️ [PROST-QS] Client disabled - missing credentials');
-    }
-  }
+    console.log(`📤 [PROST-QS] Sending: ${type}`);
 
-  /**
-   * Envia evento de telemetria para o PROST-QS
-   */
-  async sendEvent(event: TelemetryEvent): Promise<boolean> {
-    if (!this.enabled) return false;
+    const response = await fetch(`${PROSTQS_URL}/api/v1/telemetry/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Prost-App-Key': PROSTQS_APP_KEY,
+        'X-Prost-App-Secret': PROSTQS_APP_SECRET
+      },
+      body: JSON.stringify(event)
+    });
 
-    try {
-      const response = await fetch(`${this.config.url}/api/v1/telemetry/events`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-App-ID': this.config.appId,
-          'X-App-Key': this.config.appKey,
-        },
-        body: JSON.stringify({
-          ...event,
-          timestamp: event.timestamp || new Date().toISOString(),
-        }),
-      });
-
-      if (!response.ok) {
-        console.error(`[PROST-QS] Event failed: ${response.status}`);
-        return false;
-      }
-
-      return true;
-    } catch (error) {
-      console.error('[PROST-QS] Event error:', error);
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`❌ [PROST-QS] ${type} failed: HTTP ${response.status} - ${text}`);
       return false;
     }
-  }
 
-  // ========================================
-  // DEPLOY EVENTS
-  // ========================================
-
-  async deployStarted(deploymentId: string, projectId: string, projectName: string, branch: string) {
-    return this.sendEvent({
-      type: 'deploy.started',
-      session_id: deploymentId,
-      data: {
-        deployment_id: deploymentId,
-        project_id: projectId,
-        project_name: projectName,
-        branch,
-        stage: 'queued',
-      },
-    });
-  }
-
-  async deployBuilding(deploymentId: string, projectId: string) {
-    return this.sendEvent({
-      type: 'deploy.building',
-      session_id: deploymentId,
-      data: {
-        deployment_id: deploymentId,
-        project_id: projectId,
-        stage: 'building',
-      },
-    });
-  }
-
-  async deployHealthy(deploymentId: string, projectId: string, duration: number) {
-    return this.sendEvent({
-      type: 'deploy.healthy',
-      session_id: deploymentId,
-      data: {
-        deployment_id: deploymentId,
-        project_id: projectId,
-        stage: 'healthy',
-        duration_ms: duration,
-      },
-    });
-  }
-
-  async deployFailed(deploymentId: string, projectId: string, error: string, stage: string) {
-    return this.sendEvent({
-      type: 'deploy.failed',
-      session_id: deploymentId,
-      data: {
-        deployment_id: deploymentId,
-        project_id: projectId,
-        stage,
-        error,
-      },
-    });
-  }
-
-  // ========================================
-  // CONTAINER EVENTS
-  // ========================================
-
-  async containerStarted(containerId: string, projectId: string, imageTag: string) {
-    return this.sendEvent({
-      type: 'container.started',
-      session_id: containerId,
-      data: {
-        container_id: containerId,
-        project_id: projectId,
-        image_tag: imageTag,
-      },
-    });
-  }
-
-  async containerStopped(containerId: string, projectId: string, reason: string) {
-    return this.sendEvent({
-      type: 'container.stopped',
-      session_id: containerId,
-      data: {
-        container_id: containerId,
-        project_id: projectId,
-        reason,
-      },
-    });
-  }
-
-  async containerCrashed(containerId: string, projectId: string, exitCode: number, logs?: string) {
-    return this.sendEvent({
-      type: 'container.crashed',
-      session_id: containerId,
-      data: {
-        container_id: containerId,
-        project_id: projectId,
-        exit_code: exitCode,
-        logs: logs?.slice(-1000), // Últimos 1000 chars
-      },
-    });
-  }
-
-  async containerMetrics(containerId: string, projectId: string, cpu: number, memory: number) {
-    return this.sendEvent({
-      type: 'container.metrics',
-      session_id: containerId,
-      data: {
-        container_id: containerId,
-        project_id: projectId,
-        cpu_percent: cpu,
-        memory_mb: memory,
-      },
-    });
-  }
-
-  // ========================================
-  // PROJECT EVENTS
-  // ========================================
-
-  async projectCreated(projectId: string, name: string, type: string, userId?: string) {
-    return this.sendEvent({
-      type: 'project.created',
-      user_id: userId,
-      data: {
-        project_id: projectId,
-        name,
-        type,
-      },
-    });
-  }
-
-  async projectDeleted(projectId: string, name: string, userId?: string) {
-    return this.sendEvent({
-      type: 'project.deleted',
-      user_id: userId,
-      data: {
-        project_id: projectId,
-        name,
-      },
-    });
-  }
-
-  // ========================================
-  // INFRA EVENTS
-  // ========================================
-
-  async infraHealthCheck(healthy: boolean, services: Record<string, boolean>) {
-    return this.sendEvent({
-      type: 'infra.health_check',
-      data: {
-        healthy,
-        services,
-        timestamp: new Date().toISOString(),
-      },
-    });
-  }
-
-  async infraResourceAlert(resource: string, value: number, threshold: number) {
-    return this.sendEvent({
-      type: 'infra.resource_alert',
-      data: {
-        resource, // 'cpu', 'memory', 'disk'
-        value,
-        threshold,
-        exceeded: value > threshold,
-      },
-    });
+    console.log(`✅ [PROST-QS] ${type} sent successfully`);
+    return true;
+  } catch (error: any) {
+    console.error(`❌ [PROST-QS] Error sending ${type}:`, error.message);
+    return false;
   }
 }
 
-// Singleton
-export const prostqs = new ProstQSClient();
+// ========================================
+// DEPLOY EVENTS
+// ========================================
+
+function deployStarted(deploymentId: string, projectId: string, projectName: string, branch: string) {
+  return emitTelemetry('deploy.started', 'system', deploymentId, {
+    feature: 'deployment',
+    targetId: projectId,
+    targetType: 'project',
+    context: { project_name: projectName, branch },
+    metadata: { stage: 'queued' }
+  });
+}
+
+function deployBuilding(deploymentId: string, projectId: string) {
+  return emitTelemetry('deploy.building', 'system', deploymentId, {
+    feature: 'deployment',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { stage: 'building' }
+  });
+}
+
+function deployHealthy(deploymentId: string, projectId: string, durationMs: number) {
+  return emitTelemetry('deploy.healthy', 'system', deploymentId, {
+    feature: 'deployment',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { stage: 'healthy', duration_ms: durationMs }
+  });
+}
+
+function deployFailed(deploymentId: string, projectId: string, error: string, stage: string) {
+  return emitTelemetry('deploy.failed', 'system', deploymentId, {
+    feature: 'deployment',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { stage, error }
+  });
+}
+
+// ========================================
+// CONTAINER EVENTS
+// ========================================
+
+function containerStarted(containerId: string, projectId: string, imageTag: string) {
+  return emitTelemetry('container.started', 'system', containerId, {
+    feature: 'container',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { image_tag: imageTag }
+  });
+}
+
+function containerStopped(containerId: string, projectId: string, reason: string) {
+  return emitTelemetry('container.stopped', 'system', containerId, {
+    feature: 'container',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { reason }
+  });
+}
+
+function containerCrashed(containerId: string, projectId: string, exitCode: number, logs?: string) {
+  return emitTelemetry('container.crashed', 'system', containerId, {
+    feature: 'container',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { exit_code: exitCode, logs: logs?.slice(-1000) }
+  });
+}
+
+function containerMetrics(containerId: string, projectId: string, cpu: number, memory: number) {
+  return emitTelemetry('container.metrics', 'system', containerId, {
+    feature: 'container',
+    targetId: projectId,
+    targetType: 'project',
+    metadata: { cpu_percent: cpu, memory_mb: memory }
+  });
+}
+
+// ========================================
+// PROJECT EVENTS
+// ========================================
+
+function projectCreated(projectId: string, name: string, type: string, userId?: string) {
+  return emitTelemetry('project.created', userId || 'system', projectId, {
+    feature: 'project',
+    targetId: projectId,
+    targetType: 'project',
+    context: { name, type }
+  });
+}
+
+function projectDeleted(projectId: string, name: string, userId?: string) {
+  return emitTelemetry('project.deleted', userId || 'system', projectId, {
+    feature: 'project',
+    targetId: projectId,
+    targetType: 'project',
+    context: { name }
+  });
+}
+
+// ========================================
+// INFRA EVENTS
+// ========================================
+
+function infraHealthCheck(healthy: boolean, services: Record<string, boolean>) {
+  return emitTelemetry('infra.health_check', 'system', '', {
+    feature: 'infrastructure',
+    metadata: { healthy, services }
+  });
+}
+
+function infraResourceAlert(resource: string, value: number, threshold: number) {
+  return emitTelemetry('infra.resource_alert', 'system', '', {
+    feature: 'infrastructure',
+    metadata: { resource, value, threshold, exceeded: value > threshold }
+  });
+}
+
+// ========================================
+// EXPORTS
+// ========================================
+
+export const prostqs = {
+  // Config
+  isConfigured,
+  APP_ID,
+  
+  // Core
+  emitTelemetry,
+  
+  // Deploy
+  deployStarted,
+  deployBuilding,
+  deployHealthy,
+  deployFailed,
+  
+  // Container
+  containerStarted,
+  containerStopped,
+  containerCrashed,
+  containerMetrics,
+  
+  // Project
+  projectCreated,
+  projectDeleted,
+  
+  // Infra
+  infraHealthCheck,
+  infraResourceAlert
+};

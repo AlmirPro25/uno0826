@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { 
   Settings, User, Globe, Bell, Palette, Shield,
@@ -31,7 +32,8 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="flex min-h-screen">
+    <AuthGuard>
+      <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-8">
         {/* Header */}
@@ -228,5 +230,6 @@ export default function SettingsPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

@@ -2,6 +2,7 @@
 'use client';
 
 import { Sidebar } from '@/components/layout/Sidebar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { Project } from '@/types';
 import { API } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -10,6 +11,7 @@ import { motion } from 'framer-motion';
 import { Activity, Server, Cpu, Layers, Plus, Box, Globe, Rocket, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -73,6 +75,7 @@ export default function DashboardPage() {
   ];
 
   return (
+    <AuthGuard>
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-8">
@@ -198,5 +201,6 @@ export default function DashboardPage() {
         </section>
       </main>
     </div>
+    </AuthGuard>
   );
 }

@@ -9,17 +9,26 @@ import { Box, Lock, Mail, Rocket } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, setAuth } = useAuthStore();
+  const { isAuthenticated, setAuth, _hasHydrated } = useAuthStore();
   const [email, setEmail] = useState('admin@sce.local');
   const [password, setPassword] = useState('admin123456');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (_hasHydrated && isAuthenticated) {
       router.push('/dashboard');
     }
-  }, [isAuthenticated, router]);
+  }, [_hasHydrated, isAuthenticated, router]);
+
+  // Aguardar hydration do Zustand
+  if (!_hasHydrated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent animate-spin rounded-full" />
+      </div>
+    );
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -65,6 +74,7 @@ export default function LoginPage() {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-12 pr-4 py-3 focus:border-primary outline-none transition-all"
                   placeholder="admin@sce.local"
                 />
@@ -79,6 +89,7 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  autoComplete="current-password"
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-12 pr-4 py-3 focus:border-primary outline-none transition-all"
                   placeholder="••••••••"
                 />

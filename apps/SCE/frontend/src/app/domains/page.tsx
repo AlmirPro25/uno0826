@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { API } from '@/lib/api';
 import { Project } from '@/types';
 import { 
@@ -48,6 +49,7 @@ export default function DomainsPage() {
   };
 
   return (
+    <AuthGuard>
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-8">
@@ -238,5 +240,6 @@ export default function DomainsPage() {
         </motion.div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

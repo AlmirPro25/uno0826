@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { AuthGuard } from '@/components/AuthGuard';
 import { 
   Shield, Key, Lock, Fingerprint, Link2, CheckCircle2,
   AlertTriangle, ExternalLink, Zap, Database, Server
@@ -18,6 +19,7 @@ export default function SecurityPage() {
   };
 
   return (
+    <AuthGuard>
     <div className="flex min-h-screen">
       <Sidebar />
       <main className="flex-1 p-8">
@@ -288,5 +290,6 @@ export default function SecurityPage() {
         </div>
       </main>
     </div>
+    </AuthGuard>
   );
 }

@@ -1,21 +1,102 @@
 # PROST-QS — Estado do Sistema
 **Data:** 10 de Janeiro de 2026  
 **Autor:** Tech Lead AI  
-**Versão:** 2.1 — ECOSSISTEMA MULTI-APP
+**Versão:** 2.2 — MULTI-APP VALIDADO + PRÓXIMOS PASSOS
 
 ---
 
 ## Resumo Executivo
 
-O sistema PROST-QS está **fechado funcionalmente** com **dois apps integrados**. Não "acabado" — fechado no sentido de **confiável e pronto para escalar**.
+O sistema PROST-QS está **fechado funcionalmente** com **dois apps integrados e validados**. A arquitetura multi-tenant foi comprovada com telemetria real fluindo de ambos os apps.
 
-**Status: ✅ PRODUÇÃO ESTÁVEL — ECOSSISTEMA MULTI-APP**
+**Status: ✅ PRODUÇÃO ESTÁVEL — MULTI-APP VALIDADO**
 
 ### Apps Integrados
-| App | Nome | Descrição | Status |
-|-----|------|-----------|--------|
-| APP-1 | VOX-BRIDGE | Video chat anônimo | ✅ Produção |
-| APP-2 | SCE | Sovereign Cloud Engine (PaaS) | ✅ Integrado |
+| App | Nome | Descrição | Status | Telemetria |
+|-----|------|-----------|--------|------------|
+| APP-1 | VOX-BRIDGE | Video chat anônimo | ✅ Produção | ✅ Eventos fluindo |
+| APP-2 | SCE | Sovereign Cloud Engine (PaaS) | ✅ Integrado | ✅ Eventos fluindo |
+
+### Credenciais SCE (APP-2)
+```env
+PROSTQS_URL=https://uno0826.onrender.com
+PROSTQS_APP_ID=011c6e88-9556-43ff-ad4e-27e20a5f5ea5
+PROSTQS_APP_KEY=pq_pk_c5f3a308b7fd081b33d72fcc04284662
+PROSTQS_APP_SECRET=pq_sk_031cdd53c49f43bba255bbb86d9cf6a819930f4dfba632804eeb007df064ec50
+```
+
+---
+
+## 🎯 CHECKPOINT: O QUE TEMOS AGORA
+
+### Validado Hoje (10/01/2026)
+1. **Multi-App Funcionando** — SCE criado no PROST-QS, API Keys geradas, telemetria fluindo
+2. **Eventos do SCE** — `project.created`, `project.deleted`, `deploy.*`, `container.*`
+3. **Dashboard Unificado** — Admin mostra métricas de ambos os apps separadamente
+4. **Arquitetura Comprovada** — Cada app tem isolamento de dados mas observabilidade centralizada
+
+### O que cada app envia:
+
+**VOX-BRIDGE (APP-1):**
+- `session.start/ping/end` — Ciclo de vida de sessões
+- `interaction.match.*` — Matches de video chat
+- `interaction.queue.*` — Fila de espera
+- `interaction.message.*` — Mensagens
+- `error.*` — Erros de WebRTC
+
+**SCE (APP-2):**
+- `project.created/deleted` — Lifecycle de projetos
+- `deploy.started/building/healthy/failed` — Pipeline de deploy
+- `container.started/stopped/crashed/metrics` — Containers Docker
+- `infra.health_check/resource_alert` — Infraestrutura
+
+---
+
+## 🚀 PRÓXIMOS PASSOS — PEDIDO DE DIREÇÃO
+
+Tech Lead, temos 3 caminhos possíveis. Qual priorizar?
+
+### Opção A: Login Unificado (Identity)
+Conectar o login do SCE ao PROST-QS Identity Module:
+- Usuários do SCE autenticam via PROST-QS
+- Single Sign-On entre apps
+- Implicit login já existe no VOX-BRIDGE
+
+**Esforço:** Médio  
+**Valor:** Alto (base para billing)
+
+### Opção B: Billing/Pagamento
+Ativar cobrança no SCE via PROST-QS Billing:
+- Stripe já integrado no kernel
+- Capabilities por plano (free/pro/enterprise)
+- Limites de projetos, deploys, recursos
+
+**Esforço:** Médio  
+**Valor:** Alto (monetização)  
+**Dependência:** Opção A (precisa de identity)
+
+### Opção C: Deploy do SCE em Produção
+Subir o SCE para Render/Vercel:
+- Backend SCE no Render
+- Frontend SCE no Vercel
+- Conectar ao PROST-QS de produção
+
+**Esforço:** Baixo  
+**Valor:** Médio (validação real)
+
+---
+
+## 📊 RECOMENDAÇÃO
+
+**Sequência sugerida: A → B → C**
+
+1. **Identity primeiro** — Sem login unificado, não dá pra cobrar
+2. **Billing depois** — Com identity, billing é plug-and-play
+3. **Deploy por último** — Só faz sentido com billing funcionando
+
+Mas se quiser validar rápido em produção, pode inverter: **C → A → B**
+
+**Aguardando direção.**
 
 ---
 

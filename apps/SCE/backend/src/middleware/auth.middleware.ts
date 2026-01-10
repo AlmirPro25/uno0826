@@ -72,32 +72,47 @@ export async function authMiddleware(
     try {
       const decoded = jwt.verify(token, prostQSSecret!) as ProstQSJWTPayload;
       
-      // Verifica audience - token deve ser para "ospedagem"
-      const validAudience = decoded.aud?.includes('ospedagem') ?? false;
-      if (!validAudience && decoded.aud && decoded.aud.length > 0) {
-        return reply.status(403).send({
-          error: 'Token não autorizado para este serviço',
-          code: 'INVALID_AUDIENCE'
-        });
+      // Se tem user_id, é token do PROST-QS
+      if (decoded.user_id) {
+        // Verifica audience - token deve ser para "ospedagem"
+        const validAudience = decoded.aud?.includes('ospedagem') ?? false;
+        if (!validAudience && decoded.aud && decoded.aud.length > 0) {
+          return reply.status(403).send({
+            error: 'Token não autorizado para este serviço',
+            code: 'INVALID_AUDIENCE'
+          });
+        }
+        
+        // Verifica se conta está ativa
+        if (decoded.account_status !== 'active') {
+          return reply.status(403).send({
+            error: `Conta ${decoded.account_status}. Acesso negado.`,
+            code: 'ACCOUNT_INACTIVE'
+          });
+        }
+        
+        // Token válido do PROST-QS
+        request.user = {
+          id: decoded.user_id,
+          role: decoded.role,
+          accountStatus: decoded.account_status,
+          source: 'PROST_QS'
+        };
+        
+        return; // Autorizado pelo Kernel
       }
       
-      // Verifica se conta está ativa
-      if (decoded.account_status !== 'active') {
-        return reply.status(403).send({
-          error: `Conta ${decoded.account_status}. Acesso negado.`,
-          code: 'ACCOUNT_INACTIVE'
-        });
+      // Se tem id (não user_id), é token local
+      const localDecoded = decoded as unknown as LegacyJWTPayload;
+      if (localDecoded.id) {
+        request.user = {
+          id: localDecoded.id,
+          role: localDecoded.role,
+          accountStatus: 'active',
+          source: 'LOCAL'
+        };
+        return; // Autorizado localmente
       }
-      
-      // Token válido do PROST-QS
-      request.user = {
-        id: decoded.user_id,
-        role: decoded.role,
-        accountStatus: decoded.account_status,
-        source: 'PROST_QS'
-      };
-      
-      return; // Autorizado pelo Kernel
       
     } catch (prostError) {
       // Se não for token do PROST-QS, tenta validar como token local (dev)
