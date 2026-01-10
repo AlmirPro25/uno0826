@@ -1,15 +1,21 @@
-# PROST-QS + VOX-BRIDGE — Estado do Sistema
+# PROST-QS — Estado do Sistema
 **Data:** 10 de Janeiro de 2026  
 **Autor:** Tech Lead AI  
-**Versão:** 2.0 — SISTEMA FECHADO FUNCIONALMENTE
+**Versão:** 2.1 — ECOSSISTEMA MULTI-APP
 
 ---
 
 ## Resumo Executivo
 
-O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado no sentido de **confiável e pronto para escalar**.
+O sistema PROST-QS está **fechado funcionalmente** com **dois apps integrados**. Não "acabado" — fechado no sentido de **confiável e pronto para escalar**.
 
-**Status: ✅ PRODUÇÃO ESTÁVEL — FASE DE OBSERVAÇÃO (72h)**
+**Status: ✅ PRODUÇÃO ESTÁVEL — ECOSSISTEMA MULTI-APP**
+
+### Apps Integrados
+| App | Nome | Descrição | Status |
+|-----|------|-----------|--------|
+| APP-1 | VOX-BRIDGE | Video chat anônimo | ✅ Produção |
+| APP-2 | SCE | Sovereign Cloud Engine (PaaS) | ✅ Integrado |
 
 ---
 
@@ -119,13 +125,19 @@ O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado 
 │  │  │ Module  │ │ Module  │ │ Module   │                        │  │
 │  │  └─────────┘ └─────────┘ └──────────┘                        │  │
 │  └──────────────────────────────────────────────────────────────┘  │
-│         │                                                           │
-│         │ PostgreSQL                                                │
-│         ▼                                                           │
-│  ┌──────────────┐                  ┌──────────────────────────┐    │
-│  │  Neon DB     │                  │    Admin Dashboard       │    │
-│  │  (sa-east-1) │                  │    (Real-time)           │    │
-│  └──────────────┘                  └──────────────────────────┘    │
+│         │                          ▲                                │
+│         │ PostgreSQL               │ HTTP (Telemetria)              │
+│         ▼                          │                                │
+│  ┌──────────────┐           ┌──────┴───────┐                       │
+│  │  Neon DB     │           │     SCE      │                       │
+│  │  (sa-east-1) │           │   (APP-2)    │                       │
+│  └──────────────┘           │  PaaS Engine │                       │
+│                             └──────────────┘                       │
+│                                                                     │
+│  ┌──────────────────────────┐                                      │
+│  │    Admin Dashboard       │                                      │
+│  │    (Real-time)           │                                      │
+│  └──────────────────────────┘                                      │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -624,6 +636,17 @@ GET  /admin/rules/audit               → Logs de auditoria
 - **WebRTC:** Peer-to-peer video
 - **Deploy:** Render (API) + Vercel (Frontend)
 
+### SCE - Sovereign Cloud Engine (APP-2)
+- **Backend:** Node.js + Fastify + Prisma
+- **Frontend:** Next.js 15 + Tailwind
+- **Database:** SQLite (local-first)
+- **Runtime:** Docker Engine + Traefik
+- **Eventos PROST-QS:**
+  - `deploy.started`, `deploy.building`, `deploy.healthy`, `deploy.failed`
+  - `container.started`, `container.stopped`, `container.crashed`, `container.metrics`
+  - `project.created`, `project.deleted`
+- **Localização:** `apps/SCE/`
+
 ### Admin Dashboard
 - **Stack:** HTML/CSS/JS puro
 - **Styling:** Tailwind CSS (CDN)
@@ -722,6 +745,8 @@ Tudo isso está correto o suficiente para crescer. Mexer agora é ansiedade téc
 - [x] Live events stream
 - [x] Top users ranking
 - [x] **Rules Engine (Camada de Decisão)**
+- [x] **Shadow Mode + Authority Levels**
+- [x] **SCE integrado como APP-2**
 
 ### Próximo Passo: OBSERVAR
 Durante alguns dias:
@@ -777,4 +802,4 @@ Isso é uma **plataforma adaptativa com governança**, não apenas observável.
 ---
 
 *Documento atualizado em 10/01/2026 — Tech Lead AI*
-*Checkpoint: Sistema fechado funcionalmente + Analytics + Rules Engine + Governança + Shadow Mode + Authority*
+*Checkpoint: Sistema fechado funcionalmente + Analytics + Rules Engine + Governança + Shadow Mode + Authority + SCE (APP-2)*
