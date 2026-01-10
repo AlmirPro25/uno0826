@@ -266,6 +266,41 @@ async function showAppDetail(appId) {
                 <p class="text-xs text-gray-500 mt-2" id="metric-last-event">Último evento: ${metrics.last_event_at ? formatDate(metrics.last_event_at) : '-'}</p>
             </div>
 
+            <!-- Analytics Section -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- Funnel -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-filter text-purple-400"></i>
+                            Funil de Conversão
+                        </h4>
+                        <button onclick="loadFunnel('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="funnel-container">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
+                    </div>
+                </div>
+
+                <!-- Engagement -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-chart-line text-emerald-400"></i>
+                            Engajamento (24h)
+                        </h4>
+                        <button onclick="loadEngagement('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="engagement-container">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Credentials -->
             <div class="card rounded-2xl p-6 mb-6">
                 <h3 class="font-bold mb-4 flex items-center gap-2">
@@ -1048,4 +1083,109 @@ async function toggleEventTimeline(appId) {
             </div>
         `;
     }
+}
+
+// ========================================
+// ANALYTICS - Funil e Engajamento
+// ========================================
+
+async function loadFunnel(appId) {
+    const container = document.getElementById('funnel-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/funnel?since=24h`);
+        const funnel = data.funnel || [];
+        
+        if (funnel.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center">Sem dados</p>';
+            return;
+        }
+        
+        container.innerHTML = funnel.map((step, i) => {
+            const width = Math.max(step.percentage, 10);
+            const color = getStepColor(i, funnel.length);
+            
+            return `
+                <div class="mb-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-gray-400">${step.step}</span>
+                        <span class="text-white">${step.users} <span class="text-gray-500">(${step.percentage.toFixed(1)}%)</span></span>
+                    </div>
+                    <div class="h-2 bg-dark rounded-full overflow-hidden">
+                        <div class="h-full ${color} rounded-full transition-all duration-500" style="width: ${width}%"></div>
+                    </div>
+                    ${step.drop_off > 0 ? `<p class="text-xs text-rose-400 mt-1">↓ ${step.drop_off.toFixed(1)}% abandonou</p>` : ''}
+                </div>
+            `;
+        }).join('');
+        
+    } catch (err) {
+        console.error('Erro ao carregar funil:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar</p>';
+    }
+}
+
+function getStepColor(index, total) {
+    const colors = ['bg-emerald-500', 'bg-cyan-500', 'bg-blue-500', 'bg-purple-500', 'bg-pink-500'];
+    return colors[index % colors.length];
+}
+
+async function loadEngagement(appId) {
+    const container = document.getElementById('engagement-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/engagement?since=24h`);
+        const e = data.engagement || {};
+        
+        container.innerHTML = `
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-3 bg-white/5 rounded-xl">
+                    <p class="text-lg font-bold text-blue-400">${formatDuration(e.avg_session_duration_ms)}</p>
+                    <p class="text-xs text-gray-500">Duração média</p>
+                </div>
+                <div class="p-3 bg-white/5 rounded-xl">
+                    <p class="text-lg font-bold text-emerald-400">${(e.avg_events_per_session || 0).toFixed(1)}</p>
+                    <p class="text-xs text-gray-500">Eventos/sessão</p>
+                </div>
+                <div class="p-3 bg-white/5 rounded-xl">
+                    <p class="text-lg font-bold text-purple-400">${(e.avg_matches_per_user || 0).toFixed(2)}</p>
+                    <p class="text-xs text-gray-500">Matches/usuário</p>
+                </div>
+                <div class="p-3 bg-white/5 rounded-xl">
+                    <p class="text-lg font-bold text-cyan-400">${(e.avg_messages_per_match || 0).toFixed(1)}</p>
+                    <p class="text-xs text-gray-500">Msgs/match</p>
+                </div>
+                <div class="p-3 bg-white/5 rounded-xl">
+                    <p class="text-lg font-bold ${e.bounce_rate > 50 ? 'text-rose-400' : 'text-amber-400'}">${(e.bounce_rate || 0).toFixed(1)}%</p>
+                    <p class="text-xs text-gray-500">Bounce rate</p>
+                </div>
+                <div class="p-3 bg-white/5 rounded-xl">
+                    <p class="text-lg font-bold ${e.match_rate > 30 ? 'text-emerald-400' : 'text-amber-400'}">${(e.match_rate || 0).toFixed(1)}%</p>
+                    <p class="text-xs text-gray-500">Match rate</p>
+                </div>
+            </div>
+        `;
+        
+    } catch (err) {
+        console.error('Erro ao carregar engajamento:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar</p>';
+    }
+}
+
+function formatDuration(ms) {
+    if (!ms || ms <= 0) return '0s';
+    const seconds = Math.floor(ms / 1000);
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+    if (minutes < 60) return `${minutes}m ${remainingSeconds}s`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    return `${hours}h ${remainingMinutes}m`;
 }

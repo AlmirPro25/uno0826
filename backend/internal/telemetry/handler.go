@@ -378,6 +378,11 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 		adminTelemetry.GET("/apps/:id/sessions", handler.GetActiveSessionsAdmin)
 		adminTelemetry.GET("/apps/:id/alerts", handler.GetAlertsAdmin)
 		adminTelemetry.GET("/alerts", handler.GetAllAlertsAdmin)
+		
+		// Analytics
+		adminTelemetry.GET("/apps/:id/retention", handler.GetRetentionAdmin)
+		adminTelemetry.GET("/apps/:id/funnel", handler.GetFunnelAdmin)
+		adminTelemetry.GET("/apps/:id/engagement", handler.GetEngagementAdmin)
 	}
 }
 
@@ -433,5 +438,97 @@ func (h *TelemetryHandler) GetAllAlertsAdmin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"alerts": alerts,
 		"total":  len(alerts),
+	})
+}
+
+
+// ========================================
+// ANALYTICS
+// ========================================
+
+// GetRetentionAdmin retorna dados de retenção D1/D7/D30
+// GET /api/v1/admin/telemetry/apps/:id/retention
+func (h *TelemetryHandler) GetRetentionAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	days := 30
+	if d := c.Query("days"); d != "" {
+		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
+			days = parsed
+		}
+	}
+	
+	retention, err := h.service.GetRetention(appID, days)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"retention": retention,
+		"days":      days,
+	})
+}
+
+// GetFunnelAdmin retorna funil de conversão
+// GET /api/v1/admin/telemetry/apps/:id/funnel
+func (h *TelemetryHandler) GetFunnelAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	since := 24 * time.Hour
+	if s := c.Query("since"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil {
+			since = d
+		}
+	}
+	
+	funnel, err := h.service.GetFunnel(appID, since)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"funnel": funnel,
+		"since":  since.String(),
+	})
+}
+
+// GetEngagementAdmin retorna métricas de engajamento
+// GET /api/v1/admin/telemetry/apps/:id/engagement
+func (h *TelemetryHandler) GetEngagementAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	since := 24 * time.Hour
+	if s := c.Query("since"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil {
+			since = d
+		}
+	}
+	
+	engagement, err := h.service.GetEngagementMetrics(appID, since)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"engagement": engagement,
+		"since":      since.String(),
 	})
 }

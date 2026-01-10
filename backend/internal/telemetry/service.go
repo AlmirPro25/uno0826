@@ -662,3 +662,251 @@ func (s *TelemetryService) GetAllRecentAlerts(limit int) ([]AlertHistory, error)
 	err := s.db.Order("created_at DESC").Limit(limit).Find(&alerts).Error
 	return alerts, err
 }
+
+// ========================================
+// 6. ANALYTICS - Inteligência de Negócio
+// ========================================
+
+// RetentionData dados de retenção por coorte
+type RetentionData struct {
+	Date       string  `json:"date"`        // Data do coorte (YYYY-MM-DD)
+	NewUsers   int64   `json:"new_users"`   // Usuários novos nesse dia
+	D1         float64 `json:"d1"`          // % que voltou no dia 1
+	D7         float64 `json:"d7"`          // % que voltou no dia 7
+	D30        float64 `json:"d30"`         // % que voltou no dia 30
+	D1Count    int64   `json:"d1_count"`    // Absoluto D1
+	D7Count    int64   `json:"d7_count"`    // Absoluto D7
+	D30Count   int64   `json:"d30_count"`   // Absoluto D30
+}
+
+// GetRetention calcula retenção D1/D7/D30 para um app
+func (s *TelemetryService) GetRetention(appID uuid.UUID, days int) ([]RetentionData, error) {
+	if days <= 0 || days > 90 {
+		days = 30
+	}
+	
+	var results []RetentionData
+	now := time.Now()
+	
+	for i := days; i >= 1; i-- {
+		date := now.AddDate(0, 0, -i)
+		dateStr := date.Format("2006-01-02")
+		startOfDay := time.Date(date.Year(), date.Month(), date.Day(), 0, 0, 0, 0, time.UTC)
+		endOfDay := startOfDay.Add(24 * time.Hour)
+		
+		// Usuários que tiveram primeira sessão nesse dia
+		var newUsers int64
+		s.db.Model(&AppSession{}).
+			Where("app_id = ? AND started_at >= ? AND started_at < ?", appID, startOfDay, endOfDay).
+			Distinct("user_id").
+			Count(&newUsers)
+		
+		if newUsers == 0 {
+			results = append(results, RetentionData{Date: dateStr, NewUsers: 0})
+			continue
+		}
+		
+		// Subquery: IDs dos usuários novos desse dia
+		subQuery := s.db.Model(&AppSession{}).
+			Select("DISTINCT user_id").
+			Where("app_id = ? AND started_at >= ? AND started_at < ?", appID, startOfDay, endOfDay)
+		
+		// D1: voltaram no dia seguinte
+		d1Start := endOfDay
+		d1End := d1Start.Add(24 * time.Hour)
+		var d1Count int64
+		s.db.Model(&AppSession{}).
+			Where("app_id = ? AND started_at >= ? AND started_at < ? AND user_id IN (?)", appID, d1Start, d1End, subQuery).
+			Distinct("user_id").
+			Count(&d1Count)
+		
+		// D7: voltaram entre dia 7 e 8
+		d7Start := startOfDay.AddDate(0, 0, 7)
+		d7End := d7Start.Add(24 * time.Hour)
+		var d7Count int64
+		if d7End.Before(now) {
+			s.db.Model(&AppSession{}).
+				Where("app_id = ? AND started_at >= ? AND started_at < ? AND user_id IN (?)", appID, d7Start, d7End, subQuery).
+				Distinct("user_id").
+				Count(&d7Count)
+		}
+		
+		// D30: voltaram entre dia 30 e 31
+		d30Start := startOfDay.AddDate(0, 0, 30)
+		d30End := d30Start.Add(24 * time.Hour)
+		var d30Count int64
+		if d30End.Before(now) {
+			s.db.Model(&AppSession{}).
+				Where("app_id = ? AND started_at >= ? AND started_at < ? AND user_id IN (?)", appID, d30Start, d30End, subQuery).
+				Distinct("user_id").
+				Count(&d30Count)
+		}
+		
+		results = append(results, RetentionData{
+			Date:     dateStr,
+			NewUsers: newUsers,
+			D1:       float64(d1Count) / float64(newUsers) * 100,
+			D7:       float64(d7Count) / float64(newUsers) * 100,
+			D30:      float64(d30Count) / float64(newUsers) * 100,
+			D1Count:  d1Count,
+			D7Count:  d7Count,
+			D30Count: d30Count,
+		})
+	}
+	
+	return results, nil
+}
+
+// FunnelStep representa um passo do funil
+type FunnelStep struct {
+	Step       string  `json:"step"`        // Nome do passo
+	Users      int64   `json:"users"`       // Usuários que chegaram
+	Percentage float64 `json:"percentage"`  // % em relação ao primeiro passo
+	DropOff    float64 `json:"drop_off"`    // % que abandonou nesse passo
+}
+
+// GetFunnel calcula funil de conversão por feature
+func (s *TelemetryService) GetFunnel(appID uuid.UUID, since time.Duration) ([]FunnelStep, error) {
+	if since <= 0 {
+		since = 24 * time.Hour
+	}
+	
+	cutoff := time.Now().Add(-since)
+	
+	// Definir passos do funil baseado em eventos
+	steps := []struct {
+		name  string
+		event string
+	}{
+		{"Sessão Iniciada", EventSessionStart},
+		{"Entrou na Fila", "interaction.queue.joined"},
+		{"Match Criado", "interaction.match.created"},
+		{"Mensagem Enviada", "interaction.message.sent"},
+		{"Match Completo (>1min)", "interaction.match.ended"},
+	}
+	
+	var results []FunnelStep
+	var firstStepUsers int64
+	
+	for i, step := range steps {
+		var users int64
+		
+		if step.event == "interaction.match.ended" {
+			// Caso especial: match que durou mais de 1 minuto
+			s.db.Model(&TelemetryEvent{}).
+				Where("app_id = ? AND type = ? AND timestamp > ?", appID, step.event, cutoff).
+				Where("metadata LIKE '%\"duration_ms\":%' AND CAST(JSON_EXTRACT(metadata, '$.duration_ms') AS INTEGER) > 60000").
+				Distinct("user_id").
+				Count(&users)
+			
+			// Fallback se JSON_EXTRACT não funcionar (PostgreSQL)
+			if users == 0 {
+				s.db.Model(&TelemetryEvent{}).
+					Where("app_id = ? AND type = ? AND timestamp > ?", appID, step.event, cutoff).
+					Distinct("user_id").
+					Count(&users)
+			}
+		} else {
+			s.db.Model(&TelemetryEvent{}).
+				Where("app_id = ? AND type = ? AND timestamp > ?", appID, step.event, cutoff).
+				Distinct("user_id").
+				Count(&users)
+		}
+		
+		if i == 0 {
+			firstStepUsers = users
+		}
+		
+		percentage := float64(0)
+		if firstStepUsers > 0 {
+			percentage = float64(users) / float64(firstStepUsers) * 100
+		}
+		
+		dropOff := float64(0)
+		if i > 0 && len(results) > 0 && results[i-1].Users > 0 {
+			dropOff = (1 - float64(users)/float64(results[i-1].Users)) * 100
+		}
+		
+		results = append(results, FunnelStep{
+			Step:       step.name,
+			Users:      users,
+			Percentage: percentage,
+			DropOff:    dropOff,
+		})
+	}
+	
+	return results, nil
+}
+
+// EngagementMetrics métricas de engajamento
+type EngagementMetrics struct {
+	AvgSessionDuration   float64 `json:"avg_session_duration_ms"`   // Duração média de sessão
+	AvgEventsPerSession  float64 `json:"avg_events_per_session"`    // Eventos por sessão
+	AvgMatchesPerUser    float64 `json:"avg_matches_per_user"`      // Matches por usuário
+	AvgMessagesPerMatch  float64 `json:"avg_messages_per_match"`    // Mensagens por match
+	BounceRate           float64 `json:"bounce_rate"`               // % sessões < 30s
+	MatchRate            float64 `json:"match_rate"`                // % sessões que viraram match
+}
+
+// GetEngagementMetrics calcula métricas de engajamento
+func (s *TelemetryService) GetEngagementMetrics(appID uuid.UUID, since time.Duration) (*EngagementMetrics, error) {
+	if since <= 0 {
+		since = 24 * time.Hour
+	}
+	
+	cutoff := time.Now().Add(-since)
+	metrics := &EngagementMetrics{}
+	
+	// Duração média de sessão (só sessões encerradas)
+	var avgDuration struct{ Avg float64 }
+	s.db.Model(&AppSession{}).
+		Select("AVG(duration_ms) as avg").
+		Where("app_id = ? AND ended_at IS NOT NULL AND started_at > ?", appID, cutoff).
+		Scan(&avgDuration)
+	metrics.AvgSessionDuration = avgDuration.Avg
+	
+	// Eventos por sessão
+	var totalSessions int64
+	var totalEvents int64
+	s.db.Model(&AppSession{}).Where("app_id = ? AND started_at > ?", appID, cutoff).Count(&totalSessions)
+	s.db.Model(&TelemetryEvent{}).Where("app_id = ? AND timestamp > ?", appID, cutoff).Count(&totalEvents)
+	if totalSessions > 0 {
+		metrics.AvgEventsPerSession = float64(totalEvents) / float64(totalSessions)
+	}
+	
+	// Matches por usuário
+	var uniqueUsers int64
+	var totalMatches int64
+	s.db.Model(&AppSession{}).Where("app_id = ? AND started_at > ?", appID, cutoff).Distinct("user_id").Count(&uniqueUsers)
+	s.db.Model(&TelemetryEvent{}).Where("app_id = ? AND type = ? AND timestamp > ?", appID, "interaction.match.created", cutoff).Count(&totalMatches)
+	if uniqueUsers > 0 {
+		metrics.AvgMatchesPerUser = float64(totalMatches) / float64(uniqueUsers)
+	}
+	
+	// Mensagens por match
+	var totalMessages int64
+	s.db.Model(&TelemetryEvent{}).Where("app_id = ? AND type = ? AND timestamp > ?", appID, "interaction.message.sent", cutoff).Count(&totalMessages)
+	if totalMatches > 0 {
+		metrics.AvgMessagesPerMatch = float64(totalMessages) / float64(totalMatches)
+	}
+	
+	// Bounce rate (sessões < 30s)
+	var bounceSessions int64
+	s.db.Model(&AppSession{}).
+		Where("app_id = ? AND ended_at IS NOT NULL AND started_at > ? AND duration_ms < 30000", appID, cutoff).
+		Count(&bounceSessions)
+	if totalSessions > 0 {
+		metrics.BounceRate = float64(bounceSessions) / float64(totalSessions) * 100
+	}
+	
+	// Match rate (sessões que tiveram match)
+	var sessionsWithMatch int64
+	s.db.Model(&AppSession{}).
+		Where("app_id = ? AND started_at > ? AND interaction_count > 0", appID, cutoff).
+		Count(&sessionsWithMatch)
+	if totalSessions > 0 {
+		metrics.MatchRate = float64(sessionsWithMatch) / float64(totalSessions) * 100
+	}
+	
+	return metrics, nil
+}
