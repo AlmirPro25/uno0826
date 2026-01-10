@@ -335,6 +335,7 @@ async function loadSection(sectionId) {
             case 'audit': await renderAudit(content); break;
             case 'jobs': await renderJobs(content); break;
             case 'applications': await renderApplications(content); break;
+            case 'rules': await renderRulesSection(content); break;
             // Identity & Access - Fase 26.8
             case 'login-history': await renderLoginHistory(content); break;
             // Financial - Fase 27.0

@@ -45,6 +45,7 @@ import (
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
 	"prost-qs/backend/internal/telemetry"
+	"prost-qs/backend/internal/rules"
 	"prost-qs/backend/pkg/capabilities"
 	"prost-qs/backend/pkg/db"
 	"prost-qs/backend/pkg/middleware"
@@ -666,6 +667,21 @@ func main() {
 		telemetryService := telemetry.NewTelemetryService(gormDB)
 		telemetry.RegisterTelemetryRoutes(v1, telemetryService, application.AppContextMiddleware(applicationService), application.RequireAppContext(), middleware.AuthMiddleware(), middleware.AdminOnly())
 		log.Println("✅ Telemetry routes registradas (/telemetry/*)")
+
+		// ========================================
+		// RULES ENGINE - Camada de Decisão
+		// "Observação → Condição → Ação"
+		// ========================================
+		rulesService := rules.NewRulesService(gormDB)
+		
+		// Conectar rules ao telemetry para alertas
+		rulesService.SetAlertCallback(func(appID uuid.UUID, alertType, message string, data map[string]interface{}) {
+			// Criar alerta no sistema de telemetria
+			log.Printf("🎯 [RULE ALERT] app=%s type=%s msg=%s", appID, alertType, message)
+		})
+		
+		rules.RegisterRulesRoutes(v1, rulesService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Rules Engine routes registradas (/admin/rules/*)")
 
 		// ========================================
 		// ADD-ONS - Capabilities como SKUs
