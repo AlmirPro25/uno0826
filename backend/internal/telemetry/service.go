@@ -590,11 +590,65 @@ const (
 
 // AlertHistory histórico de alertas disparados
 type AlertHistory struct {
-	ID        uuid.UUID `gorm:"type:uuid;primaryKey"`
-	AppID     uuid.UUID `gorm:"type:uuid;index"`
-	Type      string    `gorm:"size:50"`
-	Data      string    `gorm:"type:text"`
-	CreatedAt time.Time
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	AppID       uuid.UUID  `gorm:"type:uuid;index" json:"app_id"`
+	Type        string     `gorm:"size:50;index" json:"type"`
+	Severity    string     `gorm:"size:20;default:'info'" json:"severity"` // info, warning, critical
+	Title       string     `gorm:"size:200" json:"title"`
+	Message     string     `gorm:"size:500" json:"message"`
+	Data        string     `gorm:"type:text" json:"data"`
+	Source      string     `gorm:"size:50;default:'system'" json:"source"` // system, rule, manual
+	RuleID      *uuid.UUID `gorm:"type:uuid" json:"rule_id,omitempty"`
+	RuleName    string     `gorm:"size:100" json:"rule_name,omitempty"`
+	Acknowledged bool      `gorm:"default:false" json:"acknowledged"`
+	AcknowledgedAt *time.Time `json:"acknowledged_at,omitempty"`
+	AcknowledgedBy string   `gorm:"size:100" json:"acknowledged_by,omitempty"`
+	CreatedAt   time.Time  `gorm:"index" json:"created_at"`
+}
+
+func (AlertHistory) TableName() string {
+	return "alert_history"
+}
+
+// CreateAlert cria um alerta no histórico (usado pelo Rules Engine e sistema)
+func (s *TelemetryService) CreateAlert(appID uuid.UUID, alertType, severity, title, message string, data map[string]interface{}, ruleID *uuid.UUID, ruleName string) error {
+	// Serializar dados
+	dataJSON := "{}"
+	if b, err := json.Marshal(data); err == nil {
+		dataJSON = string(b)
+	}
+	
+	source := "system"
+	if ruleID != nil {
+		source = "rule"
+	}
+	
+	alert := AlertHistory{
+		ID:        uuid.New(),
+		AppID:     appID,
+		Type:      alertType,
+		Severity:  severity,
+		Title:     title,
+		Message:   message,
+		Data:      dataJSON,
+		Source:    source,
+		RuleID:    ruleID,
+		RuleName:  ruleName,
+		CreatedAt: time.Now(),
+	}
+	
+	if err := s.db.Create(&alert).Error; err != nil {
+		return err
+	}
+	
+	log.Printf("🚨 [ALERT] %s (%s) for app %s: %s", alertType, severity, appID, message)
+	
+	// Chamar callback se configurado
+	if s.alertCallback != nil {
+		s.alertCallback(appID, alertType, data)
+	}
+	
+	return nil
 }
 
 func (s *TelemetryService) triggerAlert(appID uuid.UUID, alertType string, data map[string]interface{}) {
@@ -604,28 +658,8 @@ func (s *TelemetryService) triggerAlert(appID uuid.UUID, alertType string, data 
 		return // Já tem alerta recente, ignorar
 	}
 	
-	// Serializar dados
-	dataJSON := "{}"
-	if b, err := json.Marshal(data); err == nil {
-		dataJSON = string(b)
-	}
-	
-	// Salvar alerta
-	alert := AlertHistory{
-		ID:        uuid.New(),
-		AppID:     appID,
-		Type:      alertType,
-		Data:      dataJSON,
-		CreatedAt: time.Now(),
-	}
-	s.db.Create(&alert)
-	
-	log.Printf("🚨 [ALERT] %s for app %s: %v", alertType, appID, data)
-	
-	// Chamar callback se configurado
-	if s.alertCallback != nil {
-		s.alertCallback(appID, alertType, data)
-	}
+	// Usar o novo método
+	s.CreateAlert(appID, alertType, "warning", alertType, "", data, nil, "")
 }
 
 func (s *TelemetryService) checkAlerts(appID uuid.UUID, event *TelemetryEvent) {
@@ -661,6 +695,123 @@ func (s *TelemetryService) GetAllRecentAlerts(limit int) ([]AlertHistory, error)
 	var alerts []AlertHistory
 	err := s.db.Order("created_at DESC").Limit(limit).Find(&alerts).Error
 	return alerts, err
+}
+
+// AlertStats estatísticas de alertas
+type AlertStats struct {
+	Total          int64 `json:"total"`
+	Unacknowledged int64 `json:"unacknowledged"`
+	BySeverity     map[string]int64 `json:"by_severity"`
+	BySource       map[string]int64 `json:"by_source"`
+	Last24h        int64 `json:"last_24h"`
+	Last1h         int64 `json:"last_1h"`
+}
+
+// GetAlertsFiltered retorna alertas com filtros
+func (s *TelemetryService) GetAlertsFiltered(limit int, severity, source, acknowledged, appIDStr string) ([]AlertHistory, *AlertStats, error) {
+	var alerts []AlertHistory
+	query := s.db.Model(&AlertHistory{})
+	
+	if severity != "" {
+		query = query.Where("severity = ?", severity)
+	}
+	if source != "" {
+		query = query.Where("source = ?", source)
+	}
+	if acknowledged == "true" {
+		query = query.Where("acknowledged = ?", true)
+	} else if acknowledged == "false" {
+		query = query.Where("acknowledged = ?", false)
+	}
+	if appIDStr != "" {
+		if appID, err := uuid.Parse(appIDStr); err == nil {
+			query = query.Where("app_id = ?", appID)
+		}
+	}
+	
+	err := query.Order("created_at DESC").Limit(limit).Find(&alerts).Error
+	if err != nil {
+		return nil, nil, err
+	}
+	
+	// Calcular stats
+	stats, _ := s.GetAlertStats()
+	
+	return alerts, stats, nil
+}
+
+// AcknowledgeAlert marca um alerta como reconhecido
+func (s *TelemetryService) AcknowledgeAlert(alertID uuid.UUID, acknowledgedBy string) error {
+	now := time.Now()
+	return s.db.Model(&AlertHistory{}).Where("id = ?", alertID).Updates(map[string]interface{}{
+		"acknowledged":    true,
+		"acknowledged_at": now,
+		"acknowledged_by": acknowledgedBy,
+	}).Error
+}
+
+// AcknowledgeAllAlerts marca todos alertas de um app como reconhecidos
+func (s *TelemetryService) AcknowledgeAllAlerts(appIDStr, acknowledgedBy string) (int64, error) {
+	now := time.Now()
+	query := s.db.Model(&AlertHistory{}).Where("acknowledged = ?", false)
+	
+	if appIDStr != "" {
+		if appID, err := uuid.Parse(appIDStr); err == nil {
+			query = query.Where("app_id = ?", appID)
+		}
+	}
+	
+	result := query.Updates(map[string]interface{}{
+		"acknowledged":    true,
+		"acknowledged_at": now,
+		"acknowledged_by": acknowledgedBy,
+	})
+	
+	return result.RowsAffected, result.Error
+}
+
+// GetAlertStats retorna estatísticas de alertas
+func (s *TelemetryService) GetAlertStats() (*AlertStats, error) {
+	stats := &AlertStats{
+		BySeverity: make(map[string]int64),
+		BySource:   make(map[string]int64),
+	}
+	
+	// Total
+	s.db.Model(&AlertHistory{}).Count(&stats.Total)
+	
+	// Não reconhecidos
+	s.db.Model(&AlertHistory{}).Where("acknowledged = ?", false).Count(&stats.Unacknowledged)
+	
+	// Últimas 24h
+	s.db.Model(&AlertHistory{}).Where("created_at > ?", time.Now().Add(-24*time.Hour)).Count(&stats.Last24h)
+	
+	// Última hora
+	s.db.Model(&AlertHistory{}).Where("created_at > ?", time.Now().Add(-1*time.Hour)).Count(&stats.Last1h)
+	
+	// Por severidade
+	type SeverityCount struct {
+		Severity string
+		Count    int64
+	}
+	var severityCounts []SeverityCount
+	s.db.Model(&AlertHistory{}).Select("severity, count(*) as count").Group("severity").Scan(&severityCounts)
+	for _, sc := range severityCounts {
+		stats.BySeverity[sc.Severity] = sc.Count
+	}
+	
+	// Por source
+	type SourceCount struct {
+		Source string
+		Count  int64
+	}
+	var sourceCounts []SourceCount
+	s.db.Model(&AlertHistory{}).Select("source, count(*) as count").Group("source").Scan(&sourceCounts)
+	for _, sc := range sourceCounts {
+		stats.BySource[sc.Source] = sc.Count
+	}
+	
+	return stats, nil
 }
 
 // ========================================

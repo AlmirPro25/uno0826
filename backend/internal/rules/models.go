@@ -38,8 +38,11 @@ const (
 	ActionWebhook    RuleActionType = "webhook"     // Chamar webhook
 	ActionFlag       RuleActionType = "flag"        // Marcar usuário/sessão
 	ActionNotify     RuleActionType = "notify"      // Notificar (email, push)
-	ActionAdjust     RuleActionType = "adjust"      // Ajustar parâmetro
+	ActionAdjust     RuleActionType = "adjust"      // Ajustar parâmetro do app
 	ActionExperiment RuleActionType = "experiment"  // Iniciar experimento
+	ActionCreateRule RuleActionType = "create_rule" // Criar nova regra (meta-regra)
+	ActionDisableRule RuleActionType = "disable_rule" // Desativar outra regra
+	ActionEscalate   RuleActionType = "escalate"    // Escalar severidade
 )
 
 // Rule regra de decisão
@@ -159,6 +162,45 @@ type NotifyActionConfig struct {
 	To       []string `json:"to"`        // Destinatários
 }
 
+// AdjustActionConfig config para ação de ajuste de parâmetro
+type AdjustActionConfig struct {
+	ConfigKey   string `json:"config_key"`   // Chave da config (ex: "ads_frequency", "match_algorithm")
+	ConfigValue string `json:"config_value"` // Novo valor
+	Operation   string `json:"operation"`    // "set", "increment", "decrement", "multiply"
+	Amount      float64 `json:"amount"`      // Para operações matemáticas
+	TTL         string `json:"ttl"`          // Tempo de vida da mudança (opcional, vazio = permanente)
+	Reason      string `json:"reason"`       // Motivo da mudança (para auditoria)
+}
+
+// CreateRuleActionConfig config para criar nova regra (meta-regra)
+type CreateRuleActionConfig struct {
+	RuleName        string `json:"rule_name"`
+	RuleDescription string `json:"rule_description"`
+	TriggerType     string `json:"trigger_type"`
+	Condition       string `json:"condition"`
+	ActionType      string `json:"action_type"`
+	ActionConfig    string `json:"action_config"`
+	CooldownMinutes int    `json:"cooldown_minutes"`
+	TTL             string `json:"ttl"` // Tempo de vida da regra criada (ex: "24h", "7d")
+	AutoDisable     bool   `json:"auto_disable"` // Desativar automaticamente após TTL
+}
+
+// DisableRuleActionConfig config para desativar outra regra
+type DisableRuleActionConfig struct {
+	TargetRuleID   string `json:"target_rule_id"`   // ID da regra a desativar
+	TargetRuleName string `json:"target_rule_name"` // Ou nome (se ID não fornecido)
+	Duration       string `json:"duration"`         // Por quanto tempo (vazio = permanente)
+	Reason         string `json:"reason"`
+}
+
+// EscalateActionConfig config para escalar severidade
+type EscalateActionConfig struct {
+	TargetAlertType string `json:"target_alert_type"` // Tipo de alerta a escalar
+	NewSeverity     string `json:"new_severity"`      // Nova severidade
+	AfterMinutes    int    `json:"after_minutes"`     // Escalar após X minutos sem acknowledge
+	NotifyChannels  []string `json:"notify_channels"` // Canais adicionais para notificar
+}
+
 // ========================================
 // PREDEFINED RULES (Templates)
 // ========================================
@@ -241,4 +283,50 @@ func GetPredefinedRules() []PredefinedRule {
 			},
 		},
 	}
+}
+
+
+// ========================================
+// APP CONFIG - Configurações Dinâmicas
+// ========================================
+
+// AppConfig configuração dinâmica de um app (alterável por regras)
+type AppConfig struct {
+	ID        uuid.UUID `gorm:"type:uuid;primaryKey" json:"id"`
+	AppID     uuid.UUID `gorm:"type:uuid;index" json:"app_id"`
+	Key       string    `gorm:"size:100;index" json:"key"`
+	Value     string    `gorm:"type:text" json:"value"`
+	ValueType string    `gorm:"size:20" json:"value_type"` // string, number, boolean, json
+	
+	// Origem da mudança
+	Source    string    `gorm:"size:50" json:"source"`     // "manual", "rule", "api"
+	SourceID  *uuid.UUID `gorm:"type:uuid" json:"source_id"` // ID da regra se source=rule
+	Reason    string    `gorm:"size:500" json:"reason"`
+	
+	// TTL (opcional)
+	ExpiresAt *time.Time `json:"expires_at"`
+	
+	// Histórico
+	PreviousValue string    `gorm:"type:text" json:"previous_value"`
+	CreatedAt     time.Time `json:"created_at"`
+	UpdatedAt     time.Time `json:"updated_at"`
+}
+
+func (AppConfig) TableName() string {
+	return "app_configs"
+}
+
+// TemporaryRule regra criada dinamicamente com TTL
+type TemporaryRule struct {
+	ID            uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	RuleID        uuid.UUID  `gorm:"type:uuid;index" json:"rule_id"`
+	CreatedByRule uuid.UUID  `gorm:"type:uuid" json:"created_by_rule"` // Regra que criou esta
+	ExpiresAt     time.Time  `json:"expires_at"`
+	AutoDisabled  bool       `gorm:"default:false" json:"auto_disabled"`
+	DisabledAt    *time.Time `json:"disabled_at"`
+	CreatedAt     time.Time  `json:"created_at"`
+}
+
+func (TemporaryRule) TableName() string {
+	return "temporary_rules"
 }

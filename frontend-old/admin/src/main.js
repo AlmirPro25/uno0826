@@ -155,7 +155,11 @@ function showSection(sectionId) {
         'cognitive-noise': '🔇 Padrões de Ruído',
         'cognitive-trust': '📈 Evolução da Confiança',
         // Kernel Billing - Fase 28.1
-        'kernel-billing': '💰 Kernel Billing'
+        'kernel-billing': '💰 Kernel Billing',
+        // Governance
+        'governance': '🛡️ Governance',
+        // Onboarding
+        'onboarding': '🚀 Onboarding'
     };
     document.getElementById('section-title').textContent = titles[sectionId] || sectionId;
     
@@ -341,7 +345,8 @@ async function loadSection(sectionId) {
             // Financial - Fase 27.0
             case 'financial': await renderFinancialDashboard(content); break;
             case 'reconciliation': await renderReconciliation(content); break;
-            case 'alerts': await renderFinancialAlerts(content); break;
+            // Alerts - Central de Alertas (Rules + System)
+            case 'alerts': await renderAlertsSection(content); break;
             // Cognitive Dashboard - Fase 26.5
             case 'cognitive': await renderCognitive(content); break;
             case 'cognitive-agents': await renderCognitiveAgents(content); break;
@@ -350,6 +355,10 @@ async function loadSection(sectionId) {
             case 'cognitive-trust': await renderCognitiveTrust(content); break;
             // Kernel Billing - Fase 28.1
             case 'kernel-billing': await renderKernelBillingAdmin(content); break;
+            // Governance - Shadow Mode, Kill Switch, Authority
+            case 'governance': await renderGovernance(content); break;
+            // Onboarding - Primeira experiência
+            case 'onboarding': renderOnboarding(content); break;
             default: content.innerHTML = '<p class="text-gray-500">Seção não encontrada</p>';
         }
         document.getElementById('last-update').textContent = `Atualizado ${new Date().toLocaleTimeString('pt-BR')}`;
@@ -2390,6 +2399,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (token && isTokenValid(token)) {
         currentUser = userData ? JSON.parse(userData) : {};
         initMainLayout();
+        
+        // Iniciar atualização periódica do badge de alertas
+        updateAlertsBadge();
+        setInterval(updateAlertsBadge, 30000); // A cada 30 segundos
     } else {
         localStorage.removeItem(STORAGE.TOKEN);
         localStorage.removeItem(STORAGE.USER);
@@ -2398,6 +2411,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('login-form')?.addEventListener('submit', handleLogin);
 });
+
+// Atualiza o badge de alertas não lidos
+async function updateAlertsBadge() {
+    try {
+        const stats = await api('/admin/telemetry/alerts/stats');
+        const badge = document.getElementById('alerts-badge');
+        if (badge && stats) {
+            const count = stats.unacknowledged || 0;
+            if (count > 0) {
+                badge.textContent = count > 99 ? '99+' : count;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+    } catch (err) {
+        // Silenciar erros de badge
+    }
+}
 
 // ========================================
 // GLOBAL EXPORTS
@@ -2437,6 +2469,12 @@ window.loadJobs = loadJobs;
 window.retryJob = retryJob;
 window.showExplainPanel = showExplainPanel;
 window.closeExplainPanel = closeExplainPanel;
+// Alerts
+window.acknowledgeAlert = acknowledgeAlert;
+window.acknowledgeAllAlerts = acknowledgeAllAlerts;
+window.filterAlerts = filterAlerts;
+window.toggleAlertsPolling = toggleAlertsPolling;
+window.showAlertDetails = showAlertDetails;
 
 // ========================================
 // EXPLAIN PANEL - Causalidade

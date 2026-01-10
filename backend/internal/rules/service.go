@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -31,7 +32,7 @@ type RulesService struct {
 
 func NewRulesService(db *gorm.DB) *RulesService {
 	// Auto-migrate
-	db.AutoMigrate(&Rule{}, &RuleExecution{})
+	db.AutoMigrate(&Rule{}, &RuleExecution{}, &AppConfig{}, &TemporaryRule{}, &ActionAuditLog{}, &ShadowExecution{}, &AuthorityGrant{})
 	
 	svc := &RulesService{
 		db:       db,
@@ -43,6 +44,9 @@ func NewRulesService(db *gorm.DB) *RulesService {
 	
 	// Iniciar avaliador periódico
 	svc.startPeriodicEvaluator()
+	
+	// Iniciar cleanup de regras temporárias
+	svc.startTemporaryRulesCleanup()
 	
 	return svc
 }
@@ -194,6 +198,71 @@ func (s *RulesService) startPeriodicEvaluator() {
 		}
 	}()
 	log.Println("🧠 [RULES] Periodic evaluator started (interval: 1min)")
+}
+
+// startTemporaryRulesCleanup inicia cleanup de regras temporárias expiradas
+func (s *RulesService) startTemporaryRulesCleanup() {
+	s.evalWg.Add(1)
+	go func() {
+		defer s.evalWg.Done()
+		ticker := time.NewTicker(5 * time.Minute) // Verifica a cada 5 minutos
+		defer ticker.Stop()
+		
+		for {
+			select {
+			case <-ticker.C:
+				s.cleanupExpiredTemporaryRules()
+				s.cleanupExpiredConfigs()
+			case <-s.stopEval:
+				return
+			}
+		}
+	}()
+	log.Println("🧹 [RULES] Temporary rules cleanup started (interval: 5min)")
+}
+
+// cleanupExpiredTemporaryRules desativa regras temporárias expiradas
+func (s *RulesService) cleanupExpiredTemporaryRules() {
+	var expiredRules []TemporaryRule
+	s.db.Where("expires_at < ? AND auto_disabled = ?", time.Now(), false).Find(&expiredRules)
+	
+	for _, temp := range expiredRules {
+		// Desativar a regra
+		s.db.Model(&Rule{}).Where("id = ?", temp.RuleID).Update("status", RuleStatusInactive)
+		
+		// Marcar como desativada
+		now := time.Now()
+		temp.AutoDisabled = true
+		temp.DisabledAt = &now
+		s.db.Save(&temp)
+		
+		log.Printf("🧹 [CLEANUP] Regra temporária expirada desativada: %s", temp.RuleID)
+	}
+}
+
+// cleanupExpiredConfigs remove configs expiradas
+func (s *RulesService) cleanupExpiredConfigs() {
+	var expiredConfigs []AppConfig
+	s.db.Where("expires_at IS NOT NULL AND expires_at < ?", time.Now()).Find(&expiredConfigs)
+	
+	for _, config := range expiredConfigs {
+		// Restaurar valor anterior se existir
+		if config.PreviousValue != "" {
+			config.Value = config.PreviousValue
+			config.PreviousValue = ""
+			config.ExpiresAt = nil
+			config.Source = "auto_restore"
+			config.Reason = "TTL expirado, valor restaurado"
+			config.UpdatedAt = time.Now()
+			s.db.Save(&config)
+			
+			log.Printf("🔄 [CLEANUP] Config restaurada: %s.%s = %s", config.AppID, config.Key, config.Value)
+		} else {
+			// Deletar se não tinha valor anterior
+			s.db.Delete(&config)
+			log.Printf("🧹 [CLEANUP] Config expirada removida: %s.%s", config.AppID, config.Key)
+		}
+	}
 }
 
 // evaluateAllMetricRules avalia todas as regras baseadas em métricas
@@ -487,6 +556,30 @@ func (s *RulesService) evalComparison(expr string) (bool, error) {
 func (s *RulesService) executeAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
 	
+	// VALIDAÇÃO DE POLÍTICA - Antes de qualquer ação
+	validation := ValidateAction(rule.ActionType, rule.AppID, rule.ActionConfig)
+	
+	// SHADOW MODE - Se ativo, apenas registra sem executar
+	if IsShadowModeActive(rule.AppID, rule.ActionType) {
+		s.RecordShadowExecution(rule, metrics, true, validation)
+		return map[string]interface{}{
+			"shadow_mode":    true,
+			"would_execute":  validation.Allowed,
+			"would_block":    !validation.Allowed,
+			"block_reason":   validation.Reason,
+		}, nil
+	}
+	
+	if !validation.Allowed {
+		// Registrar tentativa bloqueada
+		s.logBlockedAction(rule, validation.Reason)
+		return map[string]interface{}{
+			"blocked":  true,
+			"reason":   validation.Reason,
+			"requires_approval": validation.RequiresApproval,
+		}, fmt.Errorf("action blocked: %s", validation.Reason)
+	}
+	
 	switch rule.ActionType {
 	case ActionAlert:
 		return s.executeAlertAction(rule, metrics)
@@ -496,9 +589,34 @@ func (s *RulesService) executeAction(rule *Rule, metrics map[string]float64) (ma
 		return s.executeFlagAction(rule, metrics)
 	case ActionNotify:
 		return s.executeNotifyAction(rule, metrics)
+	case ActionAdjust:
+		return s.executeAdjustAction(rule, metrics)
+	case ActionCreateRule:
+		return s.executeCreateRuleAction(rule, metrics)
+	case ActionDisableRule:
+		return s.executeDisableRuleAction(rule, metrics)
+	case ActionEscalate:
+		return s.executeEscalateAction(rule, metrics)
 	default:
 		return result, fmt.Errorf("unknown action type: %s", rule.ActionType)
 	}
+}
+
+// logBlockedAction registra ação bloqueada para auditoria
+func (s *RulesService) logBlockedAction(rule *Rule, reason string) {
+	log := ActionAuditLog{
+		ID:           uuid.New(),
+		AppID:        rule.AppID,
+		RuleID:       &rule.ID,
+		ActionType:   rule.ActionType,
+		ActionConfig: rule.ActionConfig,
+		WasAllowed:   false,
+		BlockReason:  reason,
+		WasExecuted:  false,
+		TriggeredBy:  "rule",
+		ExecutedAt:   time.Now(),
+	}
+	s.db.Create(&log)
 }
 
 func (s *RulesService) executeAlertAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
@@ -547,26 +665,102 @@ func (s *RulesService) executeWebhookAction(rule *Rule, metrics map[string]float
 		return nil, fmt.Errorf("webhook URL is required")
 	}
 	
+	// Default method
+	if config.Method == "" {
+		config.Method = "POST"
+	}
+	
 	// Substituir variáveis no body
 	body := config.Body
 	for name, value := range metrics {
-		body = strings.ReplaceAll(body, "{{"+name+"}}", fmt.Sprintf("%f", value))
+		body = strings.ReplaceAll(body, "{{"+name+"}}", fmt.Sprintf("%.2f", value))
 	}
 	body = strings.ReplaceAll(body, "{{rule_name}}", rule.Name)
+	body = strings.ReplaceAll(body, "{{rule_id}}", rule.ID.String())
 	body = strings.ReplaceAll(body, "{{app_id}}", rule.AppID.String())
+	body = strings.ReplaceAll(body, "{{timestamp}}", time.Now().Format(time.RFC3339))
 	
-	// Chamar callback se configurado
-	if s.webhookCallback != nil {
-		if err := s.webhookCallback(config.URL, config.Method, config.Headers, body); err != nil {
-			return nil, err
+	// Se body vazio, criar payload padrão
+	if body == "" {
+		defaultPayload := map[string]interface{}{
+			"rule_id":   rule.ID.String(),
+			"rule_name": rule.Name,
+			"app_id":    rule.AppID.String(),
+			"condition": rule.Condition,
+			"metrics":   metrics,
+			"timestamp": time.Now().Format(time.RFC3339),
+		}
+		if b, err := json.Marshal(defaultPayload); err == nil {
+			body = string(b)
 		}
 	}
 	
-	return map[string]interface{}{
-		"url":    config.URL,
-		"method": config.Method,
-		"body":   body,
-	}, nil
+	// Executar webhook real
+	result, err := s.executeHTTPWebhook(config.URL, config.Method, config.Headers, body)
+	if err != nil {
+		return nil, err
+	}
+	
+	return result, nil
+}
+
+// executeHTTPWebhook executa a chamada HTTP real
+func (s *RulesService) executeHTTPWebhook(url, method string, headers map[string]string, body string) (map[string]interface{}, error) {
+	// Criar request
+	req, err := http.NewRequest(method, url, strings.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+	
+	// Headers padrão
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "PROST-QS-RulesEngine/1.0")
+	
+	// Headers customizados
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+	
+	// Cliente com timeout
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	
+	// Executar
+	start := time.Now()
+	resp, err := client.Do(req)
+	duration := time.Since(start)
+	
+	if err != nil {
+		return map[string]interface{}{
+			"url":      url,
+			"method":   method,
+			"error":    err.Error(),
+			"duration": duration.Milliseconds(),
+		}, fmt.Errorf("webhook failed: %v", err)
+	}
+	defer resp.Body.Close()
+	
+	// Ler resposta (limitado a 1KB)
+	respBody := make([]byte, 1024)
+	n, _ := resp.Body.Read(respBody)
+	
+	result := map[string]interface{}{
+		"url":           url,
+		"method":        method,
+		"status_code":   resp.StatusCode,
+		"response_body": string(respBody[:n]),
+		"duration_ms":   duration.Milliseconds(),
+	}
+	
+	// Verificar status
+	if resp.StatusCode >= 400 {
+		return result, fmt.Errorf("webhook returned status %d", resp.StatusCode)
+	}
+	
+	log.Printf("✅ [WEBHOOK] %s %s -> %d (%dms)", method, url, resp.StatusCode, duration.Milliseconds())
+	
+	return result, nil
 }
 
 func (s *RulesService) executeFlagAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
@@ -600,6 +794,252 @@ func (s *RulesService) executeNotifyAction(rule *Rule, metrics map[string]float6
 	// TODO: Implementar notificações (email, push, slack)
 	return map[string]interface{}{
 		"status": "not_implemented",
+	}, nil
+}
+
+// ========================================
+// AÇÕES CONSEQUENTES - Mudam estado do sistema
+// ========================================
+
+// executeAdjustAction ajusta configuração do app
+func (s *RulesService) executeAdjustAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
+	var config AdjustActionConfig
+	if err := json.Unmarshal([]byte(rule.ActionConfig), &config); err != nil {
+		return nil, fmt.Errorf("invalid adjust config: %v", err)
+	}
+	
+	if config.ConfigKey == "" {
+		return nil, fmt.Errorf("config_key is required")
+	}
+	
+	// Buscar config atual
+	var currentConfig AppConfig
+	err := s.db.Where("app_id = ? AND key = ?", rule.AppID, config.ConfigKey).First(&currentConfig).Error
+	
+	previousValue := ""
+	newValue := config.ConfigValue
+	
+	if err == nil {
+		previousValue = currentConfig.Value
+		
+		// Aplicar operação se especificada
+		if config.Operation != "" && config.Operation != "set" {
+			currentFloat, _ := strconv.ParseFloat(currentConfig.Value, 64)
+			switch config.Operation {
+			case "increment":
+				newValue = fmt.Sprintf("%f", currentFloat+config.Amount)
+			case "decrement":
+				newValue = fmt.Sprintf("%f", currentFloat-config.Amount)
+			case "multiply":
+				newValue = fmt.Sprintf("%f", currentFloat*config.Amount)
+			}
+		}
+		
+		// Atualizar
+		currentConfig.Value = newValue
+		currentConfig.PreviousValue = previousValue
+		currentConfig.Source = "rule"
+		currentConfig.SourceID = &rule.ID
+		currentConfig.Reason = config.Reason
+		currentConfig.UpdatedAt = time.Now()
+		
+		// TTL
+		if config.TTL != "" {
+			if d, err := time.ParseDuration(config.TTL); err == nil {
+				expiresAt := time.Now().Add(d)
+				currentConfig.ExpiresAt = &expiresAt
+			}
+		}
+		
+		s.db.Save(&currentConfig)
+	} else {
+		// Criar nova config
+		newConfig := AppConfig{
+			ID:            uuid.New(),
+			AppID:         rule.AppID,
+			Key:           config.ConfigKey,
+			Value:         newValue,
+			ValueType:     "string",
+			Source:        "rule",
+			SourceID:      &rule.ID,
+			Reason:        config.Reason,
+			PreviousValue: "",
+			CreatedAt:     time.Now(),
+			UpdatedAt:     time.Now(),
+		}
+		
+		if config.TTL != "" {
+			if d, err := time.ParseDuration(config.TTL); err == nil {
+				expiresAt := time.Now().Add(d)
+				newConfig.ExpiresAt = &expiresAt
+			}
+		}
+		
+		s.db.Create(&newConfig)
+	}
+	
+	log.Printf("⚙️ [ADJUST] app=%s key=%s value=%s (was: %s) by rule=%s", 
+		rule.AppID, config.ConfigKey, newValue, previousValue, rule.Name)
+	
+	return map[string]interface{}{
+		"config_key":     config.ConfigKey,
+		"new_value":      newValue,
+		"previous_value": previousValue,
+		"operation":      config.Operation,
+	}, nil
+}
+
+// executeCreateRuleAction cria uma nova regra (meta-regra)
+func (s *RulesService) executeCreateRuleAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
+	var config CreateRuleActionConfig
+	if err := json.Unmarshal([]byte(rule.ActionConfig), &config); err != nil {
+		return nil, fmt.Errorf("invalid create_rule config: %v", err)
+	}
+	
+	if config.RuleName == "" {
+		return nil, fmt.Errorf("rule_name is required")
+	}
+	
+	// Substituir variáveis no nome e condição
+	ruleName := config.RuleName
+	condition := config.Condition
+	for name, value := range metrics {
+		ruleName = strings.ReplaceAll(ruleName, "{{"+name+"}}", fmt.Sprintf("%.2f", value))
+		condition = strings.ReplaceAll(condition, "{{"+name+"}}", fmt.Sprintf("%.2f", value))
+	}
+	ruleName = strings.ReplaceAll(ruleName, "{{timestamp}}", time.Now().Format("2006-01-02 15:04"))
+	
+	// Criar nova regra
+	newRule := Rule{
+		ID:              uuid.New(),
+		AppID:           rule.AppID,
+		Name:            ruleName,
+		Description:     config.RuleDescription + " (criada automaticamente por: " + rule.Name + ")",
+		Status:          RuleStatusActive,
+		TriggerType:     RuleTriggerType(config.TriggerType),
+		Condition:       condition,
+		ActionType:      RuleActionType(config.ActionType),
+		ActionConfig:    config.ActionConfig,
+		CooldownMinutes: config.CooldownMinutes,
+		CreatedAt:       time.Now(),
+		UpdatedAt:       time.Now(),
+		CreatedBy:       rule.ID, // Regra pai
+	}
+	
+	if newRule.CooldownMinutes == 0 {
+		newRule.CooldownMinutes = 60
+	}
+	
+	if err := s.db.Create(&newRule).Error; err != nil {
+		return nil, fmt.Errorf("failed to create rule: %v", err)
+	}
+	
+	// Se tem TTL, registrar como temporária
+	if config.TTL != "" {
+		if d, err := time.ParseDuration(config.TTL); err == nil {
+			tempRule := TemporaryRule{
+				ID:            uuid.New(),
+				RuleID:        newRule.ID,
+				CreatedByRule: rule.ID,
+				ExpiresAt:     time.Now().Add(d),
+				AutoDisabled:  config.AutoDisable,
+				CreatedAt:     time.Now(),
+			}
+			s.db.Create(&tempRule)
+		}
+	}
+	
+	log.Printf("🧠 [CREATE_RULE] Nova regra criada: %s (por: %s)", newRule.Name, rule.Name)
+	
+	return map[string]interface{}{
+		"new_rule_id":   newRule.ID.String(),
+		"new_rule_name": newRule.Name,
+		"created_by":    rule.Name,
+		"ttl":           config.TTL,
+	}, nil
+}
+
+// executeDisableRuleAction desativa outra regra
+func (s *RulesService) executeDisableRuleAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
+	var config DisableRuleActionConfig
+	if err := json.Unmarshal([]byte(rule.ActionConfig), &config); err != nil {
+		return nil, fmt.Errorf("invalid disable_rule config: %v", err)
+	}
+	
+	var targetRule Rule
+	
+	if config.TargetRuleID != "" {
+		targetID, err := uuid.Parse(config.TargetRuleID)
+		if err != nil {
+			return nil, fmt.Errorf("invalid target_rule_id: %v", err)
+		}
+		if err := s.db.First(&targetRule, "id = ?", targetID).Error; err != nil {
+			return nil, fmt.Errorf("target rule not found: %v", err)
+		}
+	} else if config.TargetRuleName != "" {
+		if err := s.db.First(&targetRule, "app_id = ? AND name = ?", rule.AppID, config.TargetRuleName).Error; err != nil {
+			return nil, fmt.Errorf("target rule not found: %v", err)
+		}
+	} else {
+		return nil, fmt.Errorf("target_rule_id or target_rule_name is required")
+	}
+	
+	// Desativar
+	targetRule.Status = RuleStatusPaused
+	targetRule.UpdatedAt = time.Now()
+	s.db.Save(&targetRule)
+	
+	log.Printf("⏸️ [DISABLE_RULE] Regra desativada: %s (por: %s, motivo: %s)", 
+		targetRule.Name, rule.Name, config.Reason)
+	
+	return map[string]interface{}{
+		"disabled_rule_id":   targetRule.ID.String(),
+		"disabled_rule_name": targetRule.Name,
+		"disabled_by":        rule.Name,
+		"reason":             config.Reason,
+	}, nil
+}
+
+// executeEscalateAction escala severidade de alertas não reconhecidos
+func (s *RulesService) executeEscalateAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
+	var config EscalateActionConfig
+	if err := json.Unmarshal([]byte(rule.ActionConfig), &config); err != nil {
+		return nil, fmt.Errorf("invalid escalate config: %v", err)
+	}
+	
+	if config.AfterMinutes == 0 {
+		config.AfterMinutes = 30 // Default: 30 minutos
+	}
+	if config.NewSeverity == "" {
+		config.NewSeverity = "critical"
+	}
+	
+	// Buscar alertas não reconhecidos que passaram do tempo
+	cutoff := time.Now().Add(-time.Duration(config.AfterMinutes) * time.Minute)
+	
+	query := s.db.Table("alert_history").
+		Where("app_id = ? AND acknowledged = ? AND created_at < ?", rule.AppID, false, cutoff)
+	
+	if config.TargetAlertType != "" {
+		query = query.Where("type = ?", config.TargetAlertType)
+	}
+	
+	// Atualizar severidade
+	result := query.Updates(map[string]interface{}{
+		"severity": config.NewSeverity,
+	})
+	
+	escalatedCount := result.RowsAffected
+	
+	if escalatedCount > 0 {
+		log.Printf("⬆️ [ESCALATE] %d alertas escalados para %s (app: %s)", 
+			escalatedCount, config.NewSeverity, rule.AppID)
+	}
+	
+	return map[string]interface{}{
+		"escalated_count": escalatedCount,
+		"new_severity":    config.NewSeverity,
+		"after_minutes":   config.AfterMinutes,
 	}, nil
 }
 
@@ -654,4 +1094,93 @@ func (s *RulesService) TriggerByEvent(appID uuid.UUID, eventType string, eventDa
 			go s.evaluateRule(&rule)
 		}
 	}
+}
+
+// ========================================
+// APP CONFIGS - Configurações Dinâmicas
+// ========================================
+
+// GetAppConfigs retorna todas as configs de um app
+func (s *RulesService) GetAppConfigs(appID uuid.UUID) ([]AppConfig, error) {
+	var configs []AppConfig
+	err := s.db.Where("app_id = ?", appID).Order("key ASC").Find(&configs).Error
+	return configs, err
+}
+
+// GetAppConfig retorna uma config específica
+func (s *RulesService) GetAppConfig(appID uuid.UUID, key string) (*AppConfig, error) {
+	var config AppConfig
+	err := s.db.Where("app_id = ? AND key = ?", appID, key).First(&config).Error
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+// SetAppConfig define ou atualiza uma config
+func (s *RulesService) SetAppConfig(appID uuid.UUID, key, value, valueType, reason, ttl string) (*AppConfig, error) {
+	var config AppConfig
+	err := s.db.Where("app_id = ? AND key = ?", appID, key).First(&config).Error
+	
+	if err != nil {
+		// Criar nova
+		config = AppConfig{
+			ID:        uuid.New(),
+			AppID:     appID,
+			Key:       key,
+			Value:     value,
+			ValueType: valueType,
+			Source:    "manual",
+			Reason:    reason,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
+	} else {
+		// Atualizar existente
+		config.PreviousValue = config.Value
+		config.Value = value
+		config.Source = "manual"
+		config.Reason = reason
+		config.UpdatedAt = time.Now()
+	}
+	
+	if valueType == "" {
+		config.ValueType = "string"
+	}
+	
+	// TTL
+	if ttl != "" {
+		if d, err := time.ParseDuration(ttl); err == nil {
+			expiresAt := time.Now().Add(d)
+			config.ExpiresAt = &expiresAt
+		}
+	}
+	
+	if err := s.db.Save(&config).Error; err != nil {
+		return nil, err
+	}
+	
+	log.Printf("⚙️ [CONFIG] app=%s key=%s value=%s (manual)", appID, key, value)
+	
+	return &config, nil
+}
+
+// DeleteAppConfig remove uma config
+func (s *RulesService) DeleteAppConfig(appID uuid.UUID, key string) error {
+	return s.db.Where("app_id = ? AND key = ?", appID, key).Delete(&AppConfig{}).Error
+}
+
+// GetAppConfigValue retorna apenas o valor de uma config (para uso em apps)
+func (s *RulesService) GetAppConfigValue(appID uuid.UUID, key string, defaultValue string) string {
+	config, err := s.GetAppConfig(appID, key)
+	if err != nil {
+		return defaultValue
+	}
+	
+	// Verificar se expirou
+	if config.ExpiresAt != nil && config.ExpiresAt.Before(time.Now()) {
+		return defaultValue
+	}
+	
+	return config.Value
 }

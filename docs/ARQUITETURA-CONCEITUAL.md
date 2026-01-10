@@ -1,7 +1,33 @@
 # PROST-QS — Arquitetura Conceitual
 
 **O que o sistema faz em uma frase:**
-> PROST-QS observa apps em tempo real, entende comportamento e age automaticamente.
+> PROST-QS observa apps em tempo real, entende comportamento, age automaticamente e aprende com os resultados.
+
+**Categoria atual:** Sistema Operacional de Comportamento
+
+---
+
+## O Ciclo Completo
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                                                                     │
+│   OBSERVAÇÃO ──► DECISÃO ──► AÇÃO ──► REGISTRO ──► APRENDIZADO     │
+│        │            │          │          │              │          │
+│     eventos      análise    webhook    histórico      feedback      │
+│     sessões      padrões    alerta     auditável      ajuste        │
+│     métricas     insights   flag       memória        evolução      │
+│                                                                     │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+Esse ciclo diferencia o PROST-QS de ferramentas fragmentadas:
+- Firebase/Supabase → infraestrutura, não decisão
+- Mixpanel/Amplitude → análise, não ação
+- Zapier → ação sem contexto
+- Intercom → regras limitadas
+
+**PROST-QS:** observa, entende, decide e age no mesmo modelo mental.
 
 ---
 
@@ -208,12 +234,33 @@ Separação clara = sistema previsível.
 
 ## Próximos passos naturais
 
-1. **Usar as regras** — Criar regras reais para o VOX-BRIDGE
-2. **Observar padrões** — Deixar o sistema rodar e coletar dados
-3. **Refinar condições** — Ajustar thresholds baseado em dados reais
-4. **Adicionar ações** — Webhooks para sistemas externos
+### AGORA: Fase de Observação (72h)
+1. **Não mexer em nada** — estabelecer baseline
+2. **Observar padrões de disparo** — quais regras falam, quais calam
+3. **Classificar alertas** — ruído vs sinal vs insight
+4. **Deixar o sistema ensinar** — ele vai mostrar onde está mal calibrado
+
+### DEPOIS: Refinamento baseado em evidência
+1. **Ajustar thresholds** — baseado em dados reais, não intuição
+2. **Calibrar cooldowns** — regras que disparam demais precisam respirar
+3. **Desativar ruído** — regras que não agregam viram log-only
+
+### FUTURO: Ações Consequentes (próximo salto real)
+Não é mais feature. É governança automática:
+- Ações que mudam estado do sistema
+- Ações que alteram comportamento do app
+- Ações que criam novas regras a partir de regras
+
+Exemplos conceituais:
+- "Se churn sobe → reduzir frequência de anúncios"
+- "Se engajamento cai → mudar algoritmo de feed"
+- "Se pico acontece → criar regra temporária de proteção"
+- "Se alerta crítico não é acknowledged → escalar severidade"
+
+**Só avançar quando confiar no que o sistema está dizendo.**
 
 ---
 
 *Documento criado em 10/01/2026*
 *Propósito: Clareza conceitual, não técnica*
+*Status: CICLO COMPLETO — FASE DE OBSERVAÇÃO*

@@ -9,7 +9,37 @@
 
 O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado no sentido de **confiável e pronto para escalar**.
 
-**Status: ✅ PRODUÇÃO ESTÁVEL — NÃO MEXER NO KERNEL**
+**Status: ✅ PRODUÇÃO ESTÁVEL — FASE DE OBSERVAÇÃO (72h)**
+
+---
+
+## ⏸️ PROTOCOLO DE OBSERVAÇÃO ATIVO
+
+**Início:** 10 de Janeiro de 2026  
+**Duração:** 72 horas mínimo  
+**Objetivo:** Estabelecer baseline real de comportamento
+
+### O que observar:
+
+| Categoria | O que significa |
+|-----------|-----------------|
+| Regras que disparam demais | Cooldown mal calibrado ou threshold errado |
+| Regras que fazem pensar "opa" | Capturando algo novo — são ouro |
+| Regras que nunca disparam | App saudável ou regra mal formulada |
+
+### Classificação mental de alertas:
+- **Ruído** — ignorar ou aumentar cooldown
+- **Informação útil** — manter como está
+- **Alerta crítico** — considerar ação automática
+- **Insight estratégico** — alimenta decisões de produto
+
+### O que NÃO fazer agora:
+- ❌ Adicionar mais métricas
+- ❌ Criar mais regras "porque dá"
+- ❌ Otimizar performance
+- ❌ Refatorar arquitetura
+
+**Mexer agora destrói o sinal.**
 
 ---
 
@@ -34,12 +64,17 @@ O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado 
 | Live events | ✅ | Stream em tempo real |
 | Top users | ✅ | Ranking por engajamento |
 | **Rules Engine** | ✅ | **Camada de decisão automática** |
+| **Central de Alertas** | ✅ | **Alertas unificados com severidade** |
+| **Ações Consequentes** | ✅ | **Adjust, CreateRule, Escalate** |
+| **Governança** | ✅ | **Políticas, Kill Switch, Auditoria** |
+| **Shadow Mode** | ✅ | **Simular ações sem executar** |
+| **Authority Levels** | ✅ | **Quem pode fazer o quê** |
 
-**Sistema de analytics + decisão completo. Plataforma adaptativa.**
+**Sistema de analytics + decisão + governança completo. Plataforma adaptativa com limites.**
 
 ---
 
-## 1. Arquitetura Atual
+## 1. Arquitetura Atual (4 Camadas)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -55,10 +90,34 @@ O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado 
 │         ▼                                                           │
 │  ┌──────────────────────────────────────────────────────────────┐  │
 │  │                      PROST-QS KERNEL                          │  │
-│  │  ┌─────────┐ ┌─────────┐ ┌──────────┐ ┌─────────────────┐   │  │
-│  │  │Identity │ │ Billing │ │ Agents   │ │   Telemetry     │   │  │
-│  │  │ Module  │ │ Module  │ │ Module   │ │   Module ✨     │   │  │
-│  │  └─────────┘ └─────────┘ └──────────┘ └─────────────────┘   │  │
+│  │                                                                │  │
+│  │  ┌─────────────────────────────────────────────────────────┐  │  │
+│  │  │ CAMADA 1: OBSERVAÇÃO                                    │  │  │
+│  │  │ Telemetry Module - Eventos, Sessões, Métricas           │  │  │
+│  │  └─────────────────────────────────────────────────────────┘  │  │
+│  │                           │                                    │  │
+│  │                           ▼                                    │  │
+│  │  ┌─────────────────────────────────────────────────────────┐  │  │
+│  │  │ CAMADA 2: DECISÃO                                       │  │  │
+│  │  │ Rules Engine - Condições, Triggers, Analytics           │  │  │
+│  │  └─────────────────────────────────────────────────────────┘  │  │
+│  │                           │                                    │  │
+│  │                           ▼                                    │  │
+│  │  ┌─────────────────────────────────────────────────────────┐  │  │
+│  │  │ CAMADA 3: AÇÃO                                          │  │  │
+│  │  │ Alert, Webhook, Adjust, CreateRule, Escalate            │  │  │
+│  │  └─────────────────────────────────────────────────────────┘  │  │
+│  │                           │                                    │  │
+│  │                           ▼                                    │  │
+│  │  ┌─────────────────────────────────────────────────────────┐  │  │
+│  │  │ CAMADA 4: GOVERNANÇA                                    │  │  │
+│  │  │ Policies, Kill Switch, Shadow Mode, Authority, Audit    │  │  │
+│  │  └─────────────────────────────────────────────────────────┘  │  │
+│  │                                                                │  │
+│  │  ┌─────────┐ ┌─────────┐ ┌──────────┐                        │  │
+│  │  │Identity │ │ Billing │ │ Agents   │                        │  │
+│  │  │ Module  │ │ Module  │ │ Module   │                        │  │
+│  │  └─────────┘ └─────────┘ └──────────┘                        │  │
 │  └──────────────────────────────────────────────────────────────┘  │
 │         │                                                           │
 │         │ PostgreSQL                                                │
@@ -70,6 +129,17 @@ O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado 
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
+
+### As 4 Camadas do PROST-QS
+
+| Camada | Nome | Responsabilidade |
+|--------|------|------------------|
+| 1 | **Observação** | Coleta eventos, sessões, métricas em tempo real |
+| 2 | **Decisão** | Avalia condições, dispara regras, analisa padrões |
+| 3 | **Ação** | Executa consequências: alertas, webhooks, ajustes |
+| 4 | **Governança** | Limita, audita, simula, controla autoridade |
+
+> "O sistema não decide por você. Ele garante que decisões sejam tomadas com contexto, limites e memória."
 
 ---
 
@@ -293,6 +363,233 @@ GET  /admin/rules/:id/executions    → Histórico de execuções
 
 ---
 
+## 5.3 Central de Alertas ✨ (NOVO)
+
+Sistema unificado de alertas que recebe notificações do Rules Engine e do sistema.
+
+### Modelo de Alerta
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | UUID | Identificador único |
+| `app_id` | UUID | App que gerou o alerta |
+| `type` | string | Tipo do alerta |
+| `severity` | string | info, warning, critical |
+| `title` | string | Título do alerta |
+| `message` | string | Mensagem descritiva |
+| `source` | string | system, rule, manual |
+| `rule_id` | UUID | ID da regra (se source=rule) |
+| `rule_name` | string | Nome da regra |
+| `acknowledged` | bool | Se foi lido |
+| `acknowledged_by` | string | Quem leu |
+
+### Endpoints
+```
+GET  /admin/telemetry/alerts/filtered     → Lista com filtros
+GET  /admin/telemetry/alerts/stats        → Estatísticas
+POST /admin/telemetry/alerts/:id/acknowledge → Marcar como lido
+POST /admin/telemetry/alerts/acknowledge-all → Marcar todos
+```
+
+### Webhook Executor
+Regras com `action_type: webhook` agora executam chamadas HTTP reais:
+- Timeout: 10 segundos
+- Variáveis: `{{rule_name}}`, `{{app_id}}`, `{{timestamp}}`, `{{metric_name}}`
+- Headers customizáveis
+- Payload padrão se body vazio
+
+---
+
+## 5.4 Ações Consequentes ✨ (NOVO)
+
+O sistema agora suporta ações que mudam o estado do sistema, não apenas alertam.
+
+### Novos Tipos de Ação
+
+| Tipo | Descrição | Exemplo |
+|------|-----------|---------|
+| `adjust` | Altera configuração do app | Reduzir frequência de ads |
+| `create_rule` | Cria nova regra (meta-regra) | Regra temporária de proteção |
+| `disable_rule` | Desativa outra regra | Pausar regra durante pico |
+| `escalate` | Escala severidade de alertas | Alerta não lido vira crítico |
+
+### AppConfig - Configurações Dinâmicas
+```
+GET  /admin/rules/app/:appId/configs      → Lista configs
+POST /admin/rules/app/:appId/configs      → Define config
+DELETE /admin/rules/app/:appId/configs/:key → Remove config
+```
+
+### Exemplo: Regra que Ajusta Config
+```json
+{
+  "name": "Reduzir Ads em Churn Alto",
+  "trigger_type": "metric",
+  "condition": "churn_rate > 30",
+  "action_type": "adjust",
+  "action_config": {
+    "config_key": "ads_frequency",
+    "operation": "decrement",
+    "amount": 0.2,
+    "ttl": "24h",
+    "reason": "Churn alto detectado"
+  }
+}
+```
+
+### Exemplo: Meta-Regra (Regra que Cria Regra)
+```json
+{
+  "name": "Proteção de Pico",
+  "trigger_type": "threshold",
+  "condition": "online_now > 500",
+  "action_type": "create_rule",
+  "action_config": {
+    "rule_name": "Proteção Temporária {{timestamp}}",
+    "trigger_type": "metric",
+    "condition": "events_per_minute > 100",
+    "action_type": "alert",
+    "ttl": "2h",
+    "auto_disable": true
+  }
+}
+```
+
+### Cleanup Automático
+- Regras temporárias são desativadas automaticamente após TTL
+- Configs com TTL são restauradas ao valor anterior
+- Verificação a cada 5 minutos
+
+---
+
+## 5.5 Governança de Ações ✨ (NOVO)
+
+O sistema agora tem limites explícitos para ações automáticas.
+
+### Kill Switch Global
+```
+GET  /admin/rules/killswitch           → Status
+POST /admin/rules/killswitch/activate  → Pausar TUDO
+POST /admin/rules/killswitch/deactivate → Retomar
+```
+
+### Políticas de Ação
+| Ação | Permissão | Blast Radius | Duração Máx |
+|------|-----------|--------------|-------------|
+| alert | Automática | App | - |
+| webhook | Automática | App | - |
+| adjust | Automática | Config | 24h |
+| create_rule | Automática | App | 24h |
+| disable_rule | Confirmação | App | 1h |
+
+### Ações Proibidas (NUNCA automáticas)
+- `billing.*` (charge, refund)
+- `user.delete`, `user.ban_permanent`
+- `app.delete`, `app.suspend`
+- `data.delete`, `data.export`
+- `platform.shutdown`
+
+### Auditoria
+Toda ação (executada ou bloqueada) é registrada em `action_audit_logs`.
+
+📄 Ver: `docs/POLITICA-ACOES-AUTOMATICAS.md`
+
+---
+
+## 5.6 Shadow Mode ✨ (NOVO)
+
+Modo de observação que simula ações sem executá-las. Essencial para testar regras em produção sem risco.
+
+### Conceito
+> "Veja tudo, não faça nada, registre tudo"
+
+### Endpoints
+```
+GET  /admin/rules/shadow              → Status do shadow mode
+POST /admin/rules/shadow/activate     → Ativar shadow mode
+POST /admin/rules/shadow/deactivate   → Desativar shadow mode
+GET  /admin/rules/shadow/executions   → Execuções simuladas
+GET  /admin/rules/shadow/stats        → Estatísticas
+```
+
+### Ativação com Filtros
+```json
+{
+  "reason": "Testando novas regras de churn",
+  "duration": "24h",
+  "app_ids": ["c573e4f0-a738-400c-a6bc-d890360a0057"],
+  "action_types": ["adjust", "create_rule"],
+  "domains": ["business", "governance"]
+}
+```
+
+### O que é registrado
+- Regra que dispararia
+- Ação que seria executada
+- Se seria permitida pela política
+- Métricas que triggaram
+- Resultado simulado
+
+### Quando usar
+- Antes de ativar regras novas em produção
+- Para calibrar thresholds
+- Para entender impacto de mudanças
+- Durante período de observação (72h)
+
+---
+
+## 5.7 Authority Levels ✨ (NOVO)
+
+Sistema de níveis de autoridade que define quem pode fazer o quê.
+
+### Hierarquia de Autoridade
+| Nível | Rank | Descrição |
+|-------|------|-----------|
+| `observer` | 1 | Pode ver, não pode agir |
+| `suggestor` | 2 | Pode sugerir ações (shadow mode) |
+| `operator` | 3 | Pode executar ações operacionais |
+| `manager` | 4 | Pode mudar regras e configs |
+| `governor` | 5 | Pode mudar políticas |
+| `sovereign` | 6 | Pode desligar o sistema |
+
+### Domínios de Ação
+| Domínio | Autoridade Mínima | Exemplos |
+|---------|-------------------|----------|
+| `tech` | operator | throttle, cache, retry |
+| `business` | manager | campanha, pricing, feature |
+| `governance` | governor | regras, políticas, limites |
+| `ops` | operator | alertas, escalação, notificação |
+
+### Endpoints
+```
+GET  /admin/rules/authority/levels    → Níveis disponíveis
+GET  /admin/rules/authority/domains   → Domínios de ação
+POST /admin/rules/authority/check     → Verificar autoridade
+GET  /admin/rules/audit               → Logs de auditoria
+```
+
+### Verificação de Autoridade
+```json
+// Request
+{
+  "actor_level": "operator",
+  "action_type": "create_rule"
+}
+
+// Response
+{
+  "actor_level": "operator",
+  "action_type": "create_rule",
+  "action_domain": "governance",
+  "required_level": "governor",
+  "has_authority": false
+}
+```
+
+### Princípio
+> "Poder sem autoridade é caos. Autoridade sem limite é tirania."
+
+---
+
 ## 6. Eventos Emitidos pelo VOX-BRIDGE
 
 | Evento | Quando | Dados |
@@ -456,7 +753,7 @@ Durante alguns dias:
 
 ## 11. Conclusão
 
-**O sistema está fechado funcionalmente com analytics + decisão completos.**
+**O sistema está fechado funcionalmente com analytics + decisão + governança completos.**
 
 Você construiu algo que:
 - Observa sistemas enquanto eles funcionam
@@ -468,12 +765,16 @@ Você construiu algo que:
 - Mostra padrões de uso (heatmap, jornada)
 - Identifica usuários mais valiosos
 - **Toma decisões automáticas baseadas em regras**
+- **Limita ações com políticas explícitas**
+- **Simula ações antes de executar (Shadow Mode)**
+- **Define quem pode fazer o quê (Authority)**
+- **Audita tudo que acontece**
 
-Isso é uma **plataforma adaptativa**, não apenas observável.
+Isso é uma **plataforma adaptativa com governança**, não apenas observável.
 
-**Próximo passo: usar as regras para automatizar decisões de negócio.**
+**O sistema não decide por você. Ele garante que decisões sejam tomadas com contexto, limites e memória.**
 
 ---
 
 *Documento atualizado em 10/01/2026 — Tech Lead AI*
-*Checkpoint: Sistema fechado funcionalmente + Analytics + Rules Engine*
+*Checkpoint: Sistema fechado funcionalmente + Analytics + Rules Engine + Governança + Shadow Mode + Authority*

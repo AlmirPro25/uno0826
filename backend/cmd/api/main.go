@@ -10,6 +10,7 @@ import (
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 
@@ -676,8 +677,27 @@ func main() {
 		
 		// Conectar rules ao telemetry para alertas
 		rulesService.SetAlertCallback(func(appID uuid.UUID, alertType, message string, data map[string]interface{}) {
+			// Extrair severidade do data se existir
+			severity := "warning"
+			if sev, ok := data["severity"].(string); ok {
+				severity = sev
+			}
+			
+			// Extrair rule info
+			var ruleID *uuid.UUID
+			ruleName := ""
+			if rid, ok := data["rule_id"].(string); ok {
+				if id, err := uuid.Parse(rid); err == nil {
+					ruleID = &id
+				}
+			}
+			if rn, ok := data["rule_name"].(string); ok {
+				ruleName = rn
+			}
+			
 			// Criar alerta no sistema de telemetria
-			log.Printf("🎯 [RULE ALERT] app=%s type=%s msg=%s", appID, alertType, message)
+			telemetryService.CreateAlert(appID, alertType, severity, alertType, message, data, ruleID, ruleName)
+			log.Printf("🎯 [RULE ALERT] app=%s type=%s severity=%s msg=%s", appID, alertType, severity, message)
 		})
 		
 		rules.RegisterRulesRoutes(v1, rulesService, middleware.AuthMiddleware(), middleware.AdminOnly())

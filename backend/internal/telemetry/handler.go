@@ -379,6 +379,12 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 		adminTelemetry.GET("/apps/:id/alerts", handler.GetAlertsAdmin)
 		adminTelemetry.GET("/alerts", handler.GetAllAlertsAdmin)
 		
+		// Alerts Management
+		adminTelemetry.GET("/alerts/filtered", handler.GetAlertsFiltered)
+		adminTelemetry.GET("/alerts/stats", handler.GetAlertStats)
+		adminTelemetry.POST("/alerts/:id/acknowledge", handler.AcknowledgeAlert)
+		adminTelemetry.POST("/alerts/acknowledge-all", handler.AcknowledgeAllAlerts)
+		
 		// Analytics
 		adminTelemetry.GET("/apps/:id/retention", handler.GetRetentionAdmin)
 		adminTelemetry.GET("/apps/:id/funnel", handler.GetFunnelAdmin)
@@ -721,4 +727,103 @@ func (h *TelemetryHandler) GetLiveEventsAdmin(c *gin.Context) {
 		"events": events,
 		"total":  len(events),
 	})
+}
+
+// ========================================
+// ALERTS MANAGEMENT
+// ========================================
+
+// GetAlertsFiltered retorna alertas com filtros
+// GET /api/v1/admin/telemetry/alerts/filtered
+func (h *TelemetryHandler) GetAlertsFiltered(c *gin.Context) {
+	limit := 100
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 500 {
+			limit = parsed
+		}
+	}
+	
+	severity := c.Query("severity") // info, warning, critical
+	source := c.Query("source")     // system, rule, manual
+	acknowledged := c.Query("acknowledged") // true, false
+	appIDStr := c.Query("app_id")
+	
+	alerts, stats, err := h.service.GetAlertsFiltered(limit, severity, source, acknowledged, appIDStr)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"alerts": alerts,
+		"total":  len(alerts),
+		"stats":  stats,
+	})
+}
+
+// AcknowledgeAlert marca um alerta como reconhecido
+// POST /api/v1/admin/telemetry/alerts/:id/acknowledge
+func (h *TelemetryHandler) AcknowledgeAlert(c *gin.Context) {
+	alertIDStr := c.Param("id")
+	alertID, err := uuid.Parse(alertIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Alert ID inválido"})
+		return
+	}
+	
+	// Pegar usuário do contexto
+	acknowledgedBy := "admin"
+	if user, exists := c.Get("user_email"); exists {
+		acknowledgedBy = user.(string)
+	}
+	
+	if err := h.service.AcknowledgeAlert(alertID, acknowledgedBy); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Alerta reconhecido",
+		"alert_id": alertID,
+	})
+}
+
+// AcknowledgeAllAlerts marca todos alertas de um app como reconhecidos
+// POST /api/v1/admin/telemetry/alerts/acknowledge-all
+func (h *TelemetryHandler) AcknowledgeAllAlerts(c *gin.Context) {
+	var req struct {
+		AppID string `json:"app_id"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	
+	acknowledgedBy := "admin"
+	if user, exists := c.Get("user_email"); exists {
+		acknowledgedBy = user.(string)
+	}
+	
+	count, err := h.service.AcknowledgeAllAlerts(req.AppID, acknowledgedBy)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Alertas reconhecidos",
+		"count":   count,
+	})
+}
+
+// GetAlertStats retorna estatísticas de alertas
+// GET /api/v1/admin/telemetry/alerts/stats
+func (h *TelemetryHandler) GetAlertStats(c *gin.Context) {
+	stats, err := h.service.GetAlertStats()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, stats)
 }
