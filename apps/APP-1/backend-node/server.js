@@ -305,11 +305,13 @@ app.get('/turn-credentials', (req, res) => {
 
 wss.on('connection', (ws, req) => {
   const id = uuidv4();
+  const sessionId = uuidv4(); // Session ID separado para telemetria
   const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
   const userAgent = req.headers['user-agent'] || 'unknown';
   
   const user = { 
     id, 
+    sessionId, // Novo: session ID para telemetria
     ws, 
     ip,
     userAgent,
@@ -329,8 +331,16 @@ wss.on('connection', (ws, req) => {
   users.set(id, user);
   metrics.totalConnections++;
 
-  // 📊 PROST-QS: Registrar início de sessão
+  // 📊 PROST-QS: Registrar início de sessão (audit legacy)
   prostqs.sessionStarted(id, ip, userAgent, user.country);
+  
+  // 📊 PROST-QS TELEMETRY: Sessão iniciada (Fase 30)
+  prostqs.telemetrySessionStart(id, sessionId, {
+    ip,
+    user_agent: userAgent,
+    country: user.country,
+    anonymous_id: user.anonymousId
+  });
 
   console.log(`👤 Connected: ${user.anonymousId} (${users.size} online)`);
   safeSend(ws, 'connected', { userId: id, anonymousId: user.anonymousId, online: users.size });
@@ -353,9 +363,12 @@ wss.on('connection', (ws, req) => {
   ws.on('close', () => {
     console.log(`👤 Disconnected: ${user.anonymousId} (${users.size - 1} online)`);
     
-    // 📊 PROST-QS: Registrar fim de sessão
+    // 📊 PROST-QS: Registrar fim de sessão (audit legacy)
     const duration = Date.now() - user.connectedAt;
     prostqs.sessionEnded(user.id, duration, user.matchCount || 0, user.skipCount || 0);
+    
+    // 📊 PROST-QS TELEMETRY: Sessão encerrada (Fase 30)
+    prostqs.telemetrySessionEnd(user.id, user.sessionId, duration);
     
     // Se estava em sala, registrar desconexão abrupta
     if (user.roomId) {
@@ -396,15 +409,27 @@ function handleMessage(user, msg) {
   switch (msg.type) {
     case 'ping': 
       safeSend(user.ws, 'pong', { online: users.size, queue: queue.length });
+      
+      // 📊 PROST-QS TELEMETRY: Heartbeat/ping (Fase 30)
+      // Envia ping de presença a cada ping do cliente
+      prostqs.telemetrySessionPing(user.id, user.sessionId, user.roomId ? 'video_chat' : (queue.find(q => q.id === user.id) ? 'queue' : 'lobby'));
       break;
     case 'join_queue': 
       joinQueue(user, msg.payload); 
       break;
     case 'leave_queue': 
-      leaveQueue(user); 
+      leaveQueue(user);
+      
+      // 📊 PROST-QS TELEMETRY: Saiu da fila (Fase 30)
+      prostqs.telemetryQueueLeft(user.id, user.sessionId);
       break;
     case 'chat_message': 
-      sendChatMessage(user, msg.payload); 
+      sendChatMessage(user, msg.payload);
+      
+      // 📊 PROST-QS TELEMETRY: Mensagem enviada (Fase 30)
+      if (user.roomId) {
+        prostqs.telemetryMessageSent(user.id, user.sessionId, user.roomId);
+      }
       break;
     case 'typing': 
       sendTyping(user, msg.payload); 
@@ -422,8 +447,11 @@ function handleMessage(user, msg) {
       metrics.iceFailures++;
       console.log(`❄️ ICE failure reported by ${user.anonymousId}`);
       
-      // 📊 PROST-QS: Registrar falha ICE
+      // 📊 PROST-QS: Registrar falha ICE (audit legacy)
       prostqs.iceFailure(user.id, user.roomId, 'ice_connection_failed');
+      
+      // 📊 PROST-QS TELEMETRY: Falha ICE (Fase 30)
+      prostqs.telemetryICEFailure(user.id, user.sessionId, user.roomId, 'ice_connection_failed');
       break;
   }
 }
@@ -514,8 +542,15 @@ function joinQueue(user, payload) {
       user.queueJoinTime = Date.now();
       queue.push(user);
       
-      // 📊 PROST-QS: Registrar entrada na fila
+      // 📊 PROST-QS: Registrar entrada na fila (audit legacy)
       prostqs.queueJoined(user.id, user.nativeLanguage, user.targetLanguage, user.interests);
+      
+      // 📊 PROST-QS TELEMETRY: Entrou na fila (Fase 30)
+      prostqs.telemetryQueueJoined(user.id, user.sessionId, {
+        native_language: user.nativeLanguage,
+        target_language: user.targetLanguage,
+        interests: user.interests
+      });
       
       safeSend(user.ws, 'queue_joined', { position: queue.length });
     }
@@ -547,9 +582,17 @@ function createRoom(user1, user2) {
   rooms.set(roomId, room);
   metrics.totalMatches++;
 
-  // 📊 PROST-QS: Registrar match criado (para ambos)
+  // 📊 PROST-QS: Registrar match criado (audit legacy - para ambos)
   prostqs.matchCreated(roomId, user1.id, user2.id);
   prostqs.matchCreated(roomId, user2.id, user1.id);
+  
+  // 📊 PROST-QS TELEMETRY: Match criado (Fase 30 - para ambos)
+  prostqs.telemetryMatchCreated(user1.id, user1.sessionId, roomId, user2.id);
+  prostqs.telemetryMatchCreated(user2.id, user2.sessionId, roomId, user1.id);
+  
+  // 📊 PROST-QS TELEMETRY: Entrou na feature video_chat
+  prostqs.telemetryFeatureEnter(user1.id, user1.sessionId, 'video_chat', { room_id: roomId });
+  prostqs.telemetryFeatureEnter(user2.id, user2.sessionId, 'video_chat', { room_id: roomId });
 
   const common = user1.interests.filter(i => user2.interests.includes(i));
   
@@ -621,9 +664,19 @@ function leaveRoom(user) {
   if (duration < 10000) {
     user.skipCount = (user.skipCount || 0) + 1;
     prostqs.skipFast(user.id, roomId, duration);
+    
+    // 📊 PROST-QS TELEMETRY: Skip rápido (Fase 30)
+    prostqs.telemetrySkip(user.id, user.sessionId, roomId, duration);
   }
   
+  // 📊 PROST-QS: Match encerrado (audit legacy)
   prostqs.matchEnded(roomId, user.id, duration, 'user_left');
+  
+  // 📊 PROST-QS TELEMETRY: Match encerrado (Fase 30)
+  prostqs.telemetryMatchEnded(user.id, user.sessionId, roomId, duration, 'user_left');
+  
+  // 📊 PROST-QS TELEMETRY: Saiu da feature video_chat
+  prostqs.telemetryFeatureLeave(user.id, user.sessionId, 'video_chat');
   
   if (room) {
     const partner = room.users.find(u => u.id !== user.id);
@@ -633,6 +686,10 @@ function leaveRoom(user) {
       // Registrar para o parceiro também
       const partnerDuration = Date.now() - (partner.roomJoinedAt || Date.now());
       prostqs.matchEnded(roomId, partner.id, partnerDuration, 'partner_left');
+      
+      // 📊 PROST-QS TELEMETRY: Match encerrado para parceiro (Fase 30)
+      prostqs.telemetryMatchEnded(partner.id, partner.sessionId, roomId, partnerDuration, 'partner_left');
+      prostqs.telemetryFeatureLeave(partner.id, partner.sessionId, 'video_chat');
       
       partner.roomId = null;
       partner.roomJoinedAt = null;

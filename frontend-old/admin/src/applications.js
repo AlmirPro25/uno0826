@@ -206,7 +206,7 @@ async function showAppDetail(appId) {
             </div>
 
             <!-- Metrics (Real-time) -->
-            <div class="grid grid-cols-5 gap-4 mb-6" id="metrics-container">
+            <div class="grid grid-cols-6 gap-4 mb-6" id="metrics-container">
                 <div class="card rounded-2xl p-4 text-center">
                     <p class="text-3xl font-bold text-blue-400 transition-all duration-300" id="metric-users">${metrics.total_users || 0}</p>
                     <p class="text-gray-400 text-sm">Usuários</p>
@@ -214,6 +214,10 @@ async function showAppDetail(appId) {
                 <div class="card rounded-2xl p-4 text-center">
                     <p class="text-3xl font-bold text-emerald-400 transition-all duration-300" id="metric-active">${metrics.active_users_24h || 0}</p>
                     <p class="text-gray-400 text-sm">Ativos (24h)</p>
+                </div>
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-3xl font-bold text-green-400 transition-all duration-300" id="metric-online">${metrics.online_now || 0}</p>
+                    <p class="text-gray-400 text-sm">Online Agora</p>
                 </div>
                 <div class="card rounded-2xl p-4 text-center">
                     <p class="text-3xl font-bold text-purple-400 transition-all duration-300" id="metric-sessions">${metrics.total_sessions || 0}</p>
@@ -340,19 +344,30 @@ function stopMetricsPolling() {
 
 async function updateMetrics(appId) {
     try {
-        const metrics = await api(`/apps/${appId}/metrics`);
+        // Buscar métricas do endpoint padrão E do endpoint de telemetria
+        const [metrics, telemetryMetrics] = await Promise.all([
+            api(`/apps/${appId}/metrics`),
+            api(`/admin/telemetry/apps/${appId}/metrics`).catch(() => null)
+        ]);
+        
+        // Usar métricas de telemetria se disponíveis, senão usar métricas padrão
+        const finalMetrics = telemetryMetrics || metrics;
         
         // Atualizar valores com animação
-        animateMetricUpdate('metric-users', metrics.total_users || 0);
-        animateMetricUpdate('metric-active', metrics.active_users_24h || 0);
-        animateMetricUpdate('metric-sessions', metrics.total_sessions || 0);
-        animateMetricUpdate('metric-active-sessions', metrics.active_sessions || 0);
-        animateMetricUpdate('metric-events', metrics.total_decisions || 0);
+        animateMetricUpdate('metric-users', finalMetrics.total_users || metrics.total_users || 0);
+        animateMetricUpdate('metric-active', finalMetrics.active_users_24h || metrics.active_users_24h || 0);
+        animateMetricUpdate('metric-online', finalMetrics.online_now || 0);
+        animateMetricUpdate('metric-sessions', finalMetrics.total_sessions || metrics.total_sessions || 0);
+        animateMetricUpdate('metric-active-sessions', finalMetrics.active_sessions || metrics.active_sessions || 0);
+        animateMetricUpdate('metric-events', finalMetrics.total_events || metrics.total_decisions || 0);
         
         // Atualizar última atividade
         const lastActivityEl = document.getElementById('metric-last-activity');
-        if (lastActivityEl && metrics.last_activity_at) {
-            lastActivityEl.textContent = formatDate(metrics.last_activity_at);
+        if (lastActivityEl) {
+            const lastActivity = finalMetrics.last_event_at || metrics.last_activity_at;
+            if (lastActivity) {
+                lastActivityEl.textContent = formatDate(lastActivity);
+            }
         }
         
         // Atualizar timestamp
