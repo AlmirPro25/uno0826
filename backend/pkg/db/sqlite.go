@@ -36,6 +36,7 @@ import (
 	"prost-qs/backend/internal/risk"
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
+	"prost-qs/backend/internal/telemetry"
 	"prost-qs/backend/pkg/capabilities"
 )
 
@@ -226,6 +227,14 @@ func MigrateSchema(db *gorm.DB) error {
 		// "Usuários anônimos de apps externos"
 		// ========================================
 		&identity.ImplicitUser{},
+
+		// ========================================
+		// TELEMETRY - Fase 30
+		// "Apps não calculam. Apps emitem. O kernel observa."
+		// ========================================
+		&telemetry.AppSession{},
+		&telemetry.TelemetryEvent{},
+		&telemetry.AppMetricsSnapshot{},
 
 		// ========================================
 		// AGENT MEMORY - Fase 24

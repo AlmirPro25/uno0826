@@ -44,6 +44,7 @@ import (
 	"prost-qs/backend/internal/risk"
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
+	"prost-qs/backend/internal/telemetry"
 	"prost-qs/backend/pkg/capabilities"
 	"prost-qs/backend/pkg/db"
 	"prost-qs/backend/pkg/middleware"
@@ -657,6 +658,14 @@ func main() {
 		// ========================================
 		identity.RegisterImplicitLoginRoutes(v1, gormDB, jwtSecret, application.AppContextMiddleware(applicationService), application.RequireAppContext())
 		log.Println("✅ Implicit Login routes registradas (/identity/implicit-login)")
+
+		// ========================================
+		// TELEMETRY - Fase 30
+		// "Apps não calculam. Apps emitem. O kernel observa."
+		// ========================================
+		telemetryService := telemetry.NewTelemetryService(gormDB)
+		telemetry.RegisterTelemetryRoutes(v1, telemetryService, application.AppContextMiddleware(applicationService), application.RequireAppContext(), middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Telemetry routes registradas (/telemetry/*)")
 
 		// ========================================
 		// ADD-ONS - Capabilities como SKUs

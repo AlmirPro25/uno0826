@@ -8,6 +8,7 @@
  * Ele apenas:
  * - Registra sessões
  * - Emite eventos de audit
+ * - Emite eventos de telemetria (Fase 30)
  * - Pergunta se pode (policy) - FUTURO
  * - Login implícito de usuários
  */
@@ -39,6 +40,139 @@ let eventBuffer = [];
 let flushTimeout = null;
 const FLUSH_INTERVAL = 5000; // 5 segundos
 const MAX_BUFFER_SIZE = 50;
+
+// ========================================
+// TELEMETRY - Fase 30
+// "Apps não calculam. Apps emitem. O kernel observa."
+// ========================================
+
+/**
+ * Emite um evento de telemetria semântico
+ * @param {string} type - Tipo do evento (session.start, interaction.match.created, etc)
+ * @param {string} userId - ID do usuário
+ * @param {string} sessionId - ID da sessão
+ * @param {object} options - Opções adicionais
+ */
+async function emitTelemetry(type, userId, sessionId, options = {}) {
+  if (!PROSTQS_URL || !PROSTQS_APP_KEY || !PROSTQS_APP_SECRET) {
+    return null;
+  }
+
+  try {
+    const event = {
+      user_id: userId,
+      session_id: sessionId,
+      type,
+      feature: options.feature || '',
+      target_id: options.targetId || '',
+      target_type: options.targetType || '',
+      context: options.context || {},
+      metadata: options.metadata || {},
+      timestamp: new Date().toISOString()
+    };
+
+    const response = await fetch(`${PROSTQS_URL}/api/v1/telemetry/events`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Prost-App-Key': PROSTQS_APP_KEY,
+        'X-Prost-App-Secret': PROSTQS_APP_SECRET
+      },
+      body: JSON.stringify(event)
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error(`❌ PROST-QS Telemetry: ${type} failed: HTTP ${response.status} - ${text}`);
+      return null;
+    }
+
+    console.log(`📊 PROST-QS Telemetry: ${type} sent for user ${userId}`);
+    return await response.json();
+  } catch (error) {
+    console.error(`❌ PROST-QS Telemetry error:`, error.message);
+    return null;
+  }
+}
+
+// ========================================
+// TELEMETRY EVENTS PRÉ-DEFINIDOS
+// ========================================
+
+// Sessão
+function telemetrySessionStart(userId, sessionId, context = {}) {
+  return emitTelemetry('session.start', userId, sessionId, { context });
+}
+
+function telemetrySessionPing(userId, sessionId, feature = '') {
+  return emitTelemetry('session.ping', userId, sessionId, { feature });
+}
+
+function telemetrySessionEnd(userId, sessionId, duration = 0) {
+  return emitTelemetry('session.end', userId, sessionId, { metadata: { duration_ms: duration } });
+}
+
+// Navegação
+function telemetryFeatureEnter(userId, sessionId, feature, context = {}) {
+  return emitTelemetry('nav.feature.enter', userId, sessionId, { feature, context });
+}
+
+function telemetryFeatureLeave(userId, sessionId, feature) {
+  return emitTelemetry('nav.feature.leave', userId, sessionId, { feature });
+}
+
+// Interações
+function telemetryMatchCreated(userId, sessionId, roomId, partnerId) {
+  return emitTelemetry('interaction.match.created', userId, sessionId, {
+    feature: 'video_chat',
+    targetId: partnerId,
+    targetType: 'user',
+    context: { room_id: roomId }
+  });
+}
+
+function telemetryMatchEnded(userId, sessionId, roomId, duration, reason) {
+  return emitTelemetry('interaction.match.ended', userId, sessionId, {
+    feature: 'video_chat',
+    context: { room_id: roomId },
+    metadata: { duration_ms: duration, reason }
+  });
+}
+
+function telemetryQueueJoined(userId, sessionId, context = {}) {
+  return emitTelemetry('interaction.queue.joined', userId, sessionId, {
+    feature: 'queue',
+    context
+  });
+}
+
+function telemetryQueueLeft(userId, sessionId) {
+  return emitTelemetry('interaction.queue.left', userId, sessionId, { feature: 'queue' });
+}
+
+function telemetrySkip(userId, sessionId, roomId, duration) {
+  return emitTelemetry('interaction.skip', userId, sessionId, {
+    feature: 'video_chat',
+    context: { room_id: roomId },
+    metadata: { duration_ms: duration }
+  });
+}
+
+function telemetryMessageSent(userId, sessionId, roomId) {
+  return emitTelemetry('interaction.message.sent', userId, sessionId, {
+    feature: 'chat',
+    context: { room_id: roomId }
+  });
+}
+
+// Erros
+function telemetryICEFailure(userId, sessionId, roomId, errorType) {
+  return emitTelemetry('error.ice_failure', userId, sessionId, {
+    feature: 'video_chat',
+    context: { room_id: roomId },
+    metadata: { error_type: errorType }
+  });
+}
 
 // ========================================
 // IMPLICIT LOGIN - Fase 29
@@ -355,7 +489,22 @@ module.exports = {
   // Implicit Login - Fase 29
   implicitLogin,
   
-  // Eventos pré-definidos
+  // Telemetry - Fase 30
+  emitTelemetry,
+  telemetrySessionStart,
+  telemetrySessionPing,
+  telemetrySessionEnd,
+  telemetryFeatureEnter,
+  telemetryFeatureLeave,
+  telemetryMatchCreated,
+  telemetryMatchEnded,
+  telemetryQueueJoined,
+  telemetryQueueLeft,
+  telemetrySkip,
+  telemetryMessageSent,
+  telemetryICEFailure,
+  
+  // Eventos pré-definidos (legacy audit)
   sessionStarted,
   queueJoined,
   matchCreated,
