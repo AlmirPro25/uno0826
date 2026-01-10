@@ -142,8 +142,17 @@ async function renderApplications(container) {
 // APP DETAIL VIEW
 // ========================================
 
+// Variável global para controlar o polling
+let metricsPollingInterval = null;
+
 async function showAppDetail(appId) {
     const container = document.getElementById('content-area');
+    
+    // Limpar polling anterior se existir
+    if (metricsPollingInterval) {
+        clearInterval(metricsPollingInterval);
+        metricsPollingInterval = null;
+    }
     
     try {
         const [app, credentials, metrics] = await Promise.all([
@@ -156,7 +165,7 @@ async function showAppDetail(appId) {
         
         container.innerHTML = `
             <!-- Back Button -->
-            <button onclick="showSection('applications')" class="text-gray-400 hover:text-white mb-4">
+            <button onclick="stopMetricsPolling(); showSection('applications')" class="text-gray-400 hover:text-white mb-4">
                 <i class="fas fa-arrow-left mr-2"></i> Voltar para Apps
             </button>
 
@@ -187,23 +196,36 @@ async function showAppDetail(appId) {
                 </div>
             </div>
 
-            <!-- Metrics -->
-            <div class="grid grid-cols-4 gap-4 mb-6">
+            <!-- Real-time Status -->
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    <span class="text-sm text-gray-400">Dados em tempo real</span>
+                </div>
+                <span class="text-xs text-gray-500" id="metrics-last-update">Atualizando...</span>
+            </div>
+
+            <!-- Metrics (Real-time) -->
+            <div class="grid grid-cols-5 gap-4 mb-6" id="metrics-container">
                 <div class="card rounded-2xl p-4 text-center">
-                    <p class="text-3xl font-bold text-blue-400">${metrics.total_users || 0}</p>
+                    <p class="text-3xl font-bold text-blue-400 transition-all duration-300" id="metric-users">${metrics.total_users || 0}</p>
                     <p class="text-gray-400 text-sm">Usuários</p>
                 </div>
                 <div class="card rounded-2xl p-4 text-center">
-                    <p class="text-3xl font-bold text-emerald-400">${metrics.active_users_24h || 0}</p>
+                    <p class="text-3xl font-bold text-emerald-400 transition-all duration-300" id="metric-active">${metrics.active_users_24h || 0}</p>
                     <p class="text-gray-400 text-sm">Ativos (24h)</p>
                 </div>
                 <div class="card rounded-2xl p-4 text-center">
-                    <p class="text-3xl font-bold text-purple-400">${metrics.total_sessions || 0}</p>
+                    <p class="text-3xl font-bold text-purple-400 transition-all duration-300" id="metric-sessions">${metrics.total_sessions || 0}</p>
                     <p class="text-gray-400 text-sm">Sessões Total</p>
                 </div>
                 <div class="card rounded-2xl p-4 text-center">
-                    <p class="text-3xl font-bold text-cyan-400">${metrics.active_sessions || 0}</p>
+                    <p class="text-3xl font-bold text-cyan-400 transition-all duration-300" id="metric-active-sessions">${metrics.active_sessions || 0}</p>
                     <p class="text-gray-400 text-sm">Sessões Ativas</p>
+                </div>
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-3xl font-bold text-amber-400 transition-all duration-300" id="metric-events">${metrics.total_decisions || 0}</p>
+                    <p class="text-gray-400 text-sm">Eventos</p>
                 </div>
             </div>
 
@@ -281,13 +303,93 @@ async function showAppDetail(appId) {
                     </div>
                     <div class="p-3 bg-white/5 rounded-xl">
                         <p class="text-gray-400">Última atividade</p>
-                        <p>${metrics.last_activity_at ? formatDate(metrics.last_activity_at) : '-'}</p>
+                        <p id="metric-last-activity">${metrics.last_activity_at ? formatDate(metrics.last_activity_at) : '-'}</p>
                     </div>
                 </div>
             </div>
         `;
+        
+        // Iniciar polling de métricas em tempo real
+        startMetricsPolling(appId);
+        
     } catch (err) {
         container.innerHTML = renderError('Erro ao carregar detalhes do App', err.message);
+    }
+}
+
+// ========================================
+// REAL-TIME METRICS POLLING
+// ========================================
+
+function startMetricsPolling(appId) {
+    // Atualizar imediatamente
+    updateMetrics(appId);
+    
+    // Polling a cada 3 segundos
+    metricsPollingInterval = setInterval(() => {
+        updateMetrics(appId);
+    }, 3000);
+}
+
+function stopMetricsPolling() {
+    if (metricsPollingInterval) {
+        clearInterval(metricsPollingInterval);
+        metricsPollingInterval = null;
+    }
+}
+
+async function updateMetrics(appId) {
+    try {
+        const metrics = await api(`/apps/${appId}/metrics`);
+        
+        // Atualizar valores com animação
+        animateMetricUpdate('metric-users', metrics.total_users || 0);
+        animateMetricUpdate('metric-active', metrics.active_users_24h || 0);
+        animateMetricUpdate('metric-sessions', metrics.total_sessions || 0);
+        animateMetricUpdate('metric-active-sessions', metrics.active_sessions || 0);
+        animateMetricUpdate('metric-events', metrics.total_decisions || 0);
+        
+        // Atualizar última atividade
+        const lastActivityEl = document.getElementById('metric-last-activity');
+        if (lastActivityEl && metrics.last_activity_at) {
+            lastActivityEl.textContent = formatDate(metrics.last_activity_at);
+        }
+        
+        // Atualizar timestamp
+        const updateEl = document.getElementById('metrics-last-update');
+        if (updateEl) {
+            updateEl.textContent = `Atualizado: ${new Date().toLocaleTimeString()}`;
+        }
+    } catch (err) {
+        console.error('Erro ao atualizar métricas:', err);
+    }
+}
+
+function animateMetricUpdate(elementId, newValue) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    const currentValue = parseInt(el.textContent) || 0;
+    
+    if (currentValue !== newValue) {
+        // Adicionar classe de animação
+        el.classList.add('scale-110');
+        
+        // Se aumentou, pisca verde; se diminuiu, pisca vermelho
+        if (newValue > currentValue) {
+            el.style.textShadow = '0 0 20px rgba(16, 185, 129, 0.8)';
+        } else {
+            el.style.textShadow = '0 0 20px rgba(239, 68, 68, 0.8)';
+        }
+        
+        // Atualizar valor
+        el.textContent = newValue;
+        
+        // Remover animação após 300ms
+        setTimeout(() => {
+            el.classList.remove('scale-110');
+            el.style.textShadow = 'none';
+        }, 300);
     }
 }
 
