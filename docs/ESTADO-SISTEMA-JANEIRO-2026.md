@@ -1,15 +1,31 @@
 # PROST-QS + VOX-BRIDGE — Estado do Sistema
 **Data:** 10 de Janeiro de 2026  
 **Autor:** Tech Lead AI  
-**Versão:** 1.0
+**Versão:** 2.0 — SISTEMA FECHADO FUNCIONALMENTE
 
 ---
 
 ## Resumo Executivo
 
-O sistema PROST-QS está **100% operacional em produção**. A Fase 30 (Telemetria Comportamental) foi concluída com sucesso, estabelecendo um pipeline completo de observabilidade end-to-end.
+O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado no sentido de **confiável e pronto para escalar**.
 
-**Status Geral: ✅ PRODUÇÃO ESTÁVEL**
+**Status: ✅ PRODUÇÃO ESTÁVEL — NÃO MEXER NO KERNEL**
+
+---
+
+## O que o sistema tem hoje
+
+| Capability | Status | Descrição |
+|------------|--------|-----------|
+| Sessões reais | ✅ | Não fake login, ciclo completo start→ping→end |
+| Session recovery | ✅ | Reconexão sem inflar métricas (localStorage + query string) |
+| Cleanup automático | ✅ | Sessões zumbi morrem em 60s |
+| Métricas real-time | ✅ | Polling 3s, dados confiáveis |
+| Alertas | ✅ | Queda de online, taxa de erros |
+| Timeline debug | ✅ | Sessões ativas com contexto |
+| Health log | ✅ | Log a cada 5min para monitoramento |
+
+**Não tem mais buraco estrutural.**
 
 ---
 
@@ -261,42 +277,55 @@ PROSTQS_APP_SECRET=pq_sk_***
 
 ## 10. Roadmap Sugerido
 
-### Curto Prazo (1-2 semanas)
-- [ ] Timeout automático de sessões zumbi (reduzir para 60s)
-- [ ] `session.recover` para reconexão sem inflar métricas
-- [ ] Deduplicação de sessão por device_id
-- [ ] Alertas básicos (queda brusca de online)
-- [ ] Exportar métricas CSV
+### ⛔ NÃO MEXER AGORA
+- Arquitetura do kernel
+- Modelo de eventos
+- Banco de dados
+- Telemetria base
 
-### Médio Prazo (1-2 meses)
-- [ ] Retenção por coorte (D1, D7, D30)
-- [ ] Funil por feature
-- [ ] Dashboard de erros
+Tudo isso está correto o suficiente para crescer. Mexer agora é ansiedade técnica.
 
-### Longo Prazo (3+ meses)
-- [ ] Integração BI externo (Metabase/Superset)
-- [ ] Machine Learning para anomalias
-- [ ] Multi-região
+### Próximo Passo: OBSERVAR
+Durante alguns dias:
+1. Usar VOX-BRIDGE como usuário normal
+2. Deixar admin aberto do lado
+3. Observar padrões sem mudar nada
+
+### Depois: Escolher UM eixo
+
+**Opção A — Produto**
+- Melhorar VOX-BRIDGE com base nos dados
+- Reduzir abandono, melhorar match, UX
+
+**Opção B — Plataforma**
+- Adicionar APP-2 simples
+- Provar que PROST-QS escala para múltiplos apps
+
+**Opção C — Inteligência**
+- Analytics: retenção D1/D7, funil, coorte
+
+📌 Escolher apenas um.
 
 ---
 
 ## 11. Conclusão
 
-O sistema PROST-QS evoluiu de "projeto experimental" para **base de empresa de verdade**.
+**O sistema está fechado funcionalmente.**
 
-**Principais conquistas:**
-- Sistema que se observa (e sistemas que se observam evoluem)
-- Arquitetura de plataforma, não de produto isolado
-- Fundação sólida que não exige refactor para crescer
+Você construiu algo que:
+- Observa sistemas enquanto eles funcionam
+- Permite corrigir a rota antes de quebrar
+- Não mente sobre métricas
+- Se recupera de falhas
+- Se alerta sobre anomalias
 
-**Decisões acertadas:**
-- Não usar Supabase (controle total)
-- Não terceirizar inteligência
-- PostgreSQL próprio (Neon)
-- Telemetria comportamental desde o início
+Isso é exatamente o mínimo profissional que empresas grandes exigem antes de escalar.
 
-**Status Final:** Produção estável, pronto para escalar.
+**Próximo passo não é código. É decisão.**
+
+Agora você tem dados suficientes para decidir melhor.
 
 ---
 
-*Documento gerado em 10/01/2026 — Tech Lead AI*
+*Documento atualizado em 10/01/2026 — Tech Lead AI*
+*Checkpoint: Sistema fechado funcionalmente*
