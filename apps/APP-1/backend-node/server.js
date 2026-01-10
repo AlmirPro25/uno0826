@@ -211,6 +211,50 @@ app.get('/stats', (req, res) => {
   });
 });
 
+// ========================================
+// IMPLICIT LOGIN - Fase 29
+// "Login invisível: usuário nem percebe"
+// ========================================
+app.post('/auth/implicit-login', async (req, res) => {
+  const { name, email, age, gender, preference, callMode } = req.body;
+  
+  if (!name || name.length < 2) {
+    return res.status(400).json({ error: 'Nome é obrigatório (mínimo 2 caracteres)' });
+  }
+
+  try {
+    // Chamar PROST-QS para criar/recuperar usuário
+    const result = await prostqs.implicitLogin({
+      name,
+      email: email || '',
+      age: age || 0,
+      gender: gender || '',
+      metadata: {
+        preference: preference || '',
+        call_mode: callMode || 'random',
+        source: 'vox-bridge'
+      }
+    });
+
+    if (!result) {
+      // Fallback: gerar ID local se PROST-QS não disponível
+      const localId = uuidv4();
+      console.log(`⚠️ PROST-QS indisponível, usando ID local: ${localId}`);
+      return res.json({
+        user_id: localId,
+        token: null,
+        is_new_user: true,
+        local_only: true
+      });
+    }
+
+    res.json(result);
+  } catch (error) {
+    console.error('Implicit login error:', error);
+    res.status(500).json({ error: 'Erro ao fazer login' });
+  }
+});
+
 // TURN credentials - com suporte a credenciais temporárias HMAC
 app.get('/turn-credentials', (req, res) => {
   const TURN_SECRET = process.env.TURN_SECRET;

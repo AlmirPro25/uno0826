@@ -3,18 +3,54 @@
 import { useState } from 'react'
 import { useUserStore, Gender, Preference, CallMode } from '@/store/useUserStore'
 
+// API URL do backend VOX-BRIDGE
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://vox-bridge-api.onrender.com'
+
 export function OnboardingScreen() {
-  const { setProfile } = useUserStore()
+  const { setProfile, setProstQSIdentity } = useUserStore()
   const [name, setName] = useState('')
   const [age, setAge] = useState('')
   const [gender, setGender] = useState<Gender | null>(null)
   const [preference, setPreference] = useState<Preference | null>(null)
   const [callMode, setCallMode] = useState<CallMode>('random')
+  const [isLoading, setIsLoading] = useState(false)
 
-  const canSubmit = name.length >= 2 && age && parseInt(age) >= 18 && gender && preference
+  const canSubmit = name.length >= 2 && age && parseInt(age) >= 18 && gender && preference && !isLoading
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!canSubmit) return
+    
+    setIsLoading(true)
+    
+    try {
+      // Chamar login implícito no backend
+      const response = await fetch(`${API_URL}/auth/implicit-login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          age: parseInt(age),
+          gender,
+          preference,
+          callMode
+        })
+      })
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log('✅ PROST-QS Identity:', data.user_id, data.is_new_user ? '(novo)' : '(existente)')
+        
+        // Salvar identidade PROST-QS
+        setProstQSIdentity(data.user_id, data.token)
+      } else {
+        console.warn('⚠️ Login implícito falhou, continuando sem identidade PROST-QS')
+      }
+    } catch (error) {
+      console.warn('⚠️ Erro no login implícito:', error)
+      // Continua mesmo sem PROST-QS
+    }
+
+    // Salvar perfil local (sempre funciona)
     setProfile({
       name,
       age: parseInt(age),
@@ -22,6 +58,8 @@ export function OnboardingScreen() {
       preference: preference!,
       callMode,
     })
+    
+    setIsLoading(false)
   }
 
   return (
@@ -205,7 +243,15 @@ export function OnboardingScreen() {
                 : 'bg-gray-800/80 text-gray-500 cursor-not-allowed'
             }`}
           >
-            {canSubmit ? (
+            {isLoading ? (
+              <>
+                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Entrando...
+              </>
+            ) : canSubmit ? (
               <>
                 Comecar
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

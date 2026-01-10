@@ -11,6 +11,9 @@ interface UserProfile {
   gender: Gender
   preference: Preference
   callMode: CallMode
+  // PROST-QS Identity
+  prostqsUserId?: string
+  prostqsToken?: string
 }
 
 interface UserState {
@@ -18,6 +21,7 @@ interface UserState {
   isOnboarded: boolean
   setProfile: (profile: UserProfile) => void
   updateCallMode: (mode: CallMode) => void
+  setProstQSIdentity: (userId: string, token: string | null) => void
   clearProfile: () => void
 }
 
@@ -34,6 +38,14 @@ export const useUserStore = create<UserState>()(
       
       updateCallMode: (mode) => set((state) => ({
         profile: state.profile ? { ...state.profile, callMode: mode } : null
+      })),
+
+      setProstQSIdentity: (userId, token) => set((state) => ({
+        profile: state.profile ? { 
+          ...state.profile, 
+          prostqsUserId: userId,
+          prostqsToken: token || undefined
+        } : null
       })),
       
       clearProfile: () => set({ 

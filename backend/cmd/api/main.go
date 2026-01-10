@@ -636,6 +636,13 @@ func main() {
 		identity.RegisterCapabilitiesRoutes(v1, gormDB, middleware.AuthMiddleware())
 
 		// ========================================
+		// IMPLICIT LOGIN - Fase 29
+		// "Login invisível para apps externos"
+		// ========================================
+		identity.RegisterImplicitLoginRoutes(v1, gormDB, jwtSecret, application.AppContextMiddleware(applicationService), application.RequireAppContext())
+		log.Println("✅ Implicit Login routes registradas (/identity/implicit-login)")
+
+		// ========================================
 		// ADD-ONS - Capabilities como SKUs
 		// "Capability primeiro. Preço depois. Agora: preço."
 		// ========================================

@@ -9,6 +9,7 @@
  * - Registra sessões
  * - Emite eventos de audit
  * - Pergunta se pode (policy) - FUTURO
+ * - Login implícito de usuários
  */
 
 // ========================================
@@ -36,6 +37,55 @@ let eventBuffer = [];
 let flushTimeout = null;
 const FLUSH_INTERVAL = 5000; // 5 segundos
 const MAX_BUFFER_SIZE = 50;
+
+// ========================================
+// IMPLICIT LOGIN - Fase 29
+// "Login invisível: usuário nem percebe"
+// ========================================
+
+/**
+ * Faz login implícito no PROST-QS
+ * Cria ou recupera usuário e retorna JWT
+ * @param {object} userData - Dados do usuário
+ * @returns {Promise<{user_id: string, token: string, is_new_user: boolean}>}
+ */
+async function implicitLogin(userData) {
+  if (!PROSTQS_URL || !PROSTQS_APP_KEY || !PROSTQS_APP_SECRET) {
+    console.warn('⚠️ PROST-QS: Configuração incompleta para implicit login');
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${PROSTQS_URL}/api/v1/identity/implicit-login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Prost-App-Key': PROSTQS_APP_KEY,
+        'X-Prost-App-Secret': PROSTQS_APP_SECRET
+      },
+      body: JSON.stringify({
+        name: userData.name,
+        email: userData.email || '',
+        age: userData.age || 0,
+        gender: userData.gender || '',
+        metadata: userData.metadata || {}
+      })
+    });
+
+    if (!response.ok) {
+      const text = await response.text();
+      console.error('❌ PROST-QS implicit login failed:', response.status, text);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`✅ PROST-QS: User ${data.is_new_user ? 'created' : 'found'}: ${data.user_id}`);
+    return data;
+  } catch (error) {
+    console.error('❌ PROST-QS implicit login error:', error.message);
+    return null;
+  }
+}
 
 /**
  * Emite um evento de audit para o PROST-QS
@@ -297,6 +347,9 @@ module.exports = {
   emitEvent,
   flushEvents,
   healthCheck,
+  
+  // Implicit Login - Fase 29
+  implicitLogin,
   
   // Eventos pré-definidos
   sessionStarted,
