@@ -385,6 +385,12 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 		adminTelemetry.GET("/apps/:id/engagement", handler.GetEngagementAdmin)
 		adminTelemetry.GET("/apps/:id/compare", handler.GetCompareAdmin)
 		adminTelemetry.GET("/apps/:id/top-users", handler.GetTopUsersAdmin)
+		
+		// Advanced Analytics
+		adminTelemetry.GET("/apps/:id/heatmap", handler.GetHeatmapAdmin)
+		adminTelemetry.GET("/apps/:id/journey", handler.GetJourneyAdmin)
+		adminTelemetry.GET("/apps/:id/geo", handler.GetGeoAdmin)
+		adminTelemetry.GET("/apps/:id/live", handler.GetLiveEventsAdmin)
 	}
 }
 
@@ -596,5 +602,123 @@ func (h *TelemetryHandler) GetTopUsersAdmin(c *gin.Context) {
 		"users": users,
 		"total": len(users),
 		"since": since.String(),
+	})
+}
+
+// GetHeatmapAdmin retorna heatmap de atividade
+// GET /api/v1/admin/telemetry/apps/:id/heatmap
+func (h *TelemetryHandler) GetHeatmapAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	days := 30
+	if d := c.Query("days"); d != "" {
+		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
+			days = parsed
+		}
+	}
+	
+	heatmap, err := h.service.GetActivityHeatmap(appID, days)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, heatmap)
+}
+
+// GetJourneyAdmin retorna jornada do usuário
+// GET /api/v1/admin/telemetry/apps/:id/journey
+func (h *TelemetryHandler) GetJourneyAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	since := 24 * time.Hour
+	if s := c.Query("since"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil {
+			since = d
+		}
+	}
+	
+	journey, err := h.service.GetUserJourney(appID, since)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, journey)
+}
+
+// GetGeoAdmin retorna distribuição geográfica
+// GET /api/v1/admin/telemetry/apps/:id/geo
+func (h *TelemetryHandler) GetGeoAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	since := 7 * 24 * time.Hour
+	if s := c.Query("since"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil {
+			since = d
+		}
+	}
+	
+	limit := 10
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 50 {
+			limit = parsed
+		}
+	}
+	
+	geo, err := h.service.GetGeoDistribution(appID, since, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"countries": geo,
+		"total":     len(geo),
+		"since":     since.String(),
+	})
+}
+
+// GetLiveEventsAdmin retorna eventos em tempo real
+// GET /api/v1/admin/telemetry/apps/:id/live
+func (h *TelemetryHandler) GetLiveEventsAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	limit := 20
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+	
+	events, err := h.service.GetLiveEvents(appID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+		"total":  len(events),
 	})
 }

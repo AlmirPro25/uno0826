@@ -266,6 +266,17 @@ async function showAppDetail(appId) {
                 <p class="text-xs text-gray-500 mt-2" id="metric-last-event">Último evento: ${metrics.last_event_at ? formatDate(metrics.last_event_at) : '-'}</p>
             </div>
 
+            <!-- Analytics Header -->
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="font-bold flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-purple-400"></i>
+                    Analytics Avançado
+                </h3>
+                <button onclick="loadAllAnalytics('${app.id}')" class="bg-purple-500/20 hover:bg-purple-500/30 text-purple-400 px-4 py-2 rounded-xl text-sm transition-all">
+                    <i class="fas fa-magic mr-2"></i> Carregar Todos
+                </button>
+            </div>
+
             <!-- Analytics Section -->
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <!-- Funnel -->
@@ -298,6 +309,22 @@ async function showAppDetail(appId) {
                     <div id="engagement-container">
                         <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Retention Section -->
+            <div class="card rounded-2xl p-4 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-bold flex items-center gap-2">
+                        <i class="fas fa-user-clock text-indigo-400"></i>
+                        Retenção D1/D7/D30 (últimos 14 dias)
+                    </h4>
+                    <button onclick="loadRetention('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div id="retention-container">
+                    <p class="text-gray-500 text-sm text-center py-4">Clique para carregar dados de retenção</p>
                 </div>
             </div>
 
@@ -373,19 +400,106 @@ async function showAppDetail(appId) {
                 </div>
             </div>
 
+            <!-- Advanced Analytics Row -->
+            <div class="grid grid-cols-3 gap-4 mb-6">
+                <!-- Heatmap -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-th text-orange-400"></i>
+                            Heatmap de Atividade
+                        </h4>
+                        <button onclick="loadHeatmap('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="heatmap-container">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
+                    </div>
+                </div>
+
+                <!-- User Journey -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-route text-blue-400"></i>
+                            Jornada do Usuário
+                        </h4>
+                        <button onclick="loadJourney('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="journey-container">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
+                    </div>
+                </div>
+
+                <!-- Geo Distribution -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-globe text-green-400"></i>
+                            Distribuição Geográfica
+                        </h4>
+                        <button onclick="loadGeo('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="geo-container">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Events & Top Users Row -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <!-- Live Events -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-bolt text-yellow-400"></i>
+                            Eventos em Tempo Real
+                            <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                        </h4>
+                        <button onclick="loadLiveEvents('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-play mr-1"></i> Iniciar
+                        </button>
+                    </div>
+                    <div id="live-events-container" class="max-h-48 overflow-y-auto">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para iniciar stream</p>
+                    </div>
+                </div>
+
+                <!-- Top Users -->
+                <div class="card rounded-2xl p-4">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-bold flex items-center gap-2">
+                            <i class="fas fa-trophy text-amber-400"></i>
+                            Top Usuários (7 dias)
+                        </h4>
+                        <button onclick="loadTopUsers('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div id="top-users-container">
+                        <p class="text-gray-500 text-sm text-center py-4">Clique para carregar</p>
+                    </div>
+                </div>
+            </div>
+
             <!-- Event Timeline -->
             <div class="card rounded-2xl p-6 mb-6">
                 <div class="flex items-center justify-between mb-4">
                     <h3 class="font-bold flex items-center gap-2">
                         <i class="fas fa-stream text-cyan-400"></i>
-                        Timeline de Eventos
+                        Timeline de Sessões Ativas
                     </h3>
                     <button onclick="toggleEventTimeline('${app.id}')" class="text-sm text-gray-400 hover:text-white">
                         <i class="fas fa-sync-alt mr-1"></i> Atualizar
                     </button>
                 </div>
                 <div id="events-timeline" class="max-h-64 overflow-y-auto">
-                    <p class="text-gray-500 text-sm">Clique em Atualizar para ver eventos</p>
+                    <p class="text-gray-500 text-sm">Clique em Atualizar para ver sessões ativas</p>
                 </div>
             </div>
 
@@ -450,6 +564,10 @@ function stopMetricsPolling() {
     if (metricsPollingInterval) {
         clearInterval(metricsPollingInterval);
         metricsPollingInterval = null;
+    }
+    // Também parar live events se estiver rodando
+    if (typeof stopLiveEvents === 'function') {
+        stopLiveEvents();
     }
 }
 
@@ -1102,6 +1220,39 @@ async function toggleEventTimeline(appId) {
 }
 
 // ========================================
+// LOAD ALL ANALYTICS
+// ========================================
+
+async function loadAllAnalytics(appId) {
+    // Mostrar loading em todos os containers
+    const containers = [
+        'funnel-container', 'engagement-container', 'retention-container',
+        'comparison-container', 'heatmap-container', 'journey-container',
+        'geo-container', 'top-users-container'
+    ];
+    
+    containers.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML = '<p class="text-gray-400 text-sm text-center animate-pulse">Carregando...</p>';
+        }
+    });
+    
+    // Carregar todos em paralelo
+    await Promise.all([
+        loadFunnel(appId),
+        loadEngagement(appId),
+        loadRetention(appId),
+        loadComparison(appId),
+        loadHeatmap(appId),
+        loadJourney(appId),
+        loadGeo(appId),
+        loadTopUsers(appId),
+        loadLiveEvents(appId)
+    ]);
+}
+
+// ========================================
 // ANALYTICS - Funil e Engajamento
 // ========================================
 
@@ -1208,6 +1359,120 @@ function formatDuration(ms) {
 
 
 // ========================================
+// RETENÇÃO D1/D7/D30
+// ========================================
+
+async function loadRetention(appId) {
+    const container = document.getElementById('retention-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando dados de retenção...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/retention?days=14`);
+        const retention = data.retention || [];
+        
+        if (retention.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center">Sem dados de retenção</p>';
+            return;
+        }
+        
+        // Calcular médias
+        const validD1 = retention.filter(r => r.new_users > 0 && r.d1 > 0);
+        const validD7 = retention.filter(r => r.new_users > 0 && r.d7 > 0);
+        const validD30 = retention.filter(r => r.new_users > 0 && r.d30 > 0);
+        
+        const avgD1 = validD1.length > 0 ? validD1.reduce((a, b) => a + b.d1, 0) / validD1.length : 0;
+        const avgD7 = validD7.length > 0 ? validD7.reduce((a, b) => a + b.d7, 0) / validD7.length : 0;
+        const avgD30 = validD30.length > 0 ? validD30.reduce((a, b) => a + b.d30, 0) / validD30.length : 0;
+        
+        let html = `
+            <!-- Médias de Retenção -->
+            <div class="grid grid-cols-3 gap-4 mb-4">
+                <div class="p-3 bg-gradient-to-br from-blue-500/20 to-blue-600/10 rounded-xl text-center">
+                    <p class="text-2xl font-bold text-blue-400">${avgD1.toFixed(1)}%</p>
+                    <p class="text-xs text-gray-400">D1 (média)</p>
+                </div>
+                <div class="p-3 bg-gradient-to-br from-purple-500/20 to-purple-600/10 rounded-xl text-center">
+                    <p class="text-2xl font-bold text-purple-400">${avgD7.toFixed(1)}%</p>
+                    <p class="text-xs text-gray-400">D7 (média)</p>
+                </div>
+                <div class="p-3 bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 rounded-xl text-center">
+                    <p class="text-2xl font-bold text-emerald-400">${avgD30.toFixed(1)}%</p>
+                    <p class="text-xs text-gray-400">D30 (média)</p>
+                </div>
+            </div>
+            
+            <!-- Tabela de Coortes -->
+            <div class="overflow-x-auto">
+                <table class="w-full text-xs">
+                    <thead>
+                        <tr class="text-gray-500 border-b border-white/10">
+                            <th class="text-left py-2 px-2">Data</th>
+                            <th class="text-center py-2 px-2">Novos</th>
+                            <th class="text-center py-2 px-2">D1</th>
+                            <th class="text-center py-2 px-2">D7</th>
+                            <th class="text-center py-2 px-2">D30</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        // Mostrar últimos 10 dias com dados
+        const recentData = retention.slice(-10).reverse();
+        
+        recentData.forEach(row => {
+            if (row.new_users === 0) return;
+            
+            html += `
+                <tr class="border-b border-white/5 hover:bg-white/5">
+                    <td class="py-2 px-2 text-gray-400">${formatShortDate(row.date)}</td>
+                    <td class="py-2 px-2 text-center text-white">${row.new_users}</td>
+                    <td class="py-2 px-2 text-center">
+                        <span class="${getRetentionColor(row.d1)}">${row.d1.toFixed(1)}%</span>
+                    </td>
+                    <td class="py-2 px-2 text-center">
+                        <span class="${getRetentionColor(row.d7)}">${row.d7 > 0 ? row.d7.toFixed(1) + '%' : '-'}</span>
+                    </td>
+                    <td class="py-2 px-2 text-center">
+                        <span class="${getRetentionColor(row.d30)}">${row.d30 > 0 ? row.d30.toFixed(1) + '%' : '-'}</span>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-xs text-gray-600 mt-2 text-center">
+                D1 = voltou no dia seguinte | D7 = voltou após 7 dias | D30 = voltou após 30 dias
+            </p>
+        `;
+        
+        container.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Erro ao carregar retenção:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar dados de retenção</p>';
+    }
+}
+
+function getRetentionColor(value) {
+    if (value >= 40) return 'text-emerald-400';
+    if (value >= 20) return 'text-blue-400';
+    if (value >= 10) return 'text-amber-400';
+    if (value > 0) return 'text-rose-400';
+    return 'text-gray-500';
+}
+
+function formatShortDate(dateStr) {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+
+// ========================================
 // COMPARAÇÃO DE PERÍODOS
 // ========================================
 
@@ -1278,4 +1543,353 @@ function getChangeColor(change) {
 function formatChange(change) {
     const sign = change > 0 ? '+' : '';
     return `${sign}${change.toFixed(1)}%`;
+}
+
+
+// ========================================
+// HEATMAP DE ATIVIDADE
+// ========================================
+
+async function loadHeatmap(appId) {
+    const container = document.getElementById('heatmap-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando heatmap...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/heatmap?days=30`);
+        const { cells, max_count } = data;
+        
+        const days = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        
+        // Criar grid do heatmap
+        let html = '<div class="overflow-x-auto">';
+        html += '<div class="grid gap-1" style="grid-template-columns: 40px repeat(24, 1fr); min-width: 600px;">';
+        
+        // Header com horas
+        html += '<div></div>';
+        for (let h = 0; h < 24; h++) {
+            html += `<div class="text-xs text-gray-500 text-center">${h}</div>`;
+        }
+        
+        // Linhas por dia da semana
+        for (let d = 0; d < 7; d++) {
+            html += `<div class="text-xs text-gray-400 flex items-center">${days[d]}</div>`;
+            for (let h = 0; h < 24; h++) {
+                const cell = cells.find(c => c.day_of_week === d && c.hour === h) || { count: 0, intensity: 0 };
+                const bgColor = getHeatmapColor(cell.intensity);
+                html += `<div class="w-full h-6 rounded-sm cursor-pointer transition-all hover:scale-110" 
+                         style="background-color: ${bgColor};" 
+                         title="${days[d]} ${h}h: ${cell.count} eventos"></div>`;
+            }
+        }
+        
+        html += '</div>';
+        
+        // Legenda
+        html += `
+            <div class="flex items-center justify-center gap-2 mt-3">
+                <span class="text-xs text-gray-500">Menos</span>
+                <div class="flex gap-1">
+                    <div class="w-4 h-4 rounded-sm" style="background-color: ${getHeatmapColor(0)}"></div>
+                    <div class="w-4 h-4 rounded-sm" style="background-color: ${getHeatmapColor(0.25)}"></div>
+                    <div class="w-4 h-4 rounded-sm" style="background-color: ${getHeatmapColor(0.5)}"></div>
+                    <div class="w-4 h-4 rounded-sm" style="background-color: ${getHeatmapColor(0.75)}"></div>
+                    <div class="w-4 h-4 rounded-sm" style="background-color: ${getHeatmapColor(1)}"></div>
+                </div>
+                <span class="text-xs text-gray-500">Mais</span>
+                <span class="text-xs text-gray-600 ml-4">Max: ${max_count} eventos</span>
+            </div>
+        `;
+        html += '</div>';
+        
+        container.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Erro ao carregar heatmap:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar heatmap</p>';
+    }
+}
+
+function getHeatmapColor(intensity) {
+    if (intensity === 0) return 'rgba(255, 255, 255, 0.05)';
+    // Gradiente de azul escuro para verde brilhante
+    const r = Math.round(16 + (34 - 16) * (1 - intensity));
+    const g = Math.round(185 + (197 - 185) * intensity);
+    const b = Math.round(129 + (94 - 129) * (1 - intensity));
+    const a = 0.3 + intensity * 0.7;
+    return `rgba(${r}, ${g}, ${b}, ${a})`;
+}
+
+// ========================================
+// USER JOURNEY
+// ========================================
+
+async function loadJourney(appId) {
+    const container = document.getElementById('journey-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando jornada...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/journey?since=24h`);
+        const { steps, total_users, completions } = data;
+        
+        if (steps.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center">Sem dados de jornada</p>';
+            return;
+        }
+        
+        const completionRate = total_users > 0 ? (completions / total_users * 100).toFixed(1) : 0;
+        
+        let html = `
+            <div class="flex items-center justify-between mb-4">
+                <span class="text-sm text-gray-400">Total: ${total_users} usuários</span>
+                <span class="text-sm ${completionRate > 10 ? 'text-emerald-400' : 'text-amber-400'}">
+                    Completaram: ${completionRate}%
+                </span>
+            </div>
+        `;
+        
+        html += '<div class="space-y-2">';
+        
+        steps.forEach((step, i) => {
+            const width = total_users > 0 ? (step.count / total_users * 100) : 0;
+            const eventName = formatEventName(step.event_type);
+            
+            html += `
+                <div class="relative">
+                    <div class="flex items-center justify-between text-xs mb-1">
+                        <span class="text-gray-400">${i + 1}. ${eventName}</span>
+                        <span class="text-white">${step.count} <span class="text-gray-500">(${width.toFixed(0)}%)</span></span>
+                    </div>
+                    <div class="h-6 bg-white/5 rounded-lg overflow-hidden">
+                        <div class="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-lg transition-all duration-500"
+                             style="width: ${width}%"></div>
+                    </div>
+                    ${step.drop_off > 0 ? `
+                        <span class="absolute right-0 -top-1 text-xs text-rose-400">
+                            -${step.drop_off.toFixed(0)}%
+                        </span>
+                    ` : ''}
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        container.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Erro ao carregar jornada:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar jornada</p>';
+    }
+}
+
+function formatEventName(eventType) {
+    const names = {
+        'session.start': 'Sessão Iniciada',
+        'nav.feature.enter': 'Entrou em Feature',
+        'interaction.queue.joined': 'Entrou na Fila',
+        'interaction.match.created': 'Match Criado',
+        'interaction.message.sent': 'Mensagem Enviada',
+        'interaction.match.ended': 'Match Finalizado'
+    };
+    return names[eventType] || eventType;
+}
+
+// ========================================
+// DISTRIBUIÇÃO GEOGRÁFICA
+// ========================================
+
+async function loadGeo(appId) {
+    const container = document.getElementById('geo-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/geo?since=168h&limit=10`);
+        const countries = data.countries || [];
+        
+        if (countries.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center">Sem dados geográficos</p>';
+            return;
+        }
+        
+        let html = '<div class="space-y-2">';
+        
+        countries.forEach((country, i) => {
+            const flag = getCountryFlag(country.country);
+            html += `
+                <div class="flex items-center gap-3">
+                    <span class="text-lg">${flag}</span>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between text-xs mb-1">
+                            <span class="text-gray-300">${country.country || 'Desconhecido'}</span>
+                            <span class="text-gray-400">${country.sessions} sessões (${country.percent.toFixed(1)}%)</span>
+                        </div>
+                        <div class="h-2 bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full"
+                                 style="width: ${country.percent}%"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        container.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Erro ao carregar geo:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar</p>';
+    }
+}
+
+function getCountryFlag(countryCode) {
+    const flags = {
+        'BR': '🇧🇷', 'US': '🇺🇸', 'PT': '🇵🇹', 'ES': '🇪🇸', 'AR': '🇦🇷',
+        'MX': '🇲🇽', 'CO': '🇨🇴', 'CL': '🇨🇱', 'PE': '🇵🇪', 'VE': '🇻🇪',
+        'DE': '🇩🇪', 'FR': '🇫🇷', 'IT': '🇮🇹', 'GB': '🇬🇧', 'CA': '🇨🇦',
+        'JP': '🇯🇵', 'CN': '🇨🇳', 'IN': '🇮🇳', 'AU': '🇦🇺', 'RU': '🇷🇺'
+    };
+    return flags[countryCode] || '🌍';
+}
+
+// ========================================
+// LIVE EVENTS STREAM
+// ========================================
+
+let liveEventsInterval = null;
+
+async function loadLiveEvents(appId) {
+    const container = document.getElementById('live-events-container');
+    if (!container) return;
+    
+    // Limpar intervalo anterior
+    if (liveEventsInterval) {
+        clearInterval(liveEventsInterval);
+    }
+    
+    async function fetchEvents() {
+        try {
+            const data = await api(`/admin/telemetry/apps/${appId}/live?limit=15`);
+            const events = data.events || [];
+            
+            if (events.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">Aguardando eventos...</p>';
+                return;
+            }
+            
+            let html = '<div class="space-y-1 max-h-64 overflow-y-auto">';
+            
+            events.forEach(event => {
+                const eventConfig = getEventConfig(event.type);
+                html += `
+                    <div class="flex items-center gap-2 p-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all">
+                        <div class="w-6 h-6 ${eventConfig.bgClass} rounded flex items-center justify-center">
+                            <i class="fas ${eventConfig.icon} ${eventConfig.iconClass} text-xs"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs text-white truncate">${event.type}</p>
+                            <p class="text-xs text-gray-500">${event.user_id}</p>
+                        </div>
+                        <span class="text-xs text-gray-500 whitespace-nowrap">${event.time_ago}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            container.innerHTML = html;
+            
+        } catch (err) {
+            console.error('Erro ao carregar live events:', err);
+        }
+    }
+    
+    // Buscar imediatamente
+    await fetchEvents();
+    
+    // Atualizar a cada 5 segundos
+    liveEventsInterval = setInterval(fetchEvents, 5000);
+}
+
+function stopLiveEvents() {
+    if (liveEventsInterval) {
+        clearInterval(liveEventsInterval);
+        liveEventsInterval = null;
+    }
+}
+
+function getEventConfig(type) {
+    if (type.startsWith('session.')) {
+        return { icon: 'fa-user', bgClass: 'bg-blue-500/20', iconClass: 'text-blue-400' };
+    }
+    if (type.startsWith('interaction.match')) {
+        return { icon: 'fa-heart', bgClass: 'bg-pink-500/20', iconClass: 'text-pink-400' };
+    }
+    if (type.startsWith('interaction.queue')) {
+        return { icon: 'fa-clock', bgClass: 'bg-amber-500/20', iconClass: 'text-amber-400' };
+    }
+    if (type.startsWith('interaction.message')) {
+        return { icon: 'fa-comment', bgClass: 'bg-emerald-500/20', iconClass: 'text-emerald-400' };
+    }
+    if (type.startsWith('nav.')) {
+        return { icon: 'fa-compass', bgClass: 'bg-purple-500/20', iconClass: 'text-purple-400' };
+    }
+    if (type.startsWith('error.')) {
+        return { icon: 'fa-exclamation', bgClass: 'bg-rose-500/20', iconClass: 'text-rose-400' };
+    }
+    return { icon: 'fa-circle', bgClass: 'bg-gray-500/20', iconClass: 'text-gray-400' };
+}
+
+// ========================================
+// TOP USERS
+// ========================================
+
+async function loadTopUsers(appId) {
+    const container = document.getElementById('top-users-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/top-users?limit=10&since=168h`);
+        const users = data.users || [];
+        
+        if (users.length === 0) {
+            container.innerHTML = '<p class="text-gray-500 text-sm text-center">Sem dados de usuários</p>';
+            return;
+        }
+        
+        let html = '<div class="space-y-2">';
+        
+        users.forEach((user, i) => {
+            const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}.`;
+            html += `
+                <div class="flex items-center gap-3 p-2 rounded-lg bg-white/5">
+                    <span class="text-lg w-8 text-center">${medal}</span>
+                    <div class="flex-1">
+                        <p class="text-xs text-gray-300 font-mono">${user.user_id.substring(0, 8)}...</p>
+                        <div class="flex gap-3 text-xs text-gray-500 mt-1">
+                            <span><i class="fas fa-play mr-1"></i>${user.session_count} sessões</span>
+                            <span><i class="fas fa-clock mr-1"></i>${formatDuration(user.total_duration)}</span>
+                            <span><i class="fas fa-heart mr-1"></i>${user.match_count} matches</span>
+                        </div>
+                    </div>
+                    <span class="text-xs text-gray-600">${user.last_seen}</span>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        
+        container.innerHTML = html;
+        
+    } catch (err) {
+        console.error('Erro ao carregar top users:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar</p>';
+    }
 }

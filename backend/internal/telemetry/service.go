@@ -1118,3 +1118,314 @@ func (s *TelemetryService) GetTopUsers(appID uuid.UUID, since time.Duration, lim
 	
 	return results, nil
 }
+
+// ========================================
+// 9. HEATMAP DE ATIVIDADE - Quando usuários estão ativos
+// ========================================
+
+// HeatmapCell célula do heatmap (hora x dia da semana)
+type HeatmapCell struct {
+	DayOfWeek int   `json:"day_of_week"` // 0=Dom, 1=Seg, ..., 6=Sab
+	Hour      int   `json:"hour"`        // 0-23
+	Count     int64 `json:"count"`       // Quantidade de eventos/sessões
+	Intensity float64 `json:"intensity"` // 0-1 normalizado
+}
+
+// HeatmapData dados completos do heatmap
+type HeatmapData struct {
+	Cells    []HeatmapCell `json:"cells"`
+	MaxCount int64         `json:"max_count"`
+	Period   string        `json:"period"`
+}
+
+// GetActivityHeatmap retorna heatmap de atividade por hora/dia
+func (s *TelemetryService) GetActivityHeatmap(appID uuid.UUID, days int) (*HeatmapData, error) {
+	if days <= 0 || days > 90 {
+		days = 30
+	}
+	
+	cutoff := time.Now().AddDate(0, 0, -days)
+	
+	// Query para agrupar por dia da semana e hora
+	type HeatmapRow struct {
+		DayOfWeek int
+		Hour      int
+		Count     int64
+	}
+	var rows []HeatmapRow
+	
+	// PostgreSQL: EXTRACT(DOW FROM timestamp), EXTRACT(HOUR FROM timestamp)
+	err := s.db.Model(&TelemetryEvent{}).
+		Select("EXTRACT(DOW FROM timestamp)::int as day_of_week, EXTRACT(HOUR FROM timestamp)::int as hour, COUNT(*) as count").
+		Where("app_id = ? AND timestamp > ?", appID, cutoff).
+		Group("day_of_week, hour").
+		Order("day_of_week, hour").
+		Scan(&rows).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	// Encontrar máximo para normalização
+	var maxCount int64 = 1
+	for _, row := range rows {
+		if row.Count > maxCount {
+			maxCount = row.Count
+		}
+	}
+	
+	// Criar mapa para lookup rápido
+	countMap := make(map[string]int64)
+	for _, row := range rows {
+		key := fmt.Sprintf("%d-%d", row.DayOfWeek, row.Hour)
+		countMap[key] = row.Count
+	}
+	
+	// Gerar todas as células (7 dias x 24 horas)
+	var cells []HeatmapCell
+	for day := 0; day < 7; day++ {
+		for hour := 0; hour < 24; hour++ {
+			key := fmt.Sprintf("%d-%d", day, hour)
+			count := countMap[key]
+			cells = append(cells, HeatmapCell{
+				DayOfWeek: day,
+				Hour:      hour,
+				Count:     count,
+				Intensity: float64(count) / float64(maxCount),
+			})
+		}
+	}
+	
+	return &HeatmapData{
+		Cells:    cells,
+		MaxCount: maxCount,
+		Period:   fmt.Sprintf("%d days", days),
+	}, nil
+}
+
+// ========================================
+// 10. USER JOURNEY - Jornada do usuário
+// ========================================
+
+// JourneyStep passo na jornada do usuário
+type JourneyStep struct {
+	Step       int    `json:"step"`
+	EventType  string `json:"event_type"`
+	Feature    string `json:"feature"`
+	Count      int64  `json:"count"`      // Quantos usuários passaram
+	AvgTimeMs  int64  `json:"avg_time_ms"` // Tempo médio até próximo passo
+	DropOff    float64 `json:"drop_off"`   // % que abandonou
+}
+
+// UserJourney jornada completa
+type UserJourney struct {
+	Steps       []JourneyStep `json:"steps"`
+	TotalUsers  int64         `json:"total_users"`
+	Completions int64         `json:"completions"` // Chegaram ao final
+	Period      string        `json:"period"`
+}
+
+// GetUserJourney analisa jornada típica dos usuários
+func (s *TelemetryService) GetUserJourney(appID uuid.UUID, since time.Duration) (*UserJourney, error) {
+	if since <= 0 {
+		since = 24 * time.Hour
+	}
+	
+	cutoff := time.Now().Add(-since)
+	
+	// Definir passos da jornada (ordem esperada)
+	journeySteps := []string{
+		EventSessionStart,
+		"nav.feature.enter",
+		"interaction.queue.joined",
+		"interaction.match.created",
+		"interaction.message.sent",
+		"interaction.match.ended",
+	}
+	
+	// Contar usuários únicos que iniciaram
+	var totalUsers int64
+	s.db.Model(&TelemetryEvent{}).
+		Where("app_id = ? AND type = ? AND timestamp > ?", appID, EventSessionStart, cutoff).
+		Distinct("user_id").
+		Count(&totalUsers)
+	
+	if totalUsers == 0 {
+		return &UserJourney{
+			Steps:      []JourneyStep{},
+			TotalUsers: 0,
+			Period:     since.String(),
+		}, nil
+	}
+	
+	var steps []JourneyStep
+	prevCount := totalUsers
+	
+	for i, eventType := range journeySteps {
+		var count int64
+		s.db.Model(&TelemetryEvent{}).
+			Where("app_id = ? AND type = ? AND timestamp > ?", appID, eventType, cutoff).
+			Distinct("user_id").
+			Count(&count)
+		
+		// Extrair feature se for nav.feature.enter
+		feature := ""
+		if eventType == "nav.feature.enter" {
+			// Pegar feature mais comum
+			type FeatureRow struct {
+				Feature string
+				Count   int64
+			}
+			var topFeature FeatureRow
+			s.db.Model(&TelemetryEvent{}).
+				Select("feature, COUNT(DISTINCT user_id) as count").
+				Where("app_id = ? AND type = ? AND timestamp > ? AND feature != ''", appID, eventType, cutoff).
+				Group("feature").
+				Order("count DESC").
+				Limit(1).
+				Scan(&topFeature)
+			feature = topFeature.Feature
+		}
+		
+		dropOff := float64(0)
+		if prevCount > 0 && i > 0 {
+			dropOff = (1 - float64(count)/float64(prevCount)) * 100
+		}
+		
+		steps = append(steps, JourneyStep{
+			Step:      i + 1,
+			EventType: eventType,
+			Feature:   feature,
+			Count:     count,
+			DropOff:   dropOff,
+		})
+		
+		prevCount = count
+	}
+	
+	// Completions = usuários que chegaram ao último passo
+	completions := int64(0)
+	if len(steps) > 0 {
+		completions = steps[len(steps)-1].Count
+	}
+	
+	return &UserJourney{
+		Steps:       steps,
+		TotalUsers:  totalUsers,
+		Completions: completions,
+		Period:      since.String(),
+	}, nil
+}
+
+// ========================================
+// 11. GEOGRAPHIC DISTRIBUTION - Distribuição geográfica
+// ========================================
+
+// GeoData dados geográficos
+type GeoData struct {
+	Country  string  `json:"country"`
+	Sessions int64   `json:"sessions"`
+	Users    int64   `json:"users"`
+	Percent  float64 `json:"percent"`
+}
+
+// GetGeoDistribution retorna distribuição geográfica
+func (s *TelemetryService) GetGeoDistribution(appID uuid.UUID, since time.Duration, limit int) ([]GeoData, error) {
+	if since <= 0 {
+		since = 7 * 24 * time.Hour
+	}
+	if limit <= 0 || limit > 50 {
+		limit = 10
+	}
+	
+	cutoff := time.Now().Add(-since)
+	
+	var results []GeoData
+	
+	err := s.db.Model(&AppSession{}).
+		Select("country, COUNT(*) as sessions, COUNT(DISTINCT user_id) as users").
+		Where("app_id = ? AND started_at > ? AND country != ''", appID, cutoff).
+		Group("country").
+		Order("sessions DESC").
+		Limit(limit).
+		Scan(&results).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	// Calcular total para percentuais
+	var totalSessions int64
+	for _, r := range results {
+		totalSessions += r.Sessions
+	}
+	
+	// Calcular percentuais
+	for i := range results {
+		if totalSessions > 0 {
+			results[i].Percent = float64(results[i].Sessions) / float64(totalSessions) * 100
+		}
+	}
+	
+	return results, nil
+}
+
+// ========================================
+// 12. REAL-TIME STREAM - Eventos em tempo real
+// ========================================
+
+// LiveEvent evento para stream em tempo real
+type LiveEvent struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	UserID    string `json:"user_id"`
+	Feature   string `json:"feature"`
+	Timestamp string `json:"timestamp"`
+	TimeAgo   string `json:"time_ago"`
+}
+
+// GetLiveEvents retorna últimos eventos para stream
+func (s *TelemetryService) GetLiveEvents(appID uuid.UUID, limit int) ([]LiveEvent, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	
+	var events []TelemetryEvent
+	err := s.db.Where("app_id = ?", appID).
+		Order("timestamp DESC").
+		Limit(limit).
+		Find(&events).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	now := time.Now()
+	var liveEvents []LiveEvent
+	for _, e := range events {
+		timeAgo := formatTimeAgo(now.Sub(e.Timestamp))
+		liveEvents = append(liveEvents, LiveEvent{
+			ID:        e.ID.String(),
+			Type:      e.Type,
+			UserID:    e.UserID.String()[:8] + "...", // Truncar para privacidade
+			Feature:   e.Feature,
+			Timestamp: e.Timestamp.Format(time.RFC3339),
+			TimeAgo:   timeAgo,
+		})
+	}
+	
+	return liveEvents, nil
+}
+
+func formatTimeAgo(d time.Duration) string {
+	if d < time.Minute {
+		return fmt.Sprintf("%ds ago", int(d.Seconds()))
+	}
+	if d < time.Hour {
+		return fmt.Sprintf("%dm ago", int(d.Minutes()))
+	}
+	if d < 24*time.Hour {
+		return fmt.Sprintf("%dh ago", int(d.Hours()))
+	}
+	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
+}

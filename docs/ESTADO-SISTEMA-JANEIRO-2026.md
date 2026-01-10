@@ -24,8 +24,17 @@ O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado 
 | Alertas | ✅ | Queda de online, taxa de erros |
 | Timeline debug | ✅ | Sessões ativas com contexto |
 | Health log | ✅ | Log a cada 5min para monitoramento |
+| Funil de conversão | ✅ | Sessão → Fila → Match → Chat |
+| Engajamento | ✅ | Duração, bounce rate, match rate |
+| Retenção D1/D7/D30 | ✅ | Coortes diários com médias |
+| Comparação períodos | ✅ | Últimos N dias vs anteriores |
+| Heatmap atividade | ✅ | Grid hora x dia da semana |
+| Jornada usuário | ✅ | Fluxo típico com drop-off |
+| Distribuição geo | ✅ | Top países por sessões |
+| Live events | ✅ | Stream em tempo real |
+| Top users | ✅ | Ranking por engajamento |
 
-**Não tem mais buraco estrutural.**
+**Sistema de analytics completo. Não tem mais buraco estrutural.**
 
 ---
 
@@ -168,6 +177,64 @@ Usuário abre VOX-BRIDGE
 
 ---
 
+## 5.1 Analytics Avançado ✨ (NOVO)
+
+### Funil de Conversão
+- Sessão Iniciada → Fila → Match → Mensagem → Match Completo
+- Drop-off por etapa
+- Endpoint: `GET /admin/telemetry/apps/:id/funnel?since=24h`
+
+### Engajamento
+| Métrica | Descrição |
+|---------|-----------|
+| Duração média | Tempo médio de sessão |
+| Eventos/sessão | Engajamento por sessão |
+| Matches/usuário | Taxa de sucesso |
+| Msgs/match | Qualidade do match |
+| Bounce rate | Sessões < 30s |
+| Match rate | % sessões com match |
+
+### Retenção D1/D7/D30
+- Coortes diários
+- D1: voltou no dia seguinte
+- D7: voltou após 7 dias
+- D30: voltou após 30 dias
+- Endpoint: `GET /admin/telemetry/apps/:id/retention?days=14`
+
+### Comparação de Períodos
+- Últimos N dias vs N dias anteriores
+- Variação % em sessões, usuários, eventos, matches
+- Endpoint: `GET /admin/telemetry/apps/:id/compare?days=7`
+
+### Heatmap de Atividade
+- Grid 7x24 (dia da semana x hora)
+- Intensidade por volume de eventos
+- Identifica horários de pico
+- Endpoint: `GET /admin/telemetry/apps/:id/heatmap?days=30`
+
+### Jornada do Usuário
+- Fluxo típico: session.start → queue → match → message → end
+- Drop-off por etapa
+- Taxa de completude
+- Endpoint: `GET /admin/telemetry/apps/:id/journey?since=24h`
+
+### Distribuição Geográfica
+- Top países por sessões
+- Percentual por região
+- Endpoint: `GET /admin/telemetry/apps/:id/geo?since=168h`
+
+### Eventos em Tempo Real
+- Stream dos últimos eventos
+- Atualização a cada 5s
+- Endpoint: `GET /admin/telemetry/apps/:id/live?limit=15`
+
+### Top Usuários
+- Ranking por engajamento
+- Sessões, duração, matches
+- Endpoint: `GET /admin/telemetry/apps/:id/top-users?limit=10`
+
+---
+
 ## 6. Eventos Emitidos pelo VOX-BRIDGE
 
 | Evento | Quando | Dados |
@@ -282,27 +349,47 @@ PROSTQS_APP_SECRET=pq_sk_***
 - Modelo de eventos
 - Banco de dados
 - Telemetria base
+- Analytics (já completo)
 
 Tudo isso está correto o suficiente para crescer. Mexer agora é ansiedade técnica.
+
+### ✅ COMPLETADO (Janeiro 2026)
+- [x] Session cleanup automático
+- [x] Session recovery
+- [x] Sistema de alertas
+- [x] Funil de conversão
+- [x] Métricas de engajamento
+- [x] Retenção D1/D7/D30
+- [x] Comparação de períodos
+- [x] Heatmap de atividade
+- [x] Jornada do usuário
+- [x] Distribuição geográfica
+- [x] Live events stream
+- [x] Top users ranking
 
 ### Próximo Passo: OBSERVAR
 Durante alguns dias:
 1. Usar VOX-BRIDGE como usuário normal
 2. Deixar admin aberto do lado
 3. Observar padrões sem mudar nada
+4. Usar os novos analytics para entender comportamento
 
 ### Depois: Escolher UM eixo
 
 **Opção A — Produto**
 - Melhorar VOX-BRIDGE com base nos dados
 - Reduzir abandono, melhorar match, UX
+- Usar funil e retenção para guiar decisões
 
 **Opção B — Plataforma**
 - Adicionar APP-2 simples
 - Provar que PROST-QS escala para múltiplos apps
+- Cada app herda analytics automaticamente
 
-**Opção C — Inteligência**
-- Analytics: retenção D1/D7, funil, coorte
+**Opção C — Monetização**
+- Definir métrica de cobrança (sessão, minuto, interação)
+- Implementar limites por plano
+- Billing já está preparado
 
 📌 Escolher apenas um.
 
@@ -310,7 +397,7 @@ Durante alguns dias:
 
 ## 11. Conclusão
 
-**O sistema está fechado funcionalmente.**
+**O sistema está fechado funcionalmente com analytics completo.**
 
 Você construiu algo que:
 - Observa sistemas enquanto eles funcionam
@@ -318,14 +405,17 @@ Você construiu algo que:
 - Não mente sobre métricas
 - Se recupera de falhas
 - Se alerta sobre anomalias
+- **Mede retenção, funil, engajamento**
+- **Mostra padrões de uso (heatmap, jornada)**
+- **Identifica usuários mais valiosos**
 
-Isso é exatamente o mínimo profissional que empresas grandes exigem antes de escalar.
+Isso é exatamente o que empresas grandes exigem antes de escalar.
 
-**Próximo passo não é código. É decisão.**
+**Próximo passo não é código. É decisão de negócio.**
 
 Agora você tem dados suficientes para decidir melhor.
 
 ---
 
 *Documento atualizado em 10/01/2026 — Tech Lead AI*
-*Checkpoint: Sistema fechado funcionalmente*
+*Checkpoint: Sistema fechado funcionalmente + Analytics completo*
