@@ -322,6 +322,22 @@ async function showAppDetail(appId) {
                 </div>
             </div>
 
+            <!-- Event Timeline -->
+            <div class="card rounded-2xl p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold flex items-center gap-2">
+                        <i class="fas fa-stream text-cyan-400"></i>
+                        Timeline de Eventos
+                    </h3>
+                    <button onclick="toggleEventTimeline('${app.id}')" class="text-sm text-gray-400 hover:text-white">
+                        <i class="fas fa-sync-alt mr-1"></i> Atualizar
+                    </button>
+                </div>
+                <div id="events-timeline" class="max-h-64 overflow-y-auto">
+                    <p class="text-gray-500 text-sm">Clique em Atualizar para ver eventos</p>
+                </div>
+            </div>
+
             <!-- App Info -->
             <div class="card rounded-2xl p-6">
                 <h3 class="font-bold mb-4 flex items-center gap-2">
@@ -966,4 +982,70 @@ function copyToClipboard(text) {
         document.body.removeChild(input);
         toast('Copiado!', 'success');
     });
+}
+
+// ========================================
+// EVENT TIMELINE - Debug/Suporte
+// ========================================
+
+async function toggleEventTimeline(appId) {
+    const container = document.getElementById('events-timeline');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm">Carregando eventos...</p>';
+    
+    try {
+        // Buscar sessões ativas para pegar eventos recentes
+        const sessionsData = await api(`/admin/telemetry/apps/${appId}/sessions?limit=20`);
+        const sessions = sessionsData.sessions || [];
+        
+        if (sessions.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-inbox text-2xl text-gray-600 mb-2"></i>
+                    <p class="text-gray-500 text-sm">Nenhuma sessão ativa</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Renderizar sessões como timeline
+        container.innerHTML = sessions.map(session => {
+            const isOnline = !session.ended_at && new Date() - new Date(session.last_seen_at) < 60000;
+            const statusClass = isOnline ? 'bg-emerald-500' : 'bg-gray-500';
+            const statusText = isOnline ? 'Online' : 'Offline';
+            
+            return `
+                <div class="flex items-start gap-3 p-3 rounded-xl hover:bg-white/5 border-l-2 ${isOnline ? 'border-emerald-500' : 'border-gray-600'} mb-2">
+                    <div class="w-2 h-2 ${statusClass} rounded-full mt-2"></div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium truncate">${session.user_id?.substring(0, 8) || 'unknown'}...</span>
+                            <span class="text-xs px-2 py-0.5 rounded ${isOnline ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}">${statusText}</span>
+                            ${session.current_feature ? `<span class="text-xs px-2 py-0.5 rounded bg-cyan-500/20 text-cyan-400">${session.current_feature}</span>` : ''}
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">
+                            <span>Eventos: ${session.event_count || 0}</span>
+                            <span class="mx-2">•</span>
+                            <span>Interações: ${session.interaction_count || 0}</span>
+                            <span class="mx-2">•</span>
+                            <span>Visto: ${formatTimeAgo(session.last_seen_at)}</span>
+                        </div>
+                        <div class="text-xs text-gray-600 mt-1 truncate">
+                            ${session.ip_address || '-'} • ${session.country || '-'}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+    } catch (err) {
+        console.error('Erro ao buscar timeline:', err);
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-exclamation-circle text-2xl text-rose-400 mb-2"></i>
+                <p class="text-gray-500 text-sm">Erro ao carregar eventos</p>
+            </div>
+        `;
+    }
 }

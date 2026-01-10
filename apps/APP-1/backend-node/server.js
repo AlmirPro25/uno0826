@@ -305,13 +305,18 @@ app.get('/turn-credentials', (req, res) => {
 
 wss.on('connection', (ws, req) => {
   const id = uuidv4();
-  const sessionId = uuidv4(); // Session ID separado para telemetria
   const ip = req.headers['x-forwarded-for']?.split(',')[0] || req.socket.remoteAddress || 'unknown';
   const userAgent = req.headers['user-agent'] || 'unknown';
   
+  // Verificar se é reconexão (session_id na query string)
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const previousSessionId = url.searchParams.get('session_id');
+  const sessionId = previousSessionId || uuidv4();
+  const isReconnect = !!previousSessionId;
+  
   const user = { 
     id, 
-    sessionId, // Novo: session ID para telemetria
+    sessionId, // Session ID para telemetria (pode ser recuperado)
     ws, 
     ip,
     userAgent,
@@ -326,6 +331,7 @@ wss.on('connection', (ws, req) => {
     negotiationStarted: null,
     matchCount: 0,
     skipCount: 0,
+    isReconnect,
   };
   
   users.set(id, user);
@@ -334,16 +340,34 @@ wss.on('connection', (ws, req) => {
   // 📊 PROST-QS: Registrar início de sessão (audit legacy)
   prostqs.sessionStarted(id, ip, userAgent, user.country);
   
-  // 📊 PROST-QS TELEMETRY: Sessão iniciada (Fase 30)
-  prostqs.telemetrySessionStart(id, sessionId, {
-    ip,
-    user_agent: userAgent,
-    country: user.country,
-    anonymous_id: user.anonymousId
-  });
+  // 📊 PROST-QS TELEMETRY: Sessão iniciada ou recuperada (Fase 30)
+  if (isReconnect) {
+    // Tentar recuperar sessão existente
+    prostqs.telemetrySessionRecover(id, sessionId, {
+      ip,
+      user_agent: userAgent,
+      country: user.country,
+      anonymous_id: user.anonymousId
+    });
+    console.log(`🔄 Reconnected: ${user.anonymousId} (session recovered: ${sessionId.substring(0, 8)}...)`);
+  } else {
+    // Nova sessão
+    prostqs.telemetrySessionStart(id, sessionId, {
+      ip,
+      user_agent: userAgent,
+      country: user.country,
+      anonymous_id: user.anonymousId
+    });
+    console.log(`👤 Connected: ${user.anonymousId} (${users.size} online)`);
+  }
 
-  console.log(`👤 Connected: ${user.anonymousId} (${users.size} online)`);
-  safeSend(ws, 'connected', { userId: id, anonymousId: user.anonymousId, online: users.size });
+  safeSend(ws, 'connected', { 
+    userId: id, 
+    sessionId, // Enviar sessionId para o cliente guardar
+    anonymousId: user.anonymousId, 
+    online: users.size,
+    isReconnect 
+  });
 
   ws.on('message', (data) => {
     try {
