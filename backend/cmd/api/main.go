@@ -662,6 +662,13 @@ func main() {
 		log.Println("✅ Implicit Login routes registradas (/identity/implicit-login)")
 
 		// ========================================
+		// MULTI-APP IDENTITY - Fase 31
+		// "Uma conta global, vínculos locais por app"
+		// ========================================
+		identity.RegisterMultiAppIdentityRoutes(v1, gormDB, jwtSecret, middleware.AuthMiddleware(), application.AppContextMiddleware(applicationService))
+		log.Println("✅ Multi-App Identity routes registradas (/identity/register, /identity/login, /identity/link-app, /identity/me)")
+
+		// ========================================
 		// TELEMETRY - Fase 30
 		// "Apps não calculam. Apps emitem. O kernel observa."
 		// ========================================

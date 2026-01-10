@@ -19,6 +19,10 @@ type User struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
+	// Multi-App Identity (Fase 31)
+	// origin_app_id identifica de qual app o usuário criou sua conta
+	OriginAppID *uuid.UUID `gorm:"type:uuid;index" json:"origin_app_id,omitempty"`
+
 	// Legacy fields for compatibility
 	Username     string `gorm:"size:255" json:"username,omitempty"`
 	Email        string `gorm:"size:255" json:"email,omitempty"`
@@ -27,8 +31,9 @@ type User struct {
 	Version      int    `json:"version,omitempty"`
 
 	// Relations
-	Profile     *UserProfile  `gorm:"foreignKey:UserID" json:"profile,omitempty"`
-	AuthMethods []AuthMethod  `gorm:"foreignKey:UserID" json:"auth_methods,omitempty"`
+	Profile      *UserProfile   `gorm:"foreignKey:UserID" json:"profile,omitempty"`
+	AuthMethods  []AuthMethod   `gorm:"foreignKey:UserID" json:"auth_methods,omitempty"`
+	AppUserLinks []AppUserLink  `gorm:"foreignKey:UserID" json:"app_links,omitempty"`
 }
 
 // UserProfile são os dados humanos do usuário

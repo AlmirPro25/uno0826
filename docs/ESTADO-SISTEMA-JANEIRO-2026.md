@@ -1,21 +1,21 @@
 # PROST-QS — Estado do Sistema
 **Data:** 10 de Janeiro de 2026  
 **Autor:** Tech Lead AI  
-**Versão:** 2.2 — MULTI-APP VALIDADO + PRÓXIMOS PASSOS
+**Versão:** 2.3 — IDENTITY MULTI-APP CONGELADO
 
 ---
 
 ## Resumo Executivo
 
-O sistema PROST-QS está **fechado funcionalmente** com **dois apps integrados e validados**. A arquitetura multi-tenant foi comprovada com telemetria real fluindo de ambos os apps.
+O sistema PROST-QS está **fechado funcionalmente** com **dois apps integrados e validados**. A arquitetura de **identidade multi-app** foi implementada e aprovada pelo Tech Lead.
 
-**Status: ✅ PRODUÇÃO ESTÁVEL — MULTI-APP VALIDADO**
+**Status: ✅ PRODUÇÃO ESTÁVEL — IDENTITY CONGELADO**
 
 ### Apps Integrados
-| App | Nome | Descrição | Status | Telemetria |
-|-----|------|-----------|--------|------------|
-| APP-1 | VOX-BRIDGE | Video chat anônimo | ✅ Produção | ✅ Eventos fluindo |
-| APP-2 | SCE | Sovereign Cloud Engine (PaaS) | ✅ Integrado | ✅ Eventos fluindo |
+| App | Nome | Descrição | Status | Telemetria | Identity |
+|-----|------|-----------|--------|------------|----------|
+| APP-1 | VOX-BRIDGE | Video chat anônimo | ✅ Produção | ✅ Fluindo | ✅ Implicit |
+| APP-2 | SCE | Sovereign Cloud Engine | ✅ Integrado | ✅ Fluindo | ⏳ Migrar |
 
 ### Credenciais SCE (APP-2)
 ```env
@@ -24,6 +24,29 @@ PROSTQS_APP_ID=011c6e88-9556-43ff-ad4e-27e20a5f5ea5
 PROSTQS_APP_KEY=pq_pk_c5f3a308b7fd081b33d72fcc04284662
 PROSTQS_APP_SECRET=pq_sk_031cdd53c49f43bba255bbb86d9cf6a819930f4dfba632804eeb007df064ec50
 ```
+
+---
+
+## 🔐 IDENTITY MULTI-APP — CONGELADO
+
+### Status: ✅ MODELO APROVADO — NÃO ALTERAR SEM REVISÃO
+
+| Entidade | Responsabilidade | Status |
+|----------|------------------|--------|
+| **User** | Identidade global única | ✅ Congelado |
+| **UserOrigin** | "Certidão de nascimento" (imutável) | ✅ Congelado |
+| **AppMembership** | Vínculo explícito por app | ✅ Congelado |
+
+### Princípio Fundamental
+> "Login unificado sem consentimento explícito é só um bug elegante."
+
+### Implementado
+- Endpoints: `/identity/register`, `/identity/login`, `/identity/link-app`, `/identity/me`
+- JWT com `origin_app_id` e `memberships[]`
+- `needs_link: true` como estado legítimo
+- Componente `LinkAppModal` reutilizável
+- Hook `useProstQSAuth` para frontend
+- Documentação: `docs/FRONTEND-IDENTITY-CONTRACT.md`
 
 ---
 
@@ -56,14 +79,14 @@ PROSTQS_APP_SECRET=pq_sk_031cdd53c49f43bba255bbb86d9cf6a819930f4dfba632804eeb007
 
 Tech Lead, temos 3 caminhos possíveis. Qual priorizar?
 
-### Opção A: Login Unificado (Identity)
+### ✅ Opção A: Login Unificado (Identity) — IMPLEMENTADO
 Conectar o login do SCE ao PROST-QS Identity Module:
-- Usuários do SCE autenticam via PROST-QS
-- Single Sign-On entre apps
-- Implicit login já existe no VOX-BRIDGE
+- ✅ Modelo `AppUserLink` criado
+- ✅ Campo `origin_app_id` adicionado ao User
+- ✅ Endpoints `/identity/register`, `/identity/login`, `/identity/link-app`, `/identity/me`
+- ✅ JWT Multi-App com `origin_app_id` e `linked_apps[]`
 
-**Esforço:** Médio  
-**Valor:** Alto (base para billing)
+**Próximo:** Migrar frontend do SCE para usar esses endpoints.
 
 ### Opção B: Billing/Pagamento
 Ativar cobrança no SCE via PROST-QS Billing:
@@ -73,7 +96,7 @@ Ativar cobrança no SCE via PROST-QS Billing:
 
 **Esforço:** Médio  
 **Valor:** Alto (monetização)  
-**Dependência:** Opção A (precisa de identity)
+**Dependência:** Opção A ✅ (já implementada)
 
 ### Opção C: Deploy do SCE em Produção
 Subir o SCE para Render/Vercel:
