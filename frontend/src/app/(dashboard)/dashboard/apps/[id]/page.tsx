@@ -32,6 +32,19 @@ interface Credential {
     status: string;
 }
 
+interface AppMetrics {
+    app_id: string;
+    total_users: number;
+    active_users_24h: number;
+    total_sessions: number;
+    active_sessions: number;
+    total_decisions: number;
+    total_approvals: number;
+    total_revenue: number;
+    risk_score: number;
+    last_activity_at: string;
+}
+
 export default function AppDetailsPage() {
     const params = useParams();
     const router = useRouter();
@@ -39,6 +52,7 @@ export default function AppDetailsPage() {
 
     const [app, setApp] = useState<AppDetails | null>(null);
     const [credentials, setCredentials] = useState<Credential[]>([]);
+    const [metrics, setMetrics] = useState<AppMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [showSecret, setShowSecret] = useState<Record<string, boolean>>({});
     const [creatingKey, setCreatingKey] = useState(false);
@@ -46,12 +60,14 @@ export default function AppDetailsPage() {
 
     const fetchApp = async () => {
         try {
-            const [appRes, credsRes] = await Promise.all([
+            const [appRes, credsRes, metricsRes] = await Promise.all([
                 api.get(`/apps/${appId}`),
-                api.get(`/apps/${appId}/credentials`).catch(() => ({ data: { credentials: [] } }))
+                api.get(`/apps/${appId}/credentials`).catch(() => ({ data: { credentials: [] } })),
+                api.get(`/apps/${appId}/metrics`).catch(() => ({ data: null }))
             ]);
             setApp(appRes.data);
             setCredentials(credsRes.data.credentials || []);
+            setMetrics(metricsRes.data);
         } catch (error) {
             console.error("Failed to fetch app", error);
             toast.error("Falha ao carregar aplicação");
@@ -214,12 +230,24 @@ export default function AppDetailsPage() {
                     </h2>
                     <div className="space-y-6">
                         <div>
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Requests (24h)</p>
-                            <p className="text-3xl font-black text-white">0</p>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Usuários</p>
+                            <p className="text-3xl font-black text-white">{metrics?.total_users || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Ativos (24h)</p>
+                            <p className="text-3xl font-black text-white">{metrics?.active_users_24h || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sessões Total</p>
+                            <p className="text-3xl font-black text-white">{metrics?.total_sessions || 0}</p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Sessões Ativas</p>
+                            <p className="text-3xl font-black text-white">{metrics?.active_sessions || 0}</p>
                         </div>
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Eventos</p>
-                            <p className="text-3xl font-black text-white">0</p>
+                            <p className="text-3xl font-black text-white">{metrics?.total_decisions || 0}</p>
                         </div>
                         <div>
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest">Credenciais Ativas</p>

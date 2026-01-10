@@ -475,6 +475,64 @@ func (h *ApplicationHandler) GetAppEvents(c *gin.Context) {
 	})
 }
 
+// DebugAppEvents retorna eventos de um app específico (admin only)
+// GET /api/v1/admin/apps/:id/events
+func (h *ApplicationHandler) DebugAppEvents(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+
+	limit := 100
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 1000 {
+			limit = parsed
+		}
+	}
+
+	events, err := h.service.GetAppAuditEvents(appID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	stats, _ := h.service.GetAppAuditStats(appID)
+	metrics, _ := h.service.GetAppMetrics(appID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"app_id":  appID,
+		"events":  events,
+		"total":   len(events),
+		"stats":   stats,
+		"metrics": metrics,
+	})
+}
+
+// DebugImplicitUsers retorna usuários implícitos de um app (admin only)
+// GET /api/v1/admin/apps/:id/implicit-users
+func (h *ApplicationHandler) DebugImplicitUsers(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+
+	users, total, err := h.service.GetImplicitUsers(appID, 100)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"app_id": appID,
+		"users":  users,
+		"total":  total,
+	})
+}
+
 // ========================================
 // ROUTES REGISTRATION
 // ========================================
@@ -505,6 +563,15 @@ func RegisterApplicationRoutes(router *gin.RouterGroup, service *ApplicationServ
 		// Admin only
 		apps.GET("", adminMiddleware, handler.ListAllApplications)
 		apps.POST("/:id/suspend", adminMiddleware, handler.SuspendApplication)
+	}
+
+	// Debug endpoints (admin only)
+	adminApps := router.Group("/admin/apps")
+	adminApps.Use(authMiddleware)
+	adminApps.Use(adminMiddleware)
+	{
+		adminApps.GET("/:id/events", handler.DebugAppEvents)
+		adminApps.GET("/:id/implicit-users", handler.DebugImplicitUsers)
 	}
 
 	// Endpoint para apps externos enviarem eventos (usa AppContextMiddleware)

@@ -25,11 +25,13 @@
 const PROSTQS_URL = process.env.PROSTQS_URL;
 const PROSTQS_APP_KEY = process.env.PROSTQS_APP_KEY;
 const PROSTQS_APP_SECRET = process.env.PROSTQS_APP_SECRET;
-const APP_ID = process.env.PROSTQS_APP_ID || '4fb16e2f-f8f0-425d-84f0-2ef3176bba43';
+const APP_ID = process.env.PROSTQS_APP_ID || 'c573e4f0-a738-400c-a6bc-d890360a0057';
 
 // Validar configuração obrigatória
 if (!PROSTQS_URL || !PROSTQS_APP_KEY || !PROSTQS_APP_SECRET) {
   console.warn('⚠️ PROST-QS: Configuração incompleta. Defina PROSTQS_URL, PROSTQS_APP_KEY e PROSTQS_APP_SECRET');
+} else {
+  console.log(`✅ PROST-QS Config: URL=${PROSTQS_URL}, APP_ID=${APP_ID}, KEY=${PROSTQS_APP_KEY?.substring(0, 15)}...`);
 }
 
 // Buffer de eventos para batch (evita muitas requests)
@@ -151,6 +153,8 @@ async function flushEvents() {
  */
 async function sendAuditEvent(event) {
   try {
+    console.log(`📤 PROST-QS: Enviando evento ${event.type} para ${PROSTQS_URL}/api/v1/apps/events`);
+    
     const response = await fetch(`${PROSTQS_URL}/api/v1/apps/events`, {
       method: 'POST',
       headers: {
@@ -163,15 +167,15 @@ async function sendAuditEvent(event) {
 
     if (!response.ok) {
       const text = await response.text();
+      console.error(`❌ PROST-QS: Evento ${event.type} falhou: HTTP ${response.status} - ${text}`);
       throw new Error(`HTTP ${response.status}: ${text}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    console.log(`✅ PROST-QS: Evento ${event.type} registrado com sucesso`);
+    return result;
   } catch (error) {
-    // Log silencioso - não quebrar o app por causa de audit
-    if (process.env.PROSTQS_DEBUG === 'true') {
-      console.error('PROST-QS audit error:', error.message);
-    }
+    console.error(`❌ PROST-QS: Erro ao enviar evento ${event.type}:`, error.message);
     return null;
   }
 }

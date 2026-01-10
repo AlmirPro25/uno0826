@@ -222,6 +222,12 @@ func MigrateSchema(db *gorm.DB) error {
 		&application.AppAuditEvent{},
 
 		// ========================================
+		// IMPLICIT USERS - Fase 29 (Login Implícito)
+		// "Usuários anônimos de apps externos"
+		// ========================================
+		&identity.ImplicitUser{},
+
+		// ========================================
 		// AGENT MEMORY - Fase 24
 		// "O sistema lembra, mas não aprende"
 		// ========================================

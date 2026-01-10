@@ -363,24 +363,35 @@ func (s *ApplicationService) ListActiveSessions(appID, userID uuid.UUID) ([]AppS
 func (s *ApplicationService) GetAppMetrics(appID uuid.UUID) (*AppMetrics, error) {
 	metrics := &AppMetrics{AppID: appID}
 
-	// Total users
-	s.db.Model(&AppUser{}).Where("app_id = ?", appID).Count(&metrics.TotalUsers)
+	// ========================================
+	// IMPLICIT USERS (usuários do login implícito)
+	// ========================================
+	s.db.Table("implicit_users").Where("app_id = ?", appID).Count(&metrics.TotalUsers)
 
-	// Active users 24h
+	// Active users 24h (implicit users)
 	yesterday := time.Now().Add(-24 * time.Hour)
-	s.db.Model(&AppUser{}).Where("app_id = ? AND last_seen_at > ?", appID, yesterday).Count(&metrics.ActiveUsers24h)
+	s.db.Table("implicit_users").Where("app_id = ? AND last_seen_at > ?", appID, yesterday).Count(&metrics.ActiveUsers24h)
 
-	// Total sessions
+	// ========================================
+	// SESSIONS (eventos de sessão)
+	// ========================================
 	s.db.Model(&AppSession{}).Where("app_id = ?", appID).Count(&metrics.TotalSessions)
 
 	// Active sessions
 	s.db.Model(&AppSession{}).Where("app_id = ? AND status = ? AND expires_at > ?",
 		appID, SessionStatusActive, time.Now()).Count(&metrics.ActiveSessions)
 
-	// Last activity
-	var lastSession AppSession
-	if err := s.db.Where("app_id = ?", appID).Order("created_at DESC").First(&lastSession).Error; err == nil {
-		metrics.LastActivityAt = lastSession.CreatedAt
+	// ========================================
+	// EVENTS (eventos de audit)
+	// ========================================
+	var totalEvents int64
+	s.db.Model(&AppAuditEvent{}).Where("app_id = ?", appID).Count(&totalEvents)
+	metrics.TotalDecisions = totalEvents // Usando TotalDecisions para eventos
+
+	// Last activity (do evento mais recente)
+	var lastEvent AppAuditEvent
+	if err := s.db.Where("app_id = ?", appID).Order("created_at DESC").First(&lastEvent).Error; err == nil {
+		metrics.LastActivityAt = lastEvent.CreatedAt
 	}
 
 	return metrics, nil
@@ -486,4 +497,38 @@ func (s *ApplicationService) GetAppAuditStats(appID uuid.UUID) (map[string]inter
 		"total_events":   total,
 		"events_by_type": typeMap,
 	}, nil
+}
+
+// ========================================
+// IMPLICIT USERS - Fase 29
+// ========================================
+
+// ImplicitUserView representa um usuário implícito para visualização
+type ImplicitUserView struct {
+	ID           uuid.UUID `json:"id"`
+	AppID        uuid.UUID `json:"app_id"`
+	ExternalRef  string    `json:"external_ref"`
+	Name         string    `json:"name"`
+	Email        string    `json:"email"`
+	SessionCount int       `json:"session_count"`
+	FirstSeenAt  time.Time `json:"first_seen_at"`
+	LastSeenAt   time.Time `json:"last_seen_at"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// GetImplicitUsers retorna usuários implícitos de um app
+func (s *ApplicationService) GetImplicitUsers(appID uuid.UUID, limit int) ([]ImplicitUserView, int64, error) {
+	var users []ImplicitUserView
+	var total int64
+
+	s.db.Table("implicit_users").Where("app_id = ?", appID).Count(&total)
+
+	err := s.db.Table("implicit_users").
+		Select("id, app_id, external_ref, name, email, session_count, first_seen_at, last_seen_at, created_at").
+		Where("app_id = ?", appID).
+		Order("last_seen_at DESC").
+		Limit(limit).
+		Scan(&users).Error
+
+	return users, total, err
 }
