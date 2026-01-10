@@ -244,7 +244,7 @@ export function useProstQSAuth() {
       throw new Error('Não autenticado');
     }
 
-    const response = await fetch(`${PROSTQS_URL}/api/v1/identity/me`, {
+    const response = await fetch(`${PROSTQS_URL}/api/v1/identity/profile`, {
       headers: { 'Authorization': `Bearer ${state.token}` },
     });
 

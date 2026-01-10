@@ -3,17 +3,23 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { API } from '@/lib/api';
+import { useProstQSAuth } from '@/hooks/useProstQSAuth';
+import { LinkAppModal } from '@/components/LinkAppModal';
 import { motion } from 'framer-motion';
-import { Box, Lock, Mail, Rocket } from 'lucide-react';
+import { Box, Lock, Mail, Rocket, UserPlus } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { isAuthenticated, setAuth, _hasHydrated } = useAuthStore();
-  const [email, setEmail] = useState('admin@sce.local');
-  const [password, setPassword] = useState('admin123456');
+  const { isAuthenticated, setAuth, updateAfterLink, _hasHydrated } = useAuthStore();
+  const prostQS = useProstQSAuth();
+  
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [isRegisterMode, setIsRegisterMode] = useState(false);
+  const [showLinkModal, setShowLinkModal] = useState(false);
 
   useEffect(() => {
     if (_hasHydrated && isAuthenticated) {
@@ -36,17 +42,78 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await API.request('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      });
-      setAuth(response.user, response.token);
-      router.push('/dashboard');
+      const response = await prostQS.login(email, password);
+      
+      if (response.needs_link) {
+        // Usuário existe mas não tem membership no SCE
+        // Salvar dados temporários e mostrar modal
+        setAuth({
+          id: response.user_id,
+          email: response.email,
+          name: response.name,
+          role: 'user',
+          originAppId: response.origin_app_id,
+          memberships: response.memberships,
+          plan: response.plan,
+          capabilities: response.capabilities,
+        }, response.token, true);
+        setShowLinkModal(true);
+      } else {
+        // Login completo
+        setAuth({
+          id: response.user_id,
+          email: response.email,
+          name: response.name,
+          role: 'user',
+          originAppId: response.origin_app_id,
+          memberships: response.memberships,
+          plan: response.plan,
+          capabilities: response.capabilities,
+        }, response.token, false);
+        router.push('/dashboard');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao autenticar');
     } finally {
       setLoading(false);
     }
+  }
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+
+    try {
+      const response = await prostQS.register(email, password, name);
+      setAuth({
+        id: response.user_id,
+        email: response.email,
+        name: response.name,
+        role: 'user',
+        originAppId: response.origin_app_id,
+        memberships: response.memberships,
+        plan: response.plan,
+        capabilities: response.capabilities,
+      }, response.token, false);
+      router.push('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao criar conta');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleLinkConfirm() {
+    const response = await prostQS.linkApp();
+    updateAfterLink(response.token, response.memberships);
+    setShowLinkModal(false);
+    router.push('/dashboard');
+  }
+
+  function handleLinkCancel() {
+    setShowLinkModal(false);
+    prostQS.logout();
   }
 
   return (
@@ -61,11 +128,31 @@ export default function LoginPage() {
             <Box className="w-8 h-8 text-black" />
           </div>
           <h1 className="text-3xl font-bold tracking-tighter">SOVEREIGN CLOUD</h1>
-          <p className="text-slate-400 mt-2">Acesse o Centro de Comando</p>
+          <p className="text-slate-400 mt-2">
+            {isRegisterMode ? 'Crie sua conta' : 'Acesse o Centro de Comando'}
+          </p>
         </div>
 
         <div className="glass-card p-8 rounded-2xl">
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={isRegisterMode ? handleRegister : handleLogin} className="space-y-6">
+            {isRegisterMode && (
+              <div>
+                <label className="text-sm font-medium text-slate-400 mb-2 block">Nome</label>
+                <div className="relative">
+                  <UserPlus className="absolute left-4 top-3.5 w-5 h-5 text-slate-600" />
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    autoComplete="name"
+                    className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-12 pr-4 py-3 focus:border-primary outline-none transition-all"
+                    placeholder="Seu nome"
+                    required={isRegisterMode}
+                  />
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium text-slate-400 mb-2 block">Email</label>
               <div className="relative">
@@ -76,7 +163,8 @@ export default function LoginPage() {
                   onChange={(e) => setEmail(e.target.value)}
                   autoComplete="email"
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-12 pr-4 py-3 focus:border-primary outline-none transition-all"
-                  placeholder="admin@sce.local"
+                  placeholder="seu@email.com"
+                  required
                 />
               </div>
             </div>
@@ -89,9 +177,11 @@ export default function LoginPage() {
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="current-password"
+                  autoComplete={isRegisterMode ? 'new-password' : 'current-password'}
                   className="w-full bg-slate-950 border border-slate-800 rounded-lg pl-12 pr-4 py-3 focus:border-primary outline-none transition-all"
                   placeholder="••••••••"
+                  required
+                  minLength={6}
                 />
               </div>
             </div>
@@ -112,30 +202,41 @@ export default function LoginPage() {
               ) : (
                 <>
                   <Rocket className="w-5 h-5" />
-                  ACESSAR ENGINE
+                  {isRegisterMode ? 'CRIAR CONTA' : 'ACESSAR ENGINE'}
                 </>
               )}
             </button>
           </form>
 
           <div className="mt-6 pt-6 border-t border-slate-800 text-center">
-            <p className="text-xs text-slate-500 mb-3">
-              Credenciais padrão: admin@sce.local / admin123456
-            </p>
-            <p className="text-xs text-slate-400">
-              Não tem conta?{' '}
-              <a 
-                href="http://localhost:3000" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
+            <p className="text-sm text-slate-400">
+              {isRegisterMode ? 'Já tem conta?' : 'Não tem conta?'}{' '}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsRegisterMode(!isRegisterMode);
+                  setError('');
+                }}
+                className="text-primary hover:underline font-medium"
               >
-                Registre-se no PROST-QS
-              </a>
+                {isRegisterMode ? 'Fazer login' : 'Criar conta'}
+              </button>
+            </p>
+            <p className="text-xs text-slate-500 mt-3">
+              Autenticação via PROST-QS Identity
             </p>
           </div>
         </div>
       </motion.div>
+
+      {/* Modal de Link de App */}
+      <LinkAppModal
+        isOpen={showLinkModal}
+        appName="Sovereign Cloud Engine"
+        userEmail={prostQS.user?.email || email}
+        onConfirm={handleLinkConfirm}
+        onCancel={handleLinkCancel}
+      />
     </div>
   );
 }
