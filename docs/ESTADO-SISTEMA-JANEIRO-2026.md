@@ -33,8 +33,9 @@ O sistema PROST-QS está **fechado funcionalmente**. Não "acabado" — fechado 
 | Distribuição geo | ✅ | Top países por sessões |
 | Live events | ✅ | Stream em tempo real |
 | Top users | ✅ | Ranking por engajamento |
+| **Rules Engine** | ✅ | **Camada de decisão automática** |
 
-**Sistema de analytics completo. Não tem mais buraco estrutural.**
+**Sistema de analytics + decisão completo. Plataforma adaptativa.**
 
 ---
 
@@ -235,6 +236,63 @@ Usuário abre VOX-BRIDGE
 
 ---
 
+## 5.2 Rules Engine ✨ (NOVO - Camada de Decisão)
+
+O Rules Engine transforma o PROST-QS de **plataforma observável** para **plataforma adaptativa**.
+
+### Conceito
+```
+Observação → Condição → Ação
+```
+
+### Tipos de Trigger
+| Tipo | Descrição | Exemplo |
+|------|-----------|---------|
+| `metric` | Baseado em métrica | `bounce_rate > 60` |
+| `threshold` | Baseado em threshold | `online_now > 100` |
+| `event` | Baseado em evento | `session.end` |
+| `schedule` | Baseado em horário | Cron expression |
+
+### Tipos de Ação
+| Tipo | Descrição |
+|------|-----------|
+| `alert` | Criar alerta no sistema |
+| `webhook` | Chamar URL externa |
+| `flag` | Marcar usuário/sessão |
+| `notify` | Enviar notificação |
+
+### Templates Pré-definidos
+- **Retenção Baixa**: Alerta quando D1 < 10%
+- **Bounce Alto**: Alerta quando bounce > 60%
+- **Pico Online**: Alerta quando online > threshold
+- **Risco de Churn**: Flag usuários inativos
+- **Queda de Atividade**: Alerta quando eventos/min cai
+
+### Endpoints
+```
+GET  /admin/rules/app/:appId        → Lista regras do app
+POST /admin/rules                   → Criar regra
+PUT  /admin/rules/:id               → Atualizar regra
+DELETE /admin/rules/:id             → Deletar regra
+POST /admin/rules/:id/toggle        → Ativar/desativar
+GET  /admin/rules/templates         → Templates pré-definidos
+POST /admin/rules/from-template     → Criar de template
+GET  /admin/rules/:id/executions    → Histórico de execuções
+```
+
+### Exemplo de Regra
+```json
+{
+  "name": "Bounce Rate Alto",
+  "trigger_type": "metric",
+  "condition": "bounce_rate > 60 AND online_now > 10",
+  "action_type": "alert",
+  "cooldown_minutes": 360
+}
+```
+
+---
+
 ## 6. Eventos Emitidos pelo VOX-BRIDGE
 
 | Evento | Quando | Dados |
@@ -366,6 +424,7 @@ Tudo isso está correto o suficiente para crescer. Mexer agora é ansiedade téc
 - [x] Distribuição geográfica
 - [x] Live events stream
 - [x] Top users ranking
+- [x] **Rules Engine (Camada de Decisão)**
 
 ### Próximo Passo: OBSERVAR
 Durante alguns dias:
@@ -397,7 +456,7 @@ Durante alguns dias:
 
 ## 11. Conclusão
 
-**O sistema está fechado funcionalmente com analytics completo.**
+**O sistema está fechado funcionalmente com analytics + decisão completos.**
 
 Você construiu algo que:
 - Observa sistemas enquanto eles funcionam
@@ -405,17 +464,16 @@ Você construiu algo que:
 - Não mente sobre métricas
 - Se recupera de falhas
 - Se alerta sobre anomalias
-- **Mede retenção, funil, engajamento**
-- **Mostra padrões de uso (heatmap, jornada)**
-- **Identifica usuários mais valiosos**
+- Mede retenção, funil, engajamento
+- Mostra padrões de uso (heatmap, jornada)
+- Identifica usuários mais valiosos
+- **Toma decisões automáticas baseadas em regras**
 
-Isso é exatamente o que empresas grandes exigem antes de escalar.
+Isso é uma **plataforma adaptativa**, não apenas observável.
 
-**Próximo passo não é código. É decisão de negócio.**
-
-Agora você tem dados suficientes para decidir melhor.
+**Próximo passo: usar as regras para automatizar decisões de negócio.**
 
 ---
 
 *Documento atualizado em 10/01/2026 — Tech Lead AI*
-*Checkpoint: Sistema fechado funcionalmente + Analytics completo*
+*Checkpoint: Sistema fechado funcionalmente + Analytics + Rules Engine*
