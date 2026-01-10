@@ -99,7 +99,7 @@ type MultiAppAuthResponse struct {
 	Capabilities []string         `json:"capabilities"`
 }
 
-type UserProfileResponse struct {
+type MultiAppUserProfile struct {
 	ID               string           `json:"id"`
 	Email            string           `json:"email"`
 	Name             string           `json:"name"`
@@ -337,7 +337,7 @@ func (h *MultiAppIdentityHandler) GetProfile(c *gin.Context) {
 	var billingAccountID string
 	h.db.Table("billing_accounts").Select("account_id").Where("user_id = ?", userID).Scan(&billingAccountID)
 
-	c.JSON(http.StatusOK, UserProfileResponse{
+	c.JSON(http.StatusOK, MultiAppUserProfile{
 		ID: user.ID.String(), Email: user.Email, Name: user.Username,
 		Role: user.Role, Status: user.Status,
 		OriginAppID: originAppID, OriginAppName: originAppName,
