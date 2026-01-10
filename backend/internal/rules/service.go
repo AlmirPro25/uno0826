@@ -38,10 +38,118 @@ func NewRulesService(db *gorm.DB) *RulesService {
 		stopEval: make(chan struct{}),
 	}
 	
+	// Seed regras padrão para VOX-BRIDGE
+	svc.seedDefaultRules()
+	
 	// Iniciar avaliador periódico
 	svc.startPeriodicEvaluator()
 	
 	return svc
+}
+
+// seedDefaultRules cria regras padrão para o VOX-BRIDGE se não existirem
+func (s *RulesService) seedDefaultRules() {
+	// VOX-BRIDGE App ID
+	appID, err := uuid.Parse("c573e4f0-a738-400c-a6bc-d890360a0057")
+	if err != nil {
+		return
+	}
+	
+	// Verificar se já tem regras
+	var count int64
+	s.db.Model(&Rule{}).Where("app_id = ?", appID).Count(&count)
+	if count > 0 {
+		log.Printf("🧠 [RULES] VOX-BRIDGE já tem %d regras configuradas", count)
+		return
+	}
+	
+	rules := []Rule{
+		{
+			ID:          uuid.New(),
+			AppID:       appID,
+			Name:        "Bounce Rate Crítico",
+			Description: "Alerta quando bounce rate passa de 70%",
+			Status:      RuleStatusActive,
+			Priority:    10,
+			TriggerType: TriggerMetric,
+			Condition:   "bounce_rate > 70",
+			ActionType:  ActionAlert,
+			ActionConfig: `{"alert_type":"high_bounce","severity":"warning","message":"Bounce rate acima de 70%"}`,
+			CooldownMinutes: 360,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			AppID:       appID,
+			Name:        "Queda de Usuários Online",
+			Description: "Alerta quando online cai para zero com sessões ativas",
+			Status:      RuleStatusActive,
+			Priority:    20,
+			TriggerType: TriggerThreshold,
+			Condition:   "online_now < 1 AND active_sessions > 0",
+			ActionType:  ActionAlert,
+			ActionConfig: `{"alert_type":"online_drop","severity":"critical","message":"Queda brusca de usuários online"}`,
+			CooldownMinutes: 30,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			AppID:       appID,
+			Name:        "Match Rate Baixo",
+			Description: "Alerta quando menos de 20% das sessões resultam em match",
+			Status:      RuleStatusActive,
+			Priority:    5,
+			TriggerType: TriggerMetric,
+			Condition:   "match_rate < 20 AND total_sessions > 10",
+			ActionType:  ActionAlert,
+			ActionConfig: `{"alert_type":"low_match_rate","severity":"warning","message":"Taxa de match abaixo de 20%"}`,
+			CooldownMinutes: 720,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			AppID:       appID,
+			Name:        "Pico de Atividade",
+			Description: "Alerta quando eventos/min passa de 10",
+			Status:      RuleStatusActive,
+			Priority:    3,
+			TriggerType: TriggerThreshold,
+			Condition:   "events_per_minute > 10",
+			ActionType:  ActionAlert,
+			ActionConfig: `{"alert_type":"activity_spike","severity":"info","message":"Pico de atividade detectado"}`,
+			CooldownMinutes: 60,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		},
+		{
+			ID:          uuid.New(),
+			AppID:       appID,
+			Name:        "Engajamento Alto",
+			Description: "Alerta positivo quando match rate passa de 50%",
+			Status:      RuleStatusActive,
+			Priority:    2,
+			TriggerType: TriggerMetric,
+			Condition:   "match_rate > 50 AND total_sessions > 5",
+			ActionType:  ActionAlert,
+			ActionConfig: `{"alert_type":"high_engagement","severity":"info","message":"Engajamento alto - mais de 50% com match"}`,
+			CooldownMinutes: 1440,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		},
+	}
+	
+	for _, rule := range rules {
+		if err := s.db.Create(&rule).Error; err != nil {
+			log.Printf("⚠️ [RULES] Erro ao criar regra '%s': %v", rule.Name, err)
+		} else {
+			log.Printf("✅ [RULES] Regra criada: %s", rule.Name)
+		}
+	}
+	
+	log.Printf("🧠 [RULES] %d regras padrão criadas para VOX-BRIDGE", len(rules))
 }
 
 // SetAlertCallback define callback para alertas
