@@ -3,15 +3,57 @@ import { useNexusStore } from '@/store/useNexusStore'
 import { useSound } from '@/hooks/useSound'
 
 // ============================================================================
-// WEBSOCKET HOOK - PRODUCTION READY
+// WEBSOCKET HOOK - PRODUCTION READY + SESSION RECOVERY
 // ============================================================================
 // CORREÇÕES APLICADAS:
 // 1. NÃO fechar socket no heartbeat (deixa TCP/servidor decidir)
 // 2. Heartbeat gentil (30s interval, 90s timeout)
 // 3. Reconectar só em erro real (não em close normal)
+// 4. Session recovery via sessionId persistido em localStorage
 // ============================================================================
 
+// Chaves do localStorage
+const SESSION_ID_KEY = 'vox_session_id'
+const SESSION_TIMESTAMP_KEY = 'vox_session_timestamp'
+const SESSION_TTL = 5 * 60 * 1000 // 5 minutos - tempo máximo para recover
+
 type MessageHandler = (type: string, payload: unknown) => void
+
+// Helpers para sessionId
+function getStoredSessionId(): string | null {
+  if (typeof window === 'undefined') return null
+  
+  const sessionId = localStorage.getItem(SESSION_ID_KEY)
+  const timestamp = localStorage.getItem(SESSION_TIMESTAMP_KEY)
+  
+  if (!sessionId || !timestamp) return null
+  
+  // Verificar se não expirou (5 min)
+  const age = Date.now() - parseInt(timestamp, 10)
+  if (age > SESSION_TTL) {
+    clearStoredSession()
+    return null
+  }
+  
+  return sessionId
+}
+
+function storeSessionId(sessionId: string): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(SESSION_ID_KEY, sessionId)
+  localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString())
+}
+
+function updateSessionTimestamp(): void {
+  if (typeof window === 'undefined') return
+  localStorage.setItem(SESSION_TIMESTAMP_KEY, Date.now().toString())
+}
+
+function clearStoredSession(): void {
+  if (typeof window === 'undefined') return
+  localStorage.removeItem(SESSION_ID_KEY)
+  localStorage.removeItem(SESSION_TIMESTAMP_KEY)
+}
 
 export function useWebSocket() {
   const wsRef = useRef<WebSocket | null>(null)
@@ -76,11 +118,17 @@ export function useWebSocket() {
     const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'wss://vox-bridge-api.onrender.com'
     const isReconnect = reconnectAttempts.current > 0
     
-    console.log('🔌 Connecting to:', wsUrl, isReconnect ? `(attempt ${reconnectAttempts.current})` : '')
+    // Tentar recuperar sessão anterior
+    const previousSessionId = getStoredSessionId()
+    const finalUrl = previousSessionId 
+      ? `${wsUrl}?session_id=${previousSessionId}` 
+      : wsUrl
+    
+    console.log('🔌 Connecting to:', wsUrl, isReconnect ? `(attempt ${reconnectAttempts.current})` : '', previousSessionId ? '(recovering session)' : '')
     setWsStatus(isReconnect ? 'reconnecting' : 'connecting')
     
     try {
-      const ws = new WebSocket(wsUrl)
+      const ws = new WebSocket(finalUrl)
       wsRef.current = ws
       isIntentionalClose.current = false
 
@@ -100,9 +148,10 @@ export function useWebSocket() {
         try {
           const { type, payload } = JSON.parse(event.data)
           
-          // Pong recebido - atualizar timestamp
+          // Pong recebido - atualizar timestamp da sessão
           if (type === 'pong') {
             lastPongTime.current = Date.now()
+            updateSessionTimestamp() // Manter sessão viva no localStorage
             if (payload?.online) setOnlineCount(payload.online)
             return
           }
@@ -111,6 +160,14 @@ export function useWebSocket() {
 
           switch (type) {
             case 'connected':
+              // Guardar sessionId para futuras reconexões
+              if (payload?.sessionId) {
+                storeSessionId(payload.sessionId)
+                console.log('💾 Session stored:', payload.sessionId.substring(0, 8) + '...')
+              }
+              if (payload?.isReconnect) {
+                console.log('🔄 Session recovered successfully!')
+              }
               if (payload?.anonymousId) {
                 useNexusStore.getState().setUser({
                   ...useNexusStore.getState().user!,
@@ -237,6 +294,7 @@ export function useWebSocket() {
   const disconnect = useCallback(() => {
     isIntentionalClose.current = true
     stopHeartbeat()
+    clearStoredSession() // Limpar sessão no disconnect intencional
     if (reconnectTimeout.current) {
       clearTimeout(reconnectTimeout.current)
       reconnectTimeout.current = null

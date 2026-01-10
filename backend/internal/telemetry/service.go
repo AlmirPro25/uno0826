@@ -69,16 +69,45 @@ func (s *TelemetryService) startSessionCleanup() {
 		ticker := time.NewTicker(SessionCleanupInterval)
 		defer ticker.Stop()
 		
+		// Health log a cada 5 minutos
+		healthTicker := time.NewTicker(5 * time.Minute)
+		defer healthTicker.Stop()
+		
 		for {
 			select {
 			case <-ticker.C:
 				s.cleanupZombieSessions()
+			case <-healthTicker.C:
+				s.logSystemHealth()
 			case <-s.stopCleanup:
 				return
 			}
 		}
 	}()
 	log.Printf("🧹 [TELEMETRY] Session cleanup started (interval: %v, timeout: %v)", SessionCleanupInterval, SessionTimeoutDuration)
+}
+
+// logSystemHealth emite log de saúde do sistema a cada 5 minutos
+func (s *TelemetryService) logSystemHealth() {
+	var totalApps int64
+	var totalSessions int64
+	var activeSessions int64
+	var totalEvents int64
+	var recentAlerts int64
+	
+	s.db.Table("applications").Count(&totalApps)
+	s.db.Model(&AppSession{}).Count(&totalSessions)
+	s.db.Model(&AppSession{}).Where("ended_at IS NULL AND last_seen_at > ?", time.Now().Add(-ActiveSessionThreshold)).Count(&activeSessions)
+	s.db.Model(&TelemetryEvent{}).Count(&totalEvents)
+	s.db.Model(&AlertHistory{}).Where("created_at > ?", time.Now().Add(-1*time.Hour)).Count(&recentAlerts)
+	
+	// Calcular eventos/min (últimos 5 min)
+	var events5min int64
+	s.db.Model(&TelemetryEvent{}).Where("timestamp > ?", time.Now().Add(-5*time.Minute)).Count(&events5min)
+	eventsPerMin := float64(events5min) / 5.0
+	
+	log.Printf("💚 [HEALTH] apps=%d sessions=%d active=%d events=%d events/min=%.1f alerts(1h)=%d",
+		totalApps, totalSessions, activeSessions, totalEvents, eventsPerMin, recentAlerts)
 }
 
 func (s *TelemetryService) cleanupZombieSessions() {
