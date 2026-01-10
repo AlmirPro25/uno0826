@@ -112,6 +112,11 @@ function telemetrySessionEnd(userId, sessionId, duration = 0) {
   return emitTelemetry('session.end', userId, sessionId, { metadata: { duration_ms: duration } });
 }
 
+// Session Recover - reconexão sem inflar métricas
+function telemetrySessionRecover(userId, sessionId, context = {}) {
+  return emitTelemetry('session.recover', userId, sessionId, { context });
+}
+
 // Navegação
 function telemetryFeatureEnter(userId, sessionId, feature, context = {}) {
   return emitTelemetry('nav.feature.enter', userId, sessionId, { feature, context });
@@ -494,6 +499,7 @@ module.exports = {
   telemetrySessionStart,
   telemetrySessionPing,
   telemetrySessionEnd,
+  telemetrySessionRecover,
   telemetryFeatureEnter,
   telemetryFeatureLeave,
   telemetryMatchCreated,

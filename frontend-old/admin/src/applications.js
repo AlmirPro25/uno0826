@@ -205,8 +205,8 @@ async function showAppDetail(appId) {
                 <span class="text-xs text-gray-500" id="metrics-last-update">Atualizando...</span>
             </div>
 
-            <!-- Metrics (Real-time) -->
-            <div class="grid grid-cols-6 gap-4 mb-6" id="metrics-container">
+            <!-- Metrics (Real-time) - Row 1 -->
+            <div class="grid grid-cols-6 gap-4 mb-4" id="metrics-container">
                 <div class="card rounded-2xl p-4 text-center">
                     <p class="text-3xl font-bold text-blue-400 transition-all duration-300" id="metric-users">${metrics.total_users || 0}</p>
                     <p class="text-gray-400 text-sm">Usuários</p>
@@ -228,9 +228,42 @@ async function showAppDetail(appId) {
                     <p class="text-gray-400 text-sm">Sessões Ativas</p>
                 </div>
                 <div class="card rounded-2xl p-4 text-center">
-                    <p class="text-3xl font-bold text-amber-400 transition-all duration-300" id="metric-events">${metrics.total_decisions || 0}</p>
+                    <p class="text-3xl font-bold text-amber-400 transition-all duration-300" id="metric-events">${metrics.total_events || metrics.total_decisions || 0}</p>
                     <p class="text-gray-400 text-sm">Eventos</p>
                 </div>
+            </div>
+
+            <!-- Metrics (Real-time) - Row 2 -->
+            <div class="grid grid-cols-5 gap-4 mb-4">
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-bold text-rose-400 transition-all duration-300" id="metric-epm">${(metrics.events_per_minute || 0).toFixed(1)}</p>
+                    <p class="text-gray-400 text-sm">Eventos/min</p>
+                </div>
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-bold text-indigo-400 transition-all duration-300" id="metric-active-1h">${metrics.active_users_1h || 0}</p>
+                    <p class="text-gray-400 text-sm">Ativos (1h)</p>
+                </div>
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-bold text-orange-400 transition-all duration-300" id="metric-events-24h">${metrics.events_24h || 0}</p>
+                    <p class="text-gray-400 text-sm">Eventos (24h)</p>
+                </div>
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-bold text-pink-400 transition-all duration-300" id="metric-interactions">${metrics.total_interactions || 0}</p>
+                    <p class="text-gray-400 text-sm">Interações</p>
+                </div>
+                <div class="card rounded-2xl p-4 text-center">
+                    <p class="text-2xl font-bold text-teal-400 transition-all duration-300" id="metric-interactions-24h">${metrics.interactions_24h || 0}</p>
+                    <p class="text-gray-400 text-sm">Interações (24h)</p>
+                </div>
+            </div>
+
+            <!-- Users by Feature -->
+            <div class="card rounded-2xl p-4 mb-6">
+                <h4 class="text-sm text-gray-400 mb-3">Usuários por Feature</h4>
+                <div class="flex flex-wrap gap-2" id="metric-features">
+                    ${renderFeatureBadges(metrics.users_by_feature)}
+                </div>
+                <p class="text-xs text-gray-500 mt-2" id="metric-last-event">Último evento: ${metrics.last_event_at ? formatDate(metrics.last_event_at) : '-'}</p>
             </div>
 
             <!-- Credentials -->
@@ -276,6 +309,17 @@ async function showAppDetail(appId) {
                         </button>
                     </div>
                 `}
+            </div>
+
+            <!-- Alerts -->
+            <div class="card rounded-2xl p-6 mb-6" id="alerts-section">
+                <h3 class="font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-bell text-rose-400"></i>
+                    Alertas Recentes
+                </h3>
+                <div id="alerts-container">
+                    <p class="text-gray-500 text-sm">Carregando alertas...</p>
+                </div>
             </div>
 
             <!-- App Info -->
@@ -353,13 +397,32 @@ async function updateMetrics(appId) {
         // Usar métricas de telemetria se disponíveis, senão usar métricas padrão
         const finalMetrics = telemetryMetrics || metrics;
         
-        // Atualizar valores com animação
+        // Row 1 - Métricas principais
         animateMetricUpdate('metric-users', finalMetrics.total_users || metrics.total_users || 0);
         animateMetricUpdate('metric-active', finalMetrics.active_users_24h || metrics.active_users_24h || 0);
         animateMetricUpdate('metric-online', finalMetrics.online_now || 0);
         animateMetricUpdate('metric-sessions', finalMetrics.total_sessions || metrics.total_sessions || 0);
         animateMetricUpdate('metric-active-sessions', finalMetrics.active_sessions || metrics.active_sessions || 0);
         animateMetricUpdate('metric-events', finalMetrics.total_events || metrics.total_decisions || 0);
+        
+        // Row 2 - Métricas adicionais
+        animateMetricUpdateFloat('metric-epm', finalMetrics.events_per_minute || 0);
+        animateMetricUpdate('metric-active-1h', finalMetrics.active_users_1h || 0);
+        animateMetricUpdate('metric-events-24h', finalMetrics.events_24h || 0);
+        animateMetricUpdate('metric-interactions', finalMetrics.total_interactions || 0);
+        animateMetricUpdate('metric-interactions-24h', finalMetrics.interactions_24h || 0);
+        
+        // Atualizar badges de features
+        const featuresEl = document.getElementById('metric-features');
+        if (featuresEl) {
+            featuresEl.innerHTML = renderFeatureBadges(finalMetrics.users_by_feature);
+        }
+        
+        // Atualizar último evento
+        const lastEventEl = document.getElementById('metric-last-event');
+        if (lastEventEl && finalMetrics.last_event_at) {
+            lastEventEl.textContent = `Último evento: ${formatDate(finalMetrics.last_event_at)}`;
+        }
         
         // Atualizar última atividade
         const lastActivityEl = document.getElementById('metric-last-activity');
@@ -375,9 +438,126 @@ async function updateMetrics(appId) {
         if (updateEl) {
             updateEl.textContent = `Atualizado: ${new Date().toLocaleTimeString()}`;
         }
+        
+        // Buscar alertas (a cada 10s, não a cada 3s)
+        if (!window.lastAlertsFetch || Date.now() - window.lastAlertsFetch > 10000) {
+            window.lastAlertsFetch = Date.now();
+            updateAlerts(appId);
+        }
     } catch (err) {
         console.error('Erro ao atualizar métricas:', err);
     }
+}
+
+// Buscar e renderizar alertas
+async function updateAlerts(appId) {
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/alerts?limit=10`);
+        const alerts = data.alerts || [];
+        
+        const container = document.getElementById('alerts-container');
+        if (!container) return;
+        
+        if (alerts.length === 0) {
+            container.innerHTML = `
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle text-2xl text-emerald-400 mb-2"></i>
+                    <p class="text-gray-400 text-sm">Nenhum alerta recente</p>
+                </div>
+            `;
+            return;
+        }
+        
+        container.innerHTML = alerts.map(alert => {
+            const alertData = typeof alert.Data === 'string' ? JSON.parse(alert.Data || '{}') : alert.Data;
+            const alertConfig = getAlertConfig(alert.Type);
+            
+            return `
+                <div class="flex items-center gap-3 p-3 rounded-xl ${alertConfig.bgClass} mb-2">
+                    <div class="w-8 h-8 ${alertConfig.iconBgClass} rounded-lg flex items-center justify-center">
+                        <i class="fas ${alertConfig.icon} ${alertConfig.iconClass}"></i>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-sm font-medium ${alertConfig.textClass}">${alertConfig.title}</p>
+                        <p class="text-xs text-gray-400">${formatAlertData(alert.Type, alertData)}</p>
+                    </div>
+                    <span class="text-xs text-gray-500">${formatTimeAgo(alert.CreatedAt)}</span>
+                </div>
+            `;
+        }).join('');
+    } catch (err) {
+        console.error('Erro ao buscar alertas:', err);
+    }
+}
+
+function getAlertConfig(type) {
+    const configs = {
+        'online_drop': {
+            title: 'Queda de Usuários Online',
+            icon: 'fa-arrow-down',
+            bgClass: 'bg-rose-500/10',
+            iconBgClass: 'bg-rose-500/20',
+            iconClass: 'text-rose-400',
+            textClass: 'text-rose-400'
+        },
+        'no_events': {
+            title: 'Sem Eventos',
+            icon: 'fa-clock',
+            bgClass: 'bg-amber-500/10',
+            iconBgClass: 'bg-amber-500/20',
+            iconClass: 'text-amber-400',
+            textClass: 'text-amber-400'
+        },
+        'high_error_rate': {
+            title: 'Taxa Alta de Erros',
+            icon: 'fa-exclamation-triangle',
+            bgClass: 'bg-red-500/10',
+            iconBgClass: 'bg-red-500/20',
+            iconClass: 'text-red-400',
+            textClass: 'text-red-400'
+        },
+        'session_spike': {
+            title: 'Pico de Sessões',
+            icon: 'fa-chart-line',
+            bgClass: 'bg-purple-500/10',
+            iconBgClass: 'bg-purple-500/20',
+            iconClass: 'text-purple-400',
+            textClass: 'text-purple-400'
+        }
+    };
+    return configs[type] || {
+        title: type,
+        icon: 'fa-bell',
+        bgClass: 'bg-gray-500/10',
+        iconBgClass: 'bg-gray-500/20',
+        iconClass: 'text-gray-400',
+        textClass: 'text-gray-400'
+    };
+}
+
+function formatAlertData(type, data) {
+    switch (type) {
+        case 'online_drop':
+            return `${data.previous || 0} → ${data.current || 0} (${data.drop || '-'})`;
+        case 'high_error_rate':
+            return `${data.error_count || 0} erros de ${data.total_count || 0} eventos (${data.rate || '-'})`;
+        default:
+            return JSON.stringify(data);
+    }
+}
+
+function formatTimeAgo(dateStr) {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMin = Math.floor(diffMs / 60000);
+    const diffHour = Math.floor(diffMs / 3600000);
+    
+    if (diffMin < 1) return 'agora';
+    if (diffMin < 60) return `${diffMin}min atrás`;
+    if (diffHour < 24) return `${diffHour}h atrás`;
+    return formatDate(dateStr);
 }
 
 function animateMetricUpdate(elementId, newValue) {
@@ -399,6 +579,35 @@ function animateMetricUpdate(elementId, newValue) {
         
         // Atualizar valor
         el.textContent = newValue;
+        
+        // Remover animação após 300ms
+        setTimeout(() => {
+            el.classList.remove('scale-110');
+            el.style.textShadow = 'none';
+        }, 300);
+    }
+}
+
+function animateMetricUpdateFloat(elementId, newValue) {
+    const el = document.getElementById(elementId);
+    if (!el) return;
+    
+    const currentValue = parseFloat(el.textContent) || 0;
+    const formattedNew = parseFloat(newValue).toFixed(1);
+    
+    if (currentValue.toFixed(1) !== formattedNew) {
+        // Adicionar classe de animação
+        el.classList.add('scale-110');
+        
+        // Se aumentou, pisca verde; se diminuiu, pisca vermelho
+        if (newValue > currentValue) {
+            el.style.textShadow = '0 0 20px rgba(16, 185, 129, 0.8)';
+        } else {
+            el.style.textShadow = '0 0 20px rgba(239, 68, 68, 0.8)';
+        }
+        
+        // Atualizar valor
+        el.textContent = formattedNew;
         
         // Remover animação após 300ms
         setTimeout(() => {
@@ -688,6 +897,52 @@ async function revokeCredential(appId, credId, credName) {
 // ========================================
 // HELPERS
 // ========================================
+
+/**
+ * Renderiza badges de features com contagem de usuários
+ * @param {string|object} usersbyFeature - JSON string ou objeto com features
+ * @returns {string} HTML com badges
+ */
+function renderFeatureBadges(usersbyFeature) {
+    if (!usersbyFeature) {
+        return '<span class="text-gray-500 text-sm">Nenhuma feature ativa</span>';
+    }
+    
+    let features = usersbyFeature;
+    
+    // Se for string JSON, fazer parse
+    if (typeof usersbyFeature === 'string') {
+        try {
+            features = JSON.parse(usersbyFeature);
+        } catch (e) {
+            return '<span class="text-gray-500 text-sm">-</span>';
+        }
+    }
+    
+    // Se não tiver features
+    if (!features || Object.keys(features).length === 0) {
+        return '<span class="text-gray-500 text-sm">Nenhuma feature ativa</span>';
+    }
+    
+    // Cores para diferentes features
+    const featureColors = {
+        'lobby': 'bg-blue-500/20 text-blue-400',
+        'video_chat': 'bg-emerald-500/20 text-emerald-400',
+        'queue': 'bg-amber-500/20 text-amber-400',
+        'match': 'bg-purple-500/20 text-purple-400',
+        'chat': 'bg-cyan-500/20 text-cyan-400',
+        'settings': 'bg-gray-500/20 text-gray-400'
+    };
+    
+    return Object.entries(features)
+        .map(([feature, count]) => {
+            const colorClass = featureColors[feature] || 'bg-indigo-500/20 text-indigo-400';
+            return `<span class="px-3 py-1 rounded-full text-xs ${colorClass}">
+                ${feature}: <strong>${count}</strong>
+            </span>`;
+        })
+        .join('');
+}
 
 function getAppStatusColor(status) {
     const colors = {

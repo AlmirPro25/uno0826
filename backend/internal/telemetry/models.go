@@ -159,6 +159,7 @@ const (
 	EventSessionPing     = "session.ping"     // heartbeat
 	EventSessionEnd      = "session.end"
 	EventSessionTimeout  = "session.timeout"
+	EventSessionRecover  = "session.recover"  // reconexão sem inflar métricas
 	
 	// Presença
 	EventPresencePing    = "presence.ping"

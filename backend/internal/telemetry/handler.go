@@ -376,5 +376,62 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 	{
 		adminTelemetry.GET("/apps/:id/metrics", handler.GetMetricsAdmin)
 		adminTelemetry.GET("/apps/:id/sessions", handler.GetActiveSessionsAdmin)
+		adminTelemetry.GET("/apps/:id/alerts", handler.GetAlertsAdmin)
+		adminTelemetry.GET("/alerts", handler.GetAllAlertsAdmin)
 	}
+}
+
+// ========================================
+// ALERTAS
+// ========================================
+
+// GetAlertsAdmin retorna alertas recentes de um app
+// GET /api/v1/admin/telemetry/apps/:id/alerts
+func (h *TelemetryHandler) GetAlertsAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	limit := 50
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 200 {
+			limit = parsed
+		}
+	}
+	
+	alerts, err := h.service.GetRecentAlerts(appID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"alerts": alerts,
+		"total":  len(alerts),
+	})
+}
+
+// GetAllAlertsAdmin retorna alertas recentes de todos os apps
+// GET /api/v1/admin/telemetry/alerts
+func (h *TelemetryHandler) GetAllAlertsAdmin(c *gin.Context) {
+	limit := 100
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 500 {
+			limit = parsed
+		}
+	}
+	
+	alerts, err := h.service.GetAllRecentAlerts(limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"alerts": alerts,
+		"total":  len(alerts),
+	})
 }
