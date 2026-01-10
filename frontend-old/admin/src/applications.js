@@ -301,6 +301,22 @@ async function showAppDetail(appId) {
                 </div>
             </div>
 
+            <!-- Period Comparison -->
+            <div class="card rounded-2xl p-4 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h4 class="font-bold flex items-center gap-2">
+                        <i class="fas fa-balance-scale text-amber-400"></i>
+                        Comparação de Períodos (7 dias)
+                    </h4>
+                    <button onclick="loadComparison('${app.id}')" class="text-xs text-gray-400 hover:text-white">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+                <div id="comparison-container">
+                    <p class="text-gray-500 text-sm text-center py-4">Clique para comparar últimos 7 dias vs 7 dias anteriores</p>
+                </div>
+            </div>
+
             <!-- Credentials -->
             <div class="card rounded-2xl p-6 mb-6">
                 <h3 class="font-bold mb-4 flex items-center gap-2">
@@ -1188,4 +1204,78 @@ function formatDuration(ms) {
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
     return `${hours}h ${remainingMinutes}m`;
+}
+
+
+// ========================================
+// COMPARAÇÃO DE PERÍODOS
+// ========================================
+
+async function loadComparison(appId) {
+    const container = document.getElementById('comparison-container');
+    if (!container) return;
+    
+    container.innerHTML = '<p class="text-gray-400 text-sm text-center">Carregando...</p>';
+    
+    try {
+        const data = await api(`/admin/telemetry/apps/${appId}/compare?days=7`);
+        const { current, previous, changes } = data;
+        
+        container.innerHTML = `
+            <div class="grid grid-cols-7 gap-2 text-center text-xs">
+                <div class="text-gray-500">Métrica</div>
+                <div class="text-gray-400">Atual</div>
+                <div class="text-gray-400">Anterior</div>
+                <div class="text-gray-400">Variação</div>
+                <div class="text-gray-500">Métrica</div>
+                <div class="text-gray-400">Atual</div>
+                <div class="text-gray-400">Variação</div>
+                
+                <div class="text-left text-gray-400">Sessões</div>
+                <div class="text-white font-bold">${current.total_sessions}</div>
+                <div class="text-gray-500">${previous.total_sessions}</div>
+                <div class="${getChangeColor(changes.sessions_change)}">${formatChange(changes.sessions_change)}</div>
+                
+                <div class="text-left text-gray-400">Bounce</div>
+                <div class="text-white font-bold">${current.bounce_rate.toFixed(1)}%</div>
+                <div class="${changes.bounce_rate_change < 0 ? 'text-emerald-400' : 'text-rose-400'}">${changes.bounce_rate_change > 0 ? '+' : ''}${changes.bounce_rate_change.toFixed(1)}pp</div>
+                
+                <div class="text-left text-gray-400">Usuários</div>
+                <div class="text-white font-bold">${current.unique_users}</div>
+                <div class="text-gray-500">${previous.unique_users}</div>
+                <div class="${getChangeColor(changes.users_change)}">${formatChange(changes.users_change)}</div>
+                
+                <div class="text-left text-gray-400">Match Rate</div>
+                <div class="text-white font-bold">${current.match_rate.toFixed(1)}%</div>
+                <div class="${changes.match_rate_change > 0 ? 'text-emerald-400' : 'text-rose-400'}">${changes.match_rate_change > 0 ? '+' : ''}${changes.match_rate_change.toFixed(1)}pp</div>
+                
+                <div class="text-left text-gray-400">Matches</div>
+                <div class="text-white font-bold">${current.total_matches}</div>
+                <div class="text-gray-500">${previous.total_matches}</div>
+                <div class="${getChangeColor(changes.matches_change)}">${formatChange(changes.matches_change)}</div>
+                
+                <div class="text-left text-gray-400">Duração</div>
+                <div class="text-white font-bold">${formatDuration(current.avg_session_duration_ms)}</div>
+                <div class="${getChangeColor(changes.duration_change)}">${formatChange(changes.duration_change)}</div>
+            </div>
+            <p class="text-xs text-gray-600 mt-3 text-center">
+                ${current.start_date} a ${current.end_date} vs ${previous.start_date} a ${previous.end_date}
+            </p>
+        `;
+        
+    } catch (err) {
+        console.error('Erro ao carregar comparação:', err);
+        container.innerHTML = '<p class="text-rose-400 text-sm text-center">Erro ao carregar</p>';
+    }
+}
+
+function getChangeColor(change) {
+    if (change > 5) return 'text-emerald-400';
+    if (change < -5) return 'text-rose-400';
+    return 'text-gray-400';
+}
+
+function formatChange(change) {
+    const sign = change > 0 ? '+' : '';
+    return `${sign}${change.toFixed(1)}%`;
 }

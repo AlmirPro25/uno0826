@@ -910,3 +910,211 @@ func (s *TelemetryService) GetEngagementMetrics(appID uuid.UUID, since time.Dura
 	
 	return metrics, nil
 }
+
+
+// ========================================
+// 7. COMPARAÇÃO DE PERÍODOS - Medir impacto
+// ========================================
+
+// PeriodComparison comparação entre dois períodos
+type PeriodComparison struct {
+	Current  PeriodMetrics `json:"current"`
+	Previous PeriodMetrics `json:"previous"`
+	Changes  PeriodChanges `json:"changes"`
+}
+
+// PeriodMetrics métricas de um período
+type PeriodMetrics struct {
+	Period           string  `json:"period"`            // "current" ou "previous"
+	StartDate        string  `json:"start_date"`
+	EndDate          string  `json:"end_date"`
+	TotalSessions    int64   `json:"total_sessions"`
+	UniquUsers       int64   `json:"unique_users"`
+	TotalEvents      int64   `json:"total_events"`
+	TotalMatches     int64   `json:"total_matches"`
+	AvgSessionDuration float64 `json:"avg_session_duration_ms"`
+	BounceRate       float64 `json:"bounce_rate"`
+	MatchRate        float64 `json:"match_rate"`
+}
+
+// PeriodChanges variação percentual entre períodos
+type PeriodChanges struct {
+	Sessions    float64 `json:"sessions_change"`     // % mudança
+	Users       float64 `json:"users_change"`
+	Events      float64 `json:"events_change"`
+	Matches     float64 `json:"matches_change"`
+	Duration    float64 `json:"duration_change"`
+	BounceRate  float64 `json:"bounce_rate_change"`
+	MatchRate   float64 `json:"match_rate_change"`
+}
+
+// ComparePeriods compara métricas entre dois períodos
+func (s *TelemetryService) ComparePeriods(appID uuid.UUID, periodDays int) (*PeriodComparison, error) {
+	if periodDays <= 0 || periodDays > 90 {
+		periodDays = 7
+	}
+	
+	now := time.Now()
+	
+	// Período atual: últimos N dias
+	currentEnd := now
+	currentStart := now.AddDate(0, 0, -periodDays)
+	
+	// Período anterior: N dias antes do período atual
+	previousEnd := currentStart
+	previousStart := previousEnd.AddDate(0, 0, -periodDays)
+	
+	current := s.calculatePeriodMetrics(appID, currentStart, currentEnd, "current")
+	previous := s.calculatePeriodMetrics(appID, previousStart, previousEnd, "previous")
+	
+	changes := PeriodChanges{
+		Sessions:   calculateChange(previous.TotalSessions, current.TotalSessions),
+		Users:      calculateChange(previous.UniquUsers, current.UniquUsers),
+		Events:     calculateChange(previous.TotalEvents, current.TotalEvents),
+		Matches:    calculateChange(previous.TotalMatches, current.TotalMatches),
+		Duration:   calculateChangeFloat(previous.AvgSessionDuration, current.AvgSessionDuration),
+		BounceRate: current.BounceRate - previous.BounceRate, // Diferença absoluta
+		MatchRate:  current.MatchRate - previous.MatchRate,   // Diferença absoluta
+	}
+	
+	return &PeriodComparison{
+		Current:  current,
+		Previous: previous,
+		Changes:  changes,
+	}, nil
+}
+
+func (s *TelemetryService) calculatePeriodMetrics(appID uuid.UUID, start, end time.Time, period string) PeriodMetrics {
+	metrics := PeriodMetrics{
+		Period:    period,
+		StartDate: start.Format("2006-01-02"),
+		EndDate:   end.Format("2006-01-02"),
+	}
+	
+	// Sessões
+	s.db.Model(&AppSession{}).
+		Where("app_id = ? AND started_at >= ? AND started_at < ?", appID, start, end).
+		Count(&metrics.TotalSessions)
+	
+	// Usuários únicos
+	s.db.Model(&AppSession{}).
+		Where("app_id = ? AND started_at >= ? AND started_at < ?", appID, start, end).
+		Distinct("user_id").
+		Count(&metrics.UniquUsers)
+	
+	// Eventos
+	s.db.Model(&TelemetryEvent{}).
+		Where("app_id = ? AND timestamp >= ? AND timestamp < ?", appID, start, end).
+		Count(&metrics.TotalEvents)
+	
+	// Matches
+	s.db.Model(&TelemetryEvent{}).
+		Where("app_id = ? AND type = ? AND timestamp >= ? AND timestamp < ?", appID, "interaction.match.created", start, end).
+		Count(&metrics.TotalMatches)
+	
+	// Duração média
+	var avgDuration struct{ Avg float64 }
+	s.db.Model(&AppSession{}).
+		Select("AVG(duration_ms) as avg").
+		Where("app_id = ? AND ended_at IS NOT NULL AND started_at >= ? AND started_at < ?", appID, start, end).
+		Scan(&avgDuration)
+	metrics.AvgSessionDuration = avgDuration.Avg
+	
+	// Bounce rate
+	if metrics.TotalSessions > 0 {
+		var bounceSessions int64
+		s.db.Model(&AppSession{}).
+			Where("app_id = ? AND ended_at IS NOT NULL AND started_at >= ? AND started_at < ? AND duration_ms < 30000", appID, start, end).
+			Count(&bounceSessions)
+		metrics.BounceRate = float64(bounceSessions) / float64(metrics.TotalSessions) * 100
+	}
+	
+	// Match rate
+	if metrics.TotalSessions > 0 {
+		var sessionsWithMatch int64
+		s.db.Model(&AppSession{}).
+			Where("app_id = ? AND started_at >= ? AND started_at < ? AND interaction_count > 0", appID, start, end).
+			Count(&sessionsWithMatch)
+		metrics.MatchRate = float64(sessionsWithMatch) / float64(metrics.TotalSessions) * 100
+	}
+	
+	return metrics
+}
+
+func calculateChange(previous, current int64) float64 {
+	if previous == 0 {
+		if current == 0 {
+			return 0
+		}
+		return 100 // De 0 para algo = +100%
+	}
+	return (float64(current) - float64(previous)) / float64(previous) * 100
+}
+
+func calculateChangeFloat(previous, current float64) float64 {
+	if previous == 0 {
+		if current == 0 {
+			return 0
+		}
+		return 100
+	}
+	return (current - previous) / previous * 100
+}
+
+// ========================================
+// 8. TOP USERS - Usuários mais engajados
+// ========================================
+
+// TopUser usuário com métricas de engajamento
+type TopUser struct {
+	UserID          string  `json:"user_id"`
+	SessionCount    int64   `json:"session_count"`
+	TotalDuration   int64   `json:"total_duration_ms"`
+	EventCount      int64   `json:"event_count"`
+	MatchCount      int64   `json:"match_count"`
+	LastSeen        string  `json:"last_seen"`
+}
+
+// GetTopUsers retorna usuários mais engajados
+func (s *TelemetryService) GetTopUsers(appID uuid.UUID, since time.Duration, limit int) ([]TopUser, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	if since <= 0 {
+		since = 7 * 24 * time.Hour
+	}
+	
+	cutoff := time.Now().Add(-since)
+	
+	var results []TopUser
+	
+	err := s.db.Model(&AppSession{}).
+		Select(`
+			user_id,
+			COUNT(*) as session_count,
+			SUM(duration_ms) as total_duration,
+			SUM(event_count) as event_count,
+			SUM(interaction_count) as match_count,
+			MAX(last_seen_at) as last_seen
+		`).
+		Where("app_id = ? AND started_at > ?", appID, cutoff).
+		Group("user_id").
+		Order("session_count DESC, total_duration DESC").
+		Limit(limit).
+		Scan(&results).Error
+	
+	if err != nil {
+		return nil, err
+	}
+	
+	// Formatar last_seen
+	for i := range results {
+		if results[i].LastSeen != "" {
+			if t, err := time.Parse(time.RFC3339, results[i].LastSeen); err == nil {
+				results[i].LastSeen = t.Format("2006-01-02 15:04")
+			}
+		}
+	}
+	
+	return results, nil
+}

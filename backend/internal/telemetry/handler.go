@@ -383,6 +383,8 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 		adminTelemetry.GET("/apps/:id/retention", handler.GetRetentionAdmin)
 		adminTelemetry.GET("/apps/:id/funnel", handler.GetFunnelAdmin)
 		adminTelemetry.GET("/apps/:id/engagement", handler.GetEngagementAdmin)
+		adminTelemetry.GET("/apps/:id/compare", handler.GetCompareAdmin)
+		adminTelemetry.GET("/apps/:id/top-users", handler.GetTopUsersAdmin)
 	}
 }
 
@@ -530,5 +532,69 @@ func (h *TelemetryHandler) GetEngagementAdmin(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"engagement": engagement,
 		"since":      since.String(),
+	})
+}
+
+
+// GetCompareAdmin compara métricas entre dois períodos
+// GET /api/v1/admin/telemetry/apps/:id/compare
+func (h *TelemetryHandler) GetCompareAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	days := 7
+	if d := c.Query("days"); d != "" {
+		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
+			days = parsed
+		}
+	}
+	
+	comparison, err := h.service.ComparePeriods(appID, days)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, comparison)
+}
+
+// GetTopUsersAdmin retorna usuários mais engajados
+// GET /api/v1/admin/telemetry/apps/:id/top-users
+func (h *TelemetryHandler) GetTopUsersAdmin(c *gin.Context) {
+	appIDStr := c.Param("id")
+	appID, err := uuid.Parse(appIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
+		return
+	}
+	
+	limit := 20
+	if l := c.Query("limit"); l != "" {
+		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
+			limit = parsed
+		}
+	}
+	
+	since := 7 * 24 * time.Hour
+	if s := c.Query("since"); s != "" {
+		if d, err := time.ParseDuration(s); err == nil {
+			since = d
+		}
+	}
+	
+	users, err := h.service.GetTopUsers(appID, since, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	
+	c.JSON(http.StatusOK, gin.H{
+		"users": users,
+		"total": len(users),
+		"since": since.String(),
 	})
 }
