@@ -408,16 +408,18 @@ func (h *MultiAppIdentityHandler) generateJWT(userID uuid.UUID, email, name, rol
 		appIDs[i] = m.AppID
 	}
 
+	// IMPORTANTE: usar "user_id" (não "sub") para compatibilidade com AuthMiddleware
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":           userID.String(),
-		"email":         email,
-		"name":          name,
-		"role":          role,
-		"origin_app_id": originAppID.String(),
-		"memberships":   appIDs,
-		"type":          "global_user",
-		"exp":           expiresAt.Unix(),
-		"iat":           time.Now().Unix(),
+		"user_id":        userID.String(),
+		"email":          email,
+		"name":           name,
+		"role":           role,
+		"account_status": "active",
+		"origin_app_id":  originAppID.String(),
+		"memberships":    appIDs,
+		"type":           "global_user",
+		"exp":            expiresAt.Unix(),
+		"iat":            time.Now().Unix(),
 	})
 	tokenString, _ := token.SignedString([]byte(h.jwtSecret))
 	return tokenString, expiresAt
