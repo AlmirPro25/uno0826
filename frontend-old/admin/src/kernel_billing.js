@@ -3,13 +3,13 @@
 // Frontend para billing do kernel
 // ========================================
 
-import { api } from './main.js';
+// Usa a função api() global definida em main.js
 
 // ========================================
 // PLANS VIEW (público)
 // ========================================
 
-export async function renderKernelPlans(container) {
+async function renderKernelPlans(container) {
     container.innerHTML = `
         <div class="kernel-billing">
             <h2>📋 Planos do Kernel</h2>
@@ -76,7 +76,7 @@ export async function renderKernelPlans(container) {
 // APP BILLING VIEW (app owner)
 // ========================================
 
-export async function renderAppBilling(container, appId) {
+async function renderAppBilling(container, appId) {
     container.innerHTML = `
         <div class="app-billing">
             <h2>💳 Billing do App</h2>
@@ -244,7 +244,7 @@ async function loadInvoices(appId) {
 // SUPERADMIN BILLING DASHBOARD
 // ========================================
 
-export async function renderKernelBillingAdmin(container) {
+async function renderKernelBillingAdmin(container) {
     container.innerHTML = `
         <div class="kernel-billing-admin">
             <h2>💰 Kernel Billing (Admin)</h2>
@@ -473,3 +473,4 @@ window.processBillingCycle = async function() {
         }
     }
 };
+
