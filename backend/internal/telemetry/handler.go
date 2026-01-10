@@ -7,6 +7,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+	"prost-qs/backend/internal/application"
 )
 
 // ========================================
@@ -35,13 +36,10 @@ func (h *TelemetryHandler) IngestEvent(c *gin.Context) {
 		return
 	}
 	
-	// Type assertion para pegar app_id
-	type AppInfo struct {
-		ID uuid.UUID
-	}
+	// Type assertion para o tipo correto (Application do package application)
 	var appID uuid.UUID
 	
-	if app, ok := appInterface.(*AppInfo); ok {
+	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
 	} else if appIDStr, ok := c.Get("app_id"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
@@ -80,12 +78,9 @@ func (h *TelemetryHandler) IngestBatch(c *gin.Context) {
 		return
 	}
 	
-	type AppInfo struct {
-		ID uuid.UUID
-	}
 	var appID uuid.UUID
 	
-	if app, ok := appInterface.(*AppInfo); ok {
+	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
 	} else if appIDStr, ok := c.Get("app_id"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
@@ -140,12 +135,9 @@ func (h *TelemetryHandler) GetMetrics(c *gin.Context) {
 		return
 	}
 	
-	type AppInfo struct {
-		ID uuid.UUID
-	}
 	var appID uuid.UUID
 	
-	if app, ok := appInterface.(*AppInfo); ok {
+	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
 	} else if appIDStr, ok := c.Get("app_id"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
@@ -199,12 +191,9 @@ func (h *TelemetryHandler) GetActiveSessions(c *gin.Context) {
 		return
 	}
 	
-	type AppInfo struct {
-		ID uuid.UUID
-	}
 	var appID uuid.UUID
 	
-	if app, ok := appInterface.(*AppInfo); ok {
+	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
 	} else if appIDStr, ok := c.Get("app_id"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
@@ -278,12 +267,9 @@ func (h *TelemetryHandler) GetRecentEvents(c *gin.Context) {
 		return
 	}
 	
-	type AppInfo struct {
-		ID uuid.UUID
-	}
 	var appID uuid.UUID
 	
-	if app, ok := appInterface.(*AppInfo); ok {
+	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
 	} else if appIDStr, ok := c.Get("app_id"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
@@ -324,12 +310,9 @@ func (h *TelemetryHandler) GetEventsByType(c *gin.Context) {
 		return
 	}
 	
-	type AppInfo struct {
-		ID uuid.UUID
-	}
 	var appID uuid.UUID
 	
-	if app, ok := appInterface.(*AppInfo); ok {
+	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
 	} else if appIDStr, ok := c.Get("app_id"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
