@@ -3,11 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { User, Lock, Bell, Shield, Fingerprint, Loader2, CheckCircle2 } from "lucide-react";
+import { 
+    User, Lock, Bell, Shield, Fingerprint, Loader2, CheckCircle2,
+    Brain, Ghost, Zap, AlertTriangle
+} from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { AppHeader } from "@/components/dashboard/app-header";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import Link from "next/link";
 
 export default function SettingsPage() {
     const { user } = useAuth();
@@ -16,6 +20,16 @@ export default function SettingsPage() {
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [changingPassword, setChangingPassword] = useState(false);
+    
+    // Notification preferences
+    const [notifications, setNotifications] = useState({
+        billing: true,
+        kernelStatus: false,
+        ruleExecutions: true,
+        approvalRequests: true,
+        shadowMode: true,
+        killSwitch: true,
+    });
 
     const handleSaveProfile = async () => {
         setSaving(true);
@@ -158,13 +172,19 @@ export default function SettingsPage() {
                     </div>
 
                     <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-8 flex items-center gap-3">
-                        <Bell className="w-5 h-5 text-amber-500" /> Alertas de Telemetria
+                        <Bell className="w-5 h-5 text-amber-500" /> Notificações
                     </h3>
 
                     <div className="space-y-6 relative z-10">
+                        {/* Billing Alerts */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input type="checkbox" className="peer sr-only" defaultChecked />
+                                <input 
+                                    type="checkbox" 
+                                    className="peer sr-only" 
+                                    checked={notifications.billing}
+                                    onChange={(e) => setNotifications(prev => ({ ...prev, billing: e.target.checked }))}
+                                />
                                 <div className="h-6 w-11 rounded-full bg-white/5 border border-white/10 peer-checked:bg-indigo-600 transition-colors" />
                                 <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-slate-400 peer-checked:translate-x-5 peer-checked:bg-white transition-all shadow-sm" />
                             </div>
@@ -174,9 +194,15 @@ export default function SettingsPage() {
                             </div>
                         </label>
 
+                        {/* Kernel Status */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input type="checkbox" className="peer sr-only" />
+                                <input 
+                                    type="checkbox" 
+                                    className="peer sr-only" 
+                                    checked={notifications.kernelStatus}
+                                    onChange={(e) => setNotifications(prev => ({ ...prev, kernelStatus: e.target.checked }))}
+                                />
                                 <div className="h-6 w-11 rounded-full bg-white/5 border border-white/10 peer-checked:bg-indigo-600 transition-colors" />
                                 <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-slate-400 peer-checked:translate-x-5 peer-checked:bg-white transition-all shadow-sm" />
                             </div>
@@ -185,6 +211,147 @@ export default function SettingsPage() {
                                 <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Relatórios semanais de performance e uptime.</p>
                             </div>
                         </label>
+
+                        {/* Rule Executions */}
+                        <label className="flex items-center gap-4 cursor-pointer group/item">
+                            <div className="relative flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    className="peer sr-only" 
+                                    checked={notifications.ruleExecutions}
+                                    onChange={(e) => setNotifications(prev => ({ ...prev, ruleExecutions: e.target.checked }))}
+                                />
+                                <div className="h-6 w-11 rounded-full bg-white/5 border border-white/10 peer-checked:bg-purple-600 transition-colors" />
+                                <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-slate-400 peer-checked:translate-x-5 peer-checked:bg-white transition-all shadow-sm" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Brain className="w-4 h-4 text-purple-400" />
+                                <div>
+                                    <span className="text-sm font-bold text-white tracking-tight">Execuções de Regras</span>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Notificar quando regras forem disparadas.</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        {/* Approval Requests */}
+                        <label className="flex items-center gap-4 cursor-pointer group/item">
+                            <div className="relative flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    className="peer sr-only" 
+                                    checked={notifications.approvalRequests}
+                                    onChange={(e) => setNotifications(prev => ({ ...prev, approvalRequests: e.target.checked }))}
+                                />
+                                <div className="h-6 w-11 rounded-full bg-white/5 border border-white/10 peer-checked:bg-amber-600 transition-colors" />
+                                <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-slate-400 peer-checked:translate-x-5 peer-checked:bg-white transition-all shadow-sm" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-amber-400" />
+                                <div>
+                                    <span className="text-sm font-bold text-white tracking-tight">Solicitações de Aprovação</span>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Notificar quando ações precisarem de aprovação.</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        {/* Shadow Mode */}
+                        <label className="flex items-center gap-4 cursor-pointer group/item">
+                            <div className="relative flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    className="peer sr-only" 
+                                    checked={notifications.shadowMode}
+                                    onChange={(e) => setNotifications(prev => ({ ...prev, shadowMode: e.target.checked }))}
+                                />
+                                <div className="h-6 w-11 rounded-full bg-white/5 border border-white/10 peer-checked:bg-violet-600 transition-colors" />
+                                <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-slate-400 peer-checked:translate-x-5 peer-checked:bg-white transition-all shadow-sm" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <Ghost className="w-4 h-4 text-violet-400" />
+                                <div>
+                                    <span className="text-sm font-bold text-white tracking-tight">Shadow Mode</span>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Notificar quando shadow mode for ativado/desativado.</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        {/* Kill Switch */}
+                        <label className="flex items-center gap-4 cursor-pointer group/item">
+                            <div className="relative flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    className="peer sr-only" 
+                                    checked={notifications.killSwitch}
+                                    onChange={(e) => setNotifications(prev => ({ ...prev, killSwitch: e.target.checked }))}
+                                />
+                                <div className="h-6 w-11 rounded-full bg-white/5 border border-white/10 peer-checked:bg-rose-600 transition-colors" />
+                                <div className="absolute left-1 top-1 h-4 w-4 rounded-full bg-slate-400 peer-checked:translate-x-5 peer-checked:bg-white transition-all shadow-sm" />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4 text-rose-400" />
+                                <div>
+                                    <span className="text-sm font-bold text-white tracking-tight">Kill Switch</span>
+                                    <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">Notificar imediatamente quando kill switch for acionado.</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+
+                {/* Quick Links */}
+                <div className="p-8 rounded-[32px] bg-white/[0.02] border border-white/5">
+                    <h3 className="text-xl font-bold text-white uppercase tracking-tight mb-8 flex items-center gap-3">
+                        <Zap className="w-5 h-5 text-indigo-500" /> Atalhos
+                    </h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <Link href="/dashboard/shadow">
+                            <div className="p-4 rounded-xl bg-violet-500/10 border border-violet-500/20 hover:border-violet-500/40 transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Ghost className="w-5 h-5 text-violet-400" />
+                                    <div>
+                                        <p className="font-bold text-white text-sm">Shadow Mode</p>
+                                        <p className="text-xs text-slate-500">Simular ações sem executar</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                        
+                        <Link href="/dashboard/killswitch">
+                            <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle className="w-5 h-5 text-rose-400" />
+                                    <div>
+                                        <p className="font-bold text-white text-sm">Kill Switch</p>
+                                        <p className="text-xs text-slate-500">Parar todas as ações</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                        
+                        <Link href="/dashboard/authority">
+                            <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Shield className="w-5 h-5 text-amber-400" />
+                                    <div>
+                                        <p className="font-bold text-white text-sm">Autoridade</p>
+                                        <p className="text-xs text-slate-500">Gerenciar permissões</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                        
+                        <Link href="/dashboard/secrets">
+                            <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 hover:border-indigo-500/40 transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Lock className="w-5 h-5 text-indigo-400" />
+                                    <div>
+                                        <p className="font-bold text-white text-sm">Secrets</p>
+                                        <p className="text-xs text-slate-500">Gerenciar credenciais</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
                     </div>
                 </div>
             </div>

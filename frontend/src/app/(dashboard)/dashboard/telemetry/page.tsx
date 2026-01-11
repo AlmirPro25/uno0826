@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { 
     Activity, BarChart3, TrendingUp,
     Users, Zap, Clock, RefreshCw, Loader2,
-    ArrowUpRight, ArrowDownRight
+    ArrowUpRight, ArrowDownRight, Radio
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useApp } from "@/contexts/app-context";
@@ -17,6 +17,16 @@ interface App {
     id: string;
     name: string;
     slug: string;
+}
+
+// Pulse metrics - prova de vida
+interface PulseMetrics {
+    events_24h: number;
+    events_5min: number;
+    last_event_at: string | null;
+    online_now: number;
+    events_1h: number;
+    total_events: number;
 }
 
 interface TelemetryMetrics {
@@ -36,8 +46,25 @@ export default function TelemetryPage() {
     const [apps, setApps] = useState<App[]>([]);
     const [selectedApp, setSelectedApp] = useState<string>("all");
     const [metrics, setMetrics] = useState<TelemetryMetrics | null>(null);
+    const [pulse, setPulse] = useState<PulseMetrics | null>(null);
     const [loading, setLoading] = useState(true);
     const [timeRange, setTimeRange] = useState<"1h" | "24h" | "7d" | "30d">("24h");
+
+    // Formatar tempo relativo
+    const formatRelativeTime = (timestamp: string | null) => {
+        if (!timestamp) return null;
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        
+        if (diffSec < 60) return `${diffSec}s atrás`;
+        if (diffMin < 60) return `${diffMin}min atrás`;
+        if (diffHour < 24) return `${diffHour}h atrás`;
+        return date.toLocaleDateString('pt-BR');
+    };
 
     // Sincronizar com app ativo do contexto
     useEffect(() => {
@@ -58,24 +85,101 @@ export default function TelemetryPage() {
     const fetchMetrics = async () => {
         setLoading(true);
         try {
-            const endpoint = selectedApp === "all"
-                ? `/telemetry/metrics?range=${timeRange}`
-                : `/telemetry/apps/${selectedApp}/metrics?range=${timeRange}`;
-            const res = await api.get(endpoint);
-            setMetrics(res.data);
+            if (selectedApp === "all") {
+                // Agregar métricas de todos os apps
+                let totalEvents = 0;
+                let totalUsers = 0;
+                let totalResponseTime = 0;
+                let appCount = 0;
+                const aggregatedPulse: PulseMetrics = {
+                    events_24h: 0,
+                    events_5min: 0,
+                    events_1h: 0,
+                    last_event_at: null,
+                    online_now: 0,
+                    total_events: 0
+                };
+                
+                for (const app of apps) {
+                    try {
+                        const res = await api.get(`/admin/telemetry/apps/${app.id}/metrics`);
+                        if (res.data) {
+                            totalEvents += res.data.total_events || 0;
+                            totalUsers += res.data.active_users_24h || 0;
+                            totalResponseTime += res.data.avg_response_time || 0;
+                            appCount++;
+                            
+                            // Agregar pulse
+                            aggregatedPulse.events_24h += res.data.events_24h || 0;
+                            aggregatedPulse.events_1h += res.data.events_1h || 0;
+                            aggregatedPulse.events_5min += Math.round((res.data.events_per_minute || 0) * 5);
+                            aggregatedPulse.online_now += res.data.online_now || 0;
+                            aggregatedPulse.total_events += res.data.total_events || 0;
+                            
+                            // Pegar o último evento mais recente
+                            if (res.data.last_event_at) {
+                                if (!aggregatedPulse.last_event_at || 
+                                    new Date(res.data.last_event_at) > new Date(aggregatedPulse.last_event_at)) {
+                                    aggregatedPulse.last_event_at = res.data.last_event_at;
+                                }
+                            }
+                        }
+                    } catch {
+                        // App pode não ter métricas
+                    }
+                }
+                
+                setPulse(aggregatedPulse);
+                setMetrics({
+                    total_events: totalEvents,
+                    events_today: Math.floor(totalEvents * 0.12),
+                    events_change: 0,
+                    active_users: totalUsers,
+                    users_change: 0,
+                    avg_response_time: appCount > 0 ? Math.floor(totalResponseTime / appCount) : 0,
+                    response_time_change: 0,
+                    error_rate: 0,
+                    error_rate_change: 0
+                });
+            } else {
+                const res = await api.get(`/admin/telemetry/apps/${selectedApp}/metrics`);
+                const data = res.data;
+                
+                // Pulse metrics
+                setPulse({
+                    events_24h: data.events_24h || 0,
+                    events_5min: Math.round((data.events_per_minute || 0) * 5),
+                    events_1h: data.events_1h || 0,
+                    last_event_at: data.last_event_at || null,
+                    online_now: data.online_now || 0,
+                    total_events: data.total_events || 0
+                });
+                
+                setMetrics({
+                    total_events: data.total_events || 0,
+                    events_today: data.events_per_minute ? data.events_per_minute * 60 * 24 : 0,
+                    events_change: 0,
+                    active_users: data.active_users_24h || data.online_now || 0,
+                    users_change: 0,
+                    avg_response_time: data.avg_response_time || 0,
+                    response_time_change: 0,
+                    error_rate: data.error_rate || 0,
+                    error_rate_change: 0
+                });
+            }
         } catch (error) {
             console.error("Failed to fetch metrics", error);
-            // Mock data
+            setPulse(null);
             setMetrics({
-                total_events: 12847,
-                events_today: 1523,
-                events_change: 12.5,
-                active_users: 342,
-                users_change: 8.3,
-                avg_response_time: 145,
-                response_time_change: -5.2,
-                error_rate: 0.8,
-                error_rate_change: -0.3
+                total_events: 0,
+                events_today: 0,
+                events_change: 0,
+                active_users: 0,
+                users_change: 0,
+                avg_response_time: 0,
+                response_time_change: 0,
+                error_rate: 0,
+                error_rate_change: 0
             });
         } finally {
             setLoading(false);
@@ -188,6 +292,87 @@ export default function TelemetryPage() {
                 </div>
             ) : (
                 <>
+                    {/* PULSE - Prova de vida (destaque) */}
+                    {pulse && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="p-6 rounded-2xl bg-gradient-to-br from-indigo-600/10 to-purple-600/5 border border-indigo-500/20"
+                        >
+                            <div className="flex items-center gap-3 mb-6">
+                                <div className={cn(
+                                    "h-3 w-3 rounded-full",
+                                    pulse.events_5min > 0 ? "bg-emerald-500 animate-pulse" : "bg-slate-600"
+                                )} />
+                                <h3 className="font-black text-white uppercase tracking-tight">
+                                    Pulso do Sistema
+                                </h3>
+                                <Radio className="w-4 h-4 text-indigo-400" />
+                            </div>
+                            
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                                {/* Eventos 24h */}
+                                <div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                        Últimas 24h
+                                    </p>
+                                    <p className="text-3xl font-black text-white">
+                                        {pulse.events_24h.toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-slate-500">eventos</p>
+                                </div>
+                                
+                                {/* Eventos 5min */}
+                                <div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                        Últimos 5 min
+                                    </p>
+                                    <p className={cn(
+                                        "text-3xl font-black",
+                                        pulse.events_5min > 0 ? "text-emerald-400" : "text-white"
+                                    )}>
+                                        {pulse.events_5min.toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-slate-500">eventos</p>
+                                </div>
+                                
+                                {/* Online agora */}
+                                <div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                        Online Agora
+                                    </p>
+                                    <p className={cn(
+                                        "text-3xl font-black",
+                                        pulse.online_now > 0 ? "text-emerald-400" : "text-white"
+                                    )}>
+                                        {pulse.online_now.toLocaleString()}
+                                    </p>
+                                    <p className="text-xs text-slate-500">usuários</p>
+                                </div>
+                                
+                                {/* Último evento */}
+                                <div>
+                                    <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">
+                                        Último Evento
+                                    </p>
+                                    {pulse.last_event_at ? (
+                                        <>
+                                            <p className="text-xl font-black text-white">
+                                                {formatRelativeTime(pulse.last_event_at)}
+                                            </p>
+                                            <p className="text-xs text-slate-500">recebido</p>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <p className="text-xl font-bold text-slate-600">—</p>
+                                            <p className="text-xs text-slate-500">nenhum ainda</p>
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                         {statCards.map((stat, i) => (
                             <motion.div

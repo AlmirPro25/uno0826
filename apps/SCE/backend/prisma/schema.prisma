@@ -12,6 +12,13 @@ model User {
   email        String   @unique
   passwordHash String
   role         String   @default("ADMIN")
+  
+  // UNO.KERNEL Integration - Multi-tenant isolation
+  kernelUserId    String?  @unique  // ID da identidade no Kernel
+  kernelAppId     String?  @unique  // ID do App no Kernel (1 user = 1 app)
+  kernelAppKey    String?           // API Key do App (pq_pk_xxx)
+  kernelAppSecret String?           // API Secret do App (pq_sk_xxx)
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }

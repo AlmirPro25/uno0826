@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Brain, Activity, Users, Zap, Clock, AlertTriangle, Eye } from "lucide-react";
+import { api } from "@/lib/api";
 
 interface SystemMetrics {
     active_users_24h: number;
@@ -23,63 +24,64 @@ interface AgentActivity {
     details: string;
 }
 
-const mockMetrics: SystemMetrics = {
-    active_users_24h: 47,
-    total_requests_24h: 12453,
-    avg_response_time_ms: 89,
-    error_rate_percent: 0.12,
-    active_agents: 3,
-    pending_approvals: 2,
-    shadow_mode_actions: 15,
-    kill_switches_active: 0
-};
-
-const mockActivities: AgentActivity[] = [
-    {
-        id: "1",
-        agent_name: "billing-agent",
-        action: "process_refund",
-        status: "completed",
-        timestamp: "2026-01-10T09:45:00Z",
-        details: "Reembolso de R$ 150,00 processado"
-    },
-    {
-        id: "2",
-        agent_name: "risk-agent",
-        action: "flag_transaction",
-        status: "pending",
-        timestamp: "2026-01-10T09:30:00Z",
-        details: "Transação suspeita aguardando revisão"
-    },
-    {
-        id: "3",
-        agent_name: "notification-agent",
-        action: "send_batch",
-        status: "shadow",
-        timestamp: "2026-01-10T09:15:00Z",
-        details: "Envio em massa simulado (shadow mode)"
-    },
-    {
-        id: "4",
-        agent_name: "cleanup-agent",
-        action: "delete_old_data",
-        status: "blocked",
-        timestamp: "2026-01-10T09:00:00Z",
-        details: "Bloqueado por política de retenção"
-    }
-];
-
 export default function CognitiveDashboardPage() {
     const [metrics, setMetrics] = useState<SystemMetrics | null>(null);
     const [activities, setActivities] = useState<AgentActivity[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        setTimeout(() => {
-            setMetrics(mockMetrics);
-            setActivities(mockActivities);
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // API: GET /api/v1/admin/cognitive/overview
+            const overviewRes = await api.get("/admin/cognitive/overview");
+            const overview = overviewRes.data;
+            
+            setMetrics({
+                active_users_24h: overview.active_users_24h || overview.users?.active_24h || 0,
+                total_requests_24h: overview.total_requests_24h || overview.requests?.total_24h || 0,
+                avg_response_time_ms: overview.avg_response_time_ms || overview.performance?.avg_latency_ms || 0,
+                error_rate_percent: overview.error_rate_percent || overview.performance?.error_rate || 0,
+                active_agents: overview.active_agents || overview.agents?.active || 0,
+                pending_approvals: overview.pending_approvals || overview.governance?.pending_approvals || 0,
+                shadow_mode_actions: overview.shadow_mode_actions || overview.governance?.shadow_actions || 0,
+                kill_switches_active: overview.kill_switches_active || overview.governance?.kill_switches || 0
+            });
+
+            // API: GET /api/v1/admin/cognitive/activity
+            try {
+                const activityRes = await api.get("/admin/cognitive/activity?limit=10");
+                const activityData = activityRes.data.activities || activityRes.data || [];
+                setActivities(activityData.map((a: Record<string, unknown>) => ({
+                    id: a.id,
+                    agent_name: a.agent_name || a.agent_id,
+                    action: a.action || a.action_type,
+                    status: a.status || "completed",
+                    timestamp: a.timestamp || a.created_at,
+                    details: a.details || a.description || ""
+                })));
+            } catch {
+                setActivities([]);
+            }
+        } catch (error) {
+            console.error("Failed to fetch cognitive data", error);
+            setMetrics({
+                active_users_24h: 0,
+                total_requests_24h: 0,
+                avg_response_time_ms: 0,
+                error_rate_percent: 0,
+                active_agents: 0,
+                pending_approvals: 0,
+                shadow_mode_actions: 0,
+                kill_switches_active: 0
+            });
+            setActivities([]);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
 
     const getStatusBadge = (status: AgentActivity["status"]) => {

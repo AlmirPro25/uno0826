@@ -60,24 +60,30 @@ export default function RiskPage() {
         
         for (const app of appList) {
             try {
+                // API: GET /api/v1/risk/apps/:id
                 const res = await api.get(`/risk/apps/${app.id}`);
-                scores.push({ ...res.data, app_name: app.name });
-            } catch {
-                // Mock data for demo
+                const data = res.data;
                 scores.push({
                     app_id: app.id,
                     app_name: app.name,
-                    overall_score: Math.floor(Math.random() * 100),
-                    risk_level: ["low", "medium", "high"][Math.floor(Math.random() * 3)] as "low" | "medium" | "high",
-                    factors: [
-                        { name: "Auth Failures", score: Math.floor(Math.random() * 100), weight: 0.3, description: "Taxa de falhas de autenticação" },
-                        { name: "API Errors", score: Math.floor(Math.random() * 100), weight: 0.25, description: "Taxa de erros de API" },
-                        { name: "Rate Limit Hits", score: Math.floor(Math.random() * 100), weight: 0.2, description: "Frequência de rate limiting" },
-                        { name: "Unusual Activity", score: Math.floor(Math.random() * 100), weight: 0.25, description: "Padrões de uso anormais" }
-                    ],
+                    overall_score: data.overall_score || data.score || 0,
+                    risk_level: data.risk_level || data.level || "low",
+                    factors: data.factors || [],
+                    last_calculated: data.calculated_at || data.last_calculated || new Date().toISOString(),
+                    trend: data.trend || "stable",
+                    trend_change: data.trend_change || 0
+                });
+            } catch {
+                // App pode não ter score de risco ainda
+                scores.push({
+                    app_id: app.id,
+                    app_name: app.name,
+                    overall_score: 0,
+                    risk_level: "low",
+                    factors: [],
                     last_calculated: new Date().toISOString(),
-                    trend: ["up", "down", "stable"][Math.floor(Math.random() * 3)] as "up" | "down" | "stable",
-                    trend_change: Math.floor(Math.random() * 20) - 10
+                    trend: "stable",
+                    trend_change: 0
                 });
             }
         }

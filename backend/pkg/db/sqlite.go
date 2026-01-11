@@ -29,6 +29,8 @@ import (
 	"prost-qs/backend/internal/jobs"
 	"prost-qs/backend/internal/killswitch"
 	"prost-qs/backend/internal/memory"
+	"prost-qs/backend/internal/narrative"
+	"prost-qs/backend/internal/notification"
 	"prost-qs/backend/internal/observer"
 	"prost-qs/backend/internal/payment"
 	"prost-qs/backend/internal/policy"
@@ -37,6 +39,7 @@ import (
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
 	"prost-qs/backend/internal/telemetry"
+	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/pkg/capabilities"
 )
 
@@ -314,6 +317,26 @@ func MigrateSchema(db *gorm.DB) error {
 		// ========================================
 		&capabilities.UserAddOn{},
 		&capabilities.AddOnGrantLog{},
+
+		// ========================================
+		// NARRATIVE SERVICE - Fase 32
+		// "Quando algo dá errado, o sistema explica em linguagem humana"
+		// ========================================
+		&narrative.FailureNarrative{},
+
+		// ========================================
+		// USAGE SERVICE - Medição de Recursos
+		// "Billing não é cobrança. Billing é medição."
+		// ========================================
+		&usage.UsageRecord{},
+
+		// ========================================
+		// NOTIFICATION SERVICE - Alertas e Notificações
+		// "O sistema avisa quando algo acontece"
+		// ========================================
+		&notification.Notification{},
+		&notification.NotificationPreference{},
+		&notification.WebhookEndpoint{},
 	)
 	if err != nil {
 		return fmt.Errorf("falha ao executar migrações: %w", err)

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
     LayoutGrid,
@@ -25,7 +26,13 @@ import {
     UserCheck,
     Power,
     GitBranch,
-    Webhook
+    Webhook,
+    Ghost,
+    Crown,
+    Database,
+    Eye,
+    Scale,
+    Bell
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
@@ -36,13 +43,17 @@ const coreItems = [
     { href: "/dashboard", label: "Visão Geral", icon: LayoutGrid },
     { href: "/dashboard/apps", label: "Aplicações", icon: AppWindow },
     { href: "/dashboard/events", label: "Eventos", icon: Activity },
+    { href: "/dashboard/incidents", label: "Incidentes", icon: AlertTriangle },
+    { href: "/dashboard/notifications", label: "Notificações", icon: Bell },
     { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
     { href: "/dashboard/telemetry", label: "Telemetria", icon: BarChart3 },
+    { href: "/dashboard/status", label: "Status", icon: Activity },
 ];
 
 // Items para quem pode gerenciar (owner/admin do app)
 const manageItems = [
     { href: "/dashboard/rules", label: "Regras", icon: Zap },
+    { href: "/dashboard/shadow", label: "Shadow Mode", icon: Ghost },
     { href: "/dashboard/policies", label: "Políticas", icon: Lock },
     { href: "/dashboard/risk", label: "Risk Score", icon: AlertTriangle },
     { href: "/dashboard/capabilities", label: "Capacidades", icon: Package },
@@ -52,12 +63,16 @@ const manageItems = [
 // Items de billing (owner do app)
 const billingItems = [
     { href: "/dashboard/billing", label: "Economia", icon: CreditCard },
+    { href: "/dashboard/usage", label: "Consumo", icon: BarChart3 },
 ];
 
 // Items de governança (admin/super_admin global)
 const governanceItems = [
+    { href: "/dashboard/authority", label: "Autoridade", icon: Crown },
     { href: "/dashboard/agents", label: "Agentes", icon: Bot },
     { href: "/dashboard/approvals", label: "Aprovações", icon: UserCheck },
+    { href: "/dashboard/memory", label: "Memória", icon: Database },
+    { href: "/dashboard/observer", label: "Observer", icon: Eye },
     { href: "/dashboard/timeline", label: "Timeline", icon: GitBranch },
     { href: "/dashboard/secrets", label: "Secrets", icon: Key },
     { href: "/dashboard/killswitch", label: "Kill Switch", icon: Power },
@@ -67,6 +82,8 @@ const governanceItems = [
 const superAdminItems = [
     { href: "/dashboard/admin/financial", label: "Financial", icon: DollarSign },
     { href: "/dashboard/admin/cognitive", label: "Cognitive", icon: Brain },
+    { href: "/dashboard/admin/intelligence", label: "Intelligence", icon: BarChart3 },
+    { href: "/dashboard/admin/reconciliation", label: "Reconciliação", icon: Scale },
 ];
 
 export function Sidebar() {
@@ -74,8 +91,30 @@ export function Sidebar() {
     const { logout, user } = useAuth();
     const { canManage, isOwner } = useApp();
 
-    const isSuperAdmin = user?.role === "super_admin";
-    const isGlobalAdmin = user?.role === "admin" || isSuperAdmin;
+    // DEV MODE: Permite testar como super_admin sem backend
+    // Ativar com ?dev=true na URL
+    const getDevMode = () => {
+        if (typeof window === 'undefined') return false;
+        const urlParams = new URLSearchParams(window.location.search);
+        const devParam = urlParams.get('dev');
+        if (devParam === 'true') {
+            localStorage.setItem('devMode', 'true');
+            return true;
+        }
+        if (devParam === 'false') {
+            localStorage.removeItem('devMode');
+            return false;
+        }
+        return localStorage.getItem('devMode') === 'true';
+    };
+    
+    const [devMode, setDevMode] = useState(getDevMode);
+
+    // Em dev mode, simula super_admin com acesso total
+    const isSuperAdmin = devMode || user?.role === "super_admin";
+    const isGlobalAdmin = devMode || user?.role === "admin" || isSuperAdmin;
+    const effectiveCanManage = devMode || canManage;
+    const effectiveIsOwner = devMode || isOwner;
 
     const renderNavItem = (item: typeof coreItems[0], activeColor = "indigo") => {
         const isActive = pathname === item.href || 
@@ -129,8 +168,8 @@ export function Sidebar() {
                 {/* Core - Todos veem */}
                 {coreItems.map(item => renderNavItem(item, "indigo"))}
 
-                {/* Manage - Owner/Admin do app */}
-                {canManage && (
+                {/* Manage - Owner/Admin do app OU dev mode */}
+                {effectiveCanManage && (
                     <>
                         <div className="pt-4 pb-2">
                             <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
@@ -141,8 +180,8 @@ export function Sidebar() {
                     </>
                 )}
 
-                {/* Billing - Owner do app */}
-                {isOwner && (
+                {/* Billing - Owner do app OU dev mode */}
+                {effectiveIsOwner && (
                     <>
                         {billingItems.map(item => renderNavItem(item, "indigo"))}
                     </>
@@ -203,13 +242,32 @@ export function Sidebar() {
 
             {/* User Footer */}
             <div className="p-4 border-t border-white/5">
+                {/* Dev Mode Toggle */}
+                {devMode && (
+                    <div className="mb-3 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-bold text-amber-400 uppercase">Dev Mode</span>
+                            <button 
+                                onClick={() => {
+                                    localStorage.removeItem('devMode');
+                                    setDevMode(false);
+                                }}
+                                className="text-[10px] text-amber-400 hover:text-amber-300"
+                            >
+                                Desativar
+                            </button>
+                        </div>
+                        <p className="text-[9px] text-amber-400/60 mt-1">Simulando super_admin</p>
+                    </div>
+                )}
+                
                 <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-white/[0.02] border border-white/5 rounded-2xl">
                     <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[10px] font-black text-indigo-400">
-                        {user?.name?.[0]?.toUpperCase() || "U"}
+                        {user?.name?.[0]?.toUpperCase() || (devMode ? "D" : "U")}
                     </div>
                     <div className="overflow-hidden flex-1">
-                        <p className="text-xs font-bold text-white truncate">{user?.name || "User"}</p>
-                        <p className="text-[10px] text-slate-500 truncate">{user?.email}</p>
+                        <p className="text-xs font-bold text-white truncate">{user?.name || (devMode ? "Dev User" : "User")}</p>
+                        <p className="text-[10px] text-slate-500 truncate">{user?.email || (devMode ? "dev@localhost" : "")}</p>
                     </div>
                     {isSuperAdmin && (
                         <span className="px-1.5 py-0.5 text-[8px] font-bold bg-rose-500/20 text-rose-400 rounded border border-rose-500/30">

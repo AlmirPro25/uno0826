@@ -117,7 +117,7 @@ export default function CapabilitiesPage() {
             await api.post(`/addons/${addonId}/purchase`);
             toast.success("Add-on adquirido com sucesso!");
             fetchEntitlements();
-        } catch (error) {
+        } catch {
             toast.error("Falha ao adquirir add-on");
         } finally {
             setPurchasing(null);

@@ -13,12 +13,18 @@ import {
     Copy,
     Check,
     ExternalLink,
-    Loader2
+    Loader2,
+    Clock,
+    TrendingUp,
+    Ghost,
+    Shield,
+    UserCheck
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
 import { AppHeader } from "@/components/dashboard/app-header";
+import { SystemStatus } from "@/components/dashboard/system-status";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -32,12 +38,32 @@ interface App {
     created_at: string;
 }
 
+// Pulse metrics - prova de vida do sistema
+interface PulseMetrics {
+    events_24h: number;
+    events_5min: number;
+    last_event_at: string | null;
+    last_event_type: string | null;
+    online_now: number;
+}
+
+// Shadow Mode status
+interface ShadowStatus {
+    active: boolean;
+    activated_by: string;
+    reason: string;
+    expires_at: string | null;
+}
+
 interface DashboardState {
     loading: boolean;
     apps: App[];
     hasApps: boolean;
     firstApp: App | null;
     recentEvents: { name: string; time: string; status: string }[];
+    pulse: PulseMetrics | null;
+    shadowStatus: ShadowStatus | null;
+    pendingApprovals: number;
 }
 
 export default function DashboardPage() {
@@ -48,9 +74,60 @@ export default function DashboardPage() {
         apps: [],
         hasApps: false,
         firstApp: null,
-        recentEvents: []
+        recentEvents: [],
+        pulse: null,
+        shadowStatus: null,
+        pendingApprovals: 0
     });
     const [copied, setCopied] = useState(false);
+
+    // Formatar tempo relativo
+    const formatRelativeTime = (timestamp: string | null) => {
+        if (!timestamp) return null;
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        const diffMin = Math.floor(diffSec / 60);
+        const diffHour = Math.floor(diffMin / 60);
+        
+        if (diffSec < 60) return `${diffSec}s atrás`;
+        if (diffMin < 60) return `${diffMin}min atrás`;
+        if (diffHour < 24) return `${diffHour}h atrás`;
+        return date.toLocaleDateString('pt-BR');
+    };
+
+    // Buscar métricas de pulso do app ativo
+    const fetchPulseMetrics = async (appId: string) => {
+        try {
+            const res = await api.get(`/admin/telemetry/apps/${appId}/metrics`);
+            const data = res.data;
+            
+            // Calcular eventos nos últimos 5 min (events_per_minute * 5)
+            const events5min = Math.round((data.events_per_minute || 0) * 5);
+            
+            // Buscar último evento para pegar o tipo
+            let lastEventType = null;
+            try {
+                const eventsRes = await api.get(`/events/${appId}?limit=1`);
+                if (eventsRes.data.events?.length > 0) {
+                    lastEventType = eventsRes.data.events[0].type || eventsRes.data.events[0].event_type;
+                }
+            } catch {
+                // Ignorar erro ao buscar último evento
+            }
+            
+            return {
+                events_24h: data.events_24h || 0,
+                events_5min: events5min,
+                last_event_at: data.last_event_at || null,
+                last_event_type: lastEventType,
+                online_now: data.online_now || 0
+            };
+        } catch {
+            return null;
+        }
+    };
 
     useEffect(() => {
         async function loadDashboard() {
@@ -60,15 +137,34 @@ export default function DashboardPage() {
                 const appsRes = await api.get("/apps/mine?limit=5");
                 const apps = appsRes.data.apps || [];
                 
+                // Buscar status do Shadow Mode
+                let shadowStatus = null;
+                try {
+                    const shadowRes = await api.get("/admin/rules/shadow");
+                    shadowStatus = shadowRes.data;
+                } catch {
+                    // Ignorar erro ao buscar shadow status
+                }
+                
+                // Buscar aprovações pendentes (LOOP 6)
+                let pendingApprovals = 0;
+                try {
+                    const approvalsRes = await api.get("/approval/pending");
+                    const pending = approvalsRes.data.pending || approvalsRes.data || [];
+                    pendingApprovals = Array.isArray(pending) ? pending.length : 0;
+                } catch {
+                    // Ignorar erro ao buscar aprovações
+                }
+                
                 setState({
                     loading: false,
                     apps,
                     hasApps: apps.length > 0,
                     firstApp: apps[0] || null,
-                    recentEvents: apps.length > 0 ? [
-                        { name: "app.created", time: "recente", status: "ok" },
-                        { name: "identity.auth.success", time: "agora", status: "ok" },
-                    ] : []
+                    recentEvents: [],
+                    pulse: null,
+                    shadowStatus,
+                    pendingApprovals
                 });
             } catch (e) {
                 console.error("Failed to load dashboard", e);
@@ -77,6 +173,15 @@ export default function DashboardPage() {
         }
         loadDashboard();
     }, [user]);
+
+    // Buscar pulse quando activeApp mudar
+    useEffect(() => {
+        if (activeApp?.id) {
+            fetchPulseMetrics(activeApp.id).then(pulse => {
+                setState(prev => ({ ...prev, pulse }));
+            });
+        }
+    }, [activeApp?.id]);
 
     const handleCopySlug = async (slug: string) => {
         await navigator.clipboard.writeText(slug);
@@ -242,6 +347,173 @@ export default function DashboardPage() {
                 </motion.div>
             )}
 
+            {/* PULSE METRICS - Prova de vida do sistema */}
+            {activeApp && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-4"
+                >
+                    {/* Eventos 24h */}
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
+                                <TrendingUp className="w-5 h-5 text-indigo-400" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">24h</span>
+                        </div>
+                        <p className="text-3xl font-black text-white">
+                            {state.pulse?.events_24h?.toLocaleString() || "0"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">eventos nas últimas 24h</p>
+                    </div>
+
+                    {/* Eventos 5min */}
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/30 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                                <Activity className="w-5 h-5 text-emerald-400" />
+                            </div>
+                            <div className={cn(
+                                "h-2 w-2 rounded-full",
+                                state.pulse?.events_5min && state.pulse.events_5min > 0 
+                                    ? "bg-emerald-500 animate-pulse" 
+                                    : "bg-slate-600"
+                            )} />
+                        </div>
+                        <p className="text-3xl font-black text-white">
+                            {state.pulse?.events_5min?.toLocaleString() || "0"}
+                        </p>
+                        <p className="text-xs text-slate-500 mt-1">eventos nos últimos 5 min</p>
+                    </div>
+
+                    {/* Último Evento */}
+                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/30 transition-all">
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                                <Clock className="w-5 h-5 text-amber-400" />
+                            </div>
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Último</span>
+                        </div>
+                        {state.pulse?.last_event_at ? (
+                            <>
+                                <p className="text-lg font-black text-white truncate">
+                                    {formatRelativeTime(state.pulse.last_event_at)}
+                                </p>
+                                {state.pulse.last_event_type && (
+                                    <p className="text-xs text-slate-400 font-mono truncate mt-1">
+                                        {state.pulse.last_event_type}
+                                    </p>
+                                )}
+                            </>
+                        ) : (
+                            <>
+                                <p className="text-lg font-bold text-slate-600">—</p>
+                                <p className="text-xs text-slate-500 mt-1">nenhum evento ainda</p>
+                            </>
+                        )}
+                    </div>
+                </motion.div>
+            )}
+
+            {/* CONFIANÇA - Shadow Mode Status (LOOP 4) */}
+            {state.shadowStatus && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.08 }}
+                >
+                    <Link href="/dashboard/shadow">
+                        <div className={cn(
+                            "p-5 rounded-2xl border transition-all cursor-pointer",
+                            state.shadowStatus.active
+                                ? "bg-gradient-to-r from-violet-600/20 to-purple-600/10 border-violet-500/30 hover:border-violet-500/50"
+                                : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                        )}>
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className={cn(
+                                        "w-12 h-12 rounded-xl flex items-center justify-center",
+                                        state.shadowStatus.active ? "bg-violet-500/20" : "bg-slate-500/10"
+                                    )}>
+                                        {state.shadowStatus.active ? (
+                                            <Ghost className="w-6 h-6 text-violet-400" />
+                                        ) : (
+                                            <Shield className="w-6 h-6 text-slate-500" />
+                                        )}
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className={cn(
+                                                "font-bold",
+                                                state.shadowStatus.active ? "text-violet-400" : "text-slate-400"
+                                            )}>
+                                                {state.shadowStatus.active ? "Shadow Mode Ativo" : "Modo Normal"}
+                                            </h3>
+                                            {state.shadowStatus.active && (
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-500/20 text-violet-400 uppercase">
+                                                    Simulando
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            {state.shadowStatus.active 
+                                                ? `Ações simuladas • ${state.shadowStatus.reason || "Sem motivo"}`
+                                                : "Ações executadas normalmente • Clique para simular"}
+                                        </p>
+                                    </div>
+                                </div>
+                                <ArrowRight className={cn(
+                                    "w-5 h-5",
+                                    state.shadowStatus.active ? "text-violet-400" : "text-slate-600"
+                                )} />
+                            </div>
+                        </div>
+                    </Link>
+                </motion.div>
+            )}
+
+            {/* DELEGAÇÃO - Aprovações Pendentes (LOOP 6) */}
+            {state.pendingApprovals > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.09 }}
+                >
+                    <Link href="/dashboard/approvals">
+                        <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-600/20 to-orange-600/10 border border-amber-500/30 hover:border-amber-500/50 transition-all cursor-pointer">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center animate-pulse">
+                                        <UserCheck className="w-6 h-6 text-amber-400" />
+                                    </div>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-amber-400">
+                                                {state.pendingApprovals} Aprovação{state.pendingApprovals > 1 ? "ões" : ""} Pendente{state.pendingApprovals > 1 ? "s" : ""}
+                                            </h3>
+                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 uppercase">
+                                                Ação Requerida
+                                            </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-0.5">
+                                            Decisões aguardando sua confirmação
+                                        </p>
+                                    </div>
+                                </div>
+                                <ArrowRight className="w-5 h-5 text-amber-400" />
+                            </div>
+                        </div>
+                    </Link>
+                </motion.div>
+            )}
+
+            {/* SYSTEM STATUS - Visão geral dos loops */}
+            {activeApp && (
+                <SystemStatus appId={activeApp.id} />
+            )}
+
             {/* Two Column Layout */}
             <div className="grid gap-6 md:grid-cols-2">
                 {/* Recent Events - "O que está funcionando?" */}
@@ -301,18 +573,33 @@ export default function DashboardPage() {
                 >
                     <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-6">Próximo Passo</h3>
                     
-                    <div className="space-y-4">
+                    <div className="space-y-3">
+                        <Link href="/dashboard/rules" className="block group">
+                            <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/15 transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
+                                        <Zap className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-white text-sm">Criar Regras</p>
+                                        <p className="text-xs text-slate-400">Automatize decisões</p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
+                                </div>
+                            </div>
+                        </Link>
+
                         <Link href="/docs" className="block group">
-                            <div className="p-4 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 hover:bg-indigo-500/15 transition-all">
+                            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
                                         <BookOpen className="w-5 h-5" />
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-bold text-white text-sm">Integre seu App</p>
-                                        <p className="text-xs text-slate-400">Siga o quickstart para conectar</p>
+                                        <p className="text-xs text-slate-500">Siga o quickstart</p>
                                     </div>
-                                    <ArrowRight className="w-4 h-4 text-indigo-400 group-hover:translate-x-1 transition-transform" />
+                                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                 </div>
                             </div>
                         </Link>
@@ -325,7 +612,7 @@ export default function DashboardPage() {
                                     </div>
                                     <div className="flex-1">
                                         <p className="font-bold text-white text-sm">Gerenciar Apps</p>
-                                        <p className="text-xs text-slate-500">{state.apps.length} app{state.apps.length !== 1 ? 's' : ''} registrado{state.apps.length !== 1 ? 's' : ''}</p>
+                                        <p className="text-xs text-slate-500">{state.apps.length} app{state.apps.length !== 1 ? 's' : ''}</p>
                                     </div>
                                     <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                 </div>

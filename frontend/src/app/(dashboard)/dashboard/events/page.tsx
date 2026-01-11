@@ -62,21 +62,16 @@ export default function EventsPage() {
     const fetchEvents = async () => {
         if (!user?.id) return;
         try {
+            // API: GET /api/v1/events/:user_id
             const endpoint = selectedApp === "all" 
                 ? `/events/${user.id}?limit=100`
                 : `/events/${user.id}?app_id=${selectedApp}&limit=100`;
             const res = await api.get(endpoint);
-            setEvents(res.data || []);
+            const data = res.data || [];
+            setEvents(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to fetch events", error);
-            // Mock data for demo
-            setEvents([
-                { id: "evt_001", type: "app.created", timestamp: Date.now() - 60000, payload: { app_name: "My App" }, status: "success" },
-                { id: "evt_002", type: "identity.auth.success", timestamp: Date.now() - 120000, payload: { user_id: user.id }, status: "success" },
-                { id: "evt_003", type: "billing.subscription.created", timestamp: Date.now() - 180000, payload: { plan: "pro" }, status: "success" },
-                { id: "evt_004", type: "api.request", timestamp: Date.now() - 240000, payload: { endpoint: "/apps" }, status: "success" },
-                { id: "evt_005", type: "governance.check", timestamp: Date.now() - 300000, payload: { rule: "rate_limit" }, status: "warning" },
-            ]);
+            setEvents([]);
         } finally {
             setLoading(false);
         }

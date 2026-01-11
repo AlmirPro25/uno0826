@@ -6,7 +6,7 @@ import { randomUUID } from 'crypto';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { prostqs } from '../lib/prostqs-client.js';
+import { kernel } from '../lib/kernel-client.js';
 
 const prisma = new PrismaClient();
 const logEmitter = new EventEmitter();
@@ -30,6 +30,11 @@ export class DeploymentService {
 
     if (!project) throw new Error('Projeto não encontrado');
 
+    // Buscar owner do projeto para pegar credenciais do Kernel
+    const owner = await prisma.user.findFirst({
+      where: { id: project.ownerId }
+    });
+
     const deployment = await prisma.deployment.create({
       data: {
         projectId,
@@ -39,21 +44,29 @@ export class DeploymentService {
       },
     });
 
-    // 🔗 PROST-QS: Deploy iniciado
-    prostqs.deployStarted(deployment.id, projectId, project.name, project.branch);
+    // 🔗 KERNEL: Deploy iniciado (telemetria isolada por usuário)
+    if (owner?.kernelAppKey && owner?.kernelAppSecret) {
+      const userKernel = kernel.createUserClient(owner.kernelAppKey, owner.kernelAppSecret);
+      userKernel.deployStarted(deployment.id, projectId, project.name);
+    }
 
     // Executa pipeline em background
-    this.runPipeline(deployment.id, project);
+    this.runPipeline(deployment.id, project, owner);
 
     return deployment;
   }
 
-  private async runPipeline(deploymentId: string, project: any) {
+  private async runPipeline(deploymentId: string, project: any, owner: any) {
     const startTime = Date.now();
     const emit = (msg: string) => {
       logEmitter.emit(`logs-${deploymentId}`, msg);
       this.appendLog(deploymentId, msg);
     };
+
+    // Criar kernel client para o usuário (se configurado)
+    const userKernel = owner?.kernelAppKey && owner?.kernelAppSecret
+      ? kernel.createUserClient(owner.kernelAppKey, owner.kernelAppSecret)
+      : null;
 
     try {
       // 1. Verificar Docker
@@ -66,8 +79,14 @@ export class DeploymentService {
 
       await this.updateStatus(deploymentId, 'BUILDING');
       
-      // 🔗 PROST-QS: Building
-      prostqs.deployBuilding(deploymentId, project.id);
+      // 🔗 KERNEL: Building (telemetria isolada)
+      if (userKernel) {
+        userKernel.emit('deploy.building', {
+          target_id: project.id,
+          target_type: 'project',
+          metadata: { deploy_id: deploymentId }
+        });
+      }
 
       // 2. Garantir rede existe
       await dockerService.ensureNetwork();
@@ -119,8 +138,10 @@ export class DeploymentService {
 
       emit(`✅ Container iniciado: ${containerId.substring(0, 12)}`);
       
-      // 🔗 PROST-QS: Container started
-      prostqs.containerStarted(containerId, project.id, imageTag);
+      // 🔗 KERNEL: Container started (telemetria isolada)
+      if (userKernel) {
+        userKernel.containerStarted(containerId, project.id);
+      }
 
       // 8. Limpar build
       await fs.rm(buildPath, { recursive: true, force: true });
@@ -130,16 +151,20 @@ export class DeploymentService {
       const duration = Date.now() - startTime;
       emit(`🎉 Deploy concluído! Acesse: https://${project.subdomain}.${process.env.SUPER_DOMAIN || 'sce.local'}`);
       
-      // 🔗 PROST-QS: Deploy healthy
-      prostqs.deployHealthy(deploymentId, project.id, duration);
+      // 🔗 KERNEL: Deploy succeeded (telemetria isolada)
+      if (userKernel) {
+        userKernel.deploySucceeded(deploymentId, project.id, duration);
+      }
 
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Erro desconhecido';
       emit(`❌ FALHA: ${errorMsg}`);
       await this.updateStatus(deploymentId, 'FAILED');
       
-      // 🔗 PROST-QS: Deploy failed
-      prostqs.deployFailed(deploymentId, project.id, errorMsg, 'pipeline');
+      // 🔗 KERNEL: Deploy failed (telemetria isolada)
+      if (userKernel) {
+        userKernel.deployFailed(deploymentId, project.id, errorMsg);
+      }
     }
   }
 

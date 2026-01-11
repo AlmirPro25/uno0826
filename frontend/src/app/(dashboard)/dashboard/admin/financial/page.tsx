@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { DollarSign, AlertTriangle, TrendingUp, Clock, CheckCircle, XCircle, RefreshCw } from "lucide-react";
+import { api } from "@/lib/api";
+import { toast } from "sonner";
 
 interface FinancialAlert {
     id: string;
@@ -23,61 +25,59 @@ interface FinancialStats {
     avg_processing_time_ms: number;
 }
 
-const mockStats: FinancialStats = {
-    total_volume_24h: 45678.90,
-    total_transactions_24h: 234,
-    failed_webhooks: 2,
-    duplicate_attempts: 5,
-    avg_processing_time_ms: 145
-};
-
-const mockAlerts: FinancialAlert[] = [
-    {
-        id: "1",
-        type: "high_volume",
-        severity: "high",
-        message: "Volume de transações 150% acima da média",
-        app_id: "app-1",
-        app_name: "VOX-BRIDGE",
-        amount: 15000,
-        created_at: "2026-01-10T09:30:00Z",
-        resolved: false
-    },
-    {
-        id: "2",
-        type: "duplicate_webhook",
-        severity: "medium",
-        message: "5 webhooks duplicados detectados",
-        app_id: "app-1",
-        app_name: "VOX-BRIDGE",
-        created_at: "2026-01-10T08:15:00Z",
-        resolved: true
-    },
-    {
-        id: "3",
-        type: "failed_payment",
-        severity: "critical",
-        message: "Falha em pagamento de alto valor",
-        app_id: "app-2",
-        app_name: "SCE",
-        amount: 5000,
-        created_at: "2026-01-10T07:45:00Z",
-        resolved: false
-    }
-];
-
 export default function AdminFinancialPage() {
     const [stats, setStats] = useState<FinancialStats | null>(null);
     const [alerts, setAlerts] = useState<FinancialAlert[]>([]);
     const [loading, setLoading] = useState(true);
     const [filter, setFilter] = useState<"all" | "active" | "resolved">("all");
 
-    useEffect(() => {
-        setTimeout(() => {
-            setStats(mockStats);
-            setAlerts(mockAlerts);
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            // Fetch alerts
+            // API: GET /api/v1/admin/financial/alerts
+            const alertsRes = await api.get("/admin/financial/alerts");
+            const alertsData = alertsRes.data.alerts || alertsRes.data || [];
+            setAlerts(alertsData.map((a: Record<string, unknown>) => ({
+                id: a.id,
+                type: a.alert_type || a.type,
+                severity: a.severity || "medium",
+                message: a.message || a.description,
+                app_id: a.app_id || "",
+                app_name: a.app_name || "App",
+                amount: a.amount,
+                created_at: a.created_at,
+                resolved: a.resolved_at !== null || a.resolved === true
+            })));
+
+            // Fetch stats
+            // API: GET /api/v1/admin/financial/alerts/stats
+            const statsRes = await api.get("/admin/financial/alerts/stats");
+            const statsData = statsRes.data;
+            setStats({
+                total_volume_24h: statsData.total_volume_24h || 0,
+                total_transactions_24h: statsData.total_transactions_24h || 0,
+                failed_webhooks: statsData.failed_webhooks || 0,
+                duplicate_attempts: statsData.duplicate_attempts || 0,
+                avg_processing_time_ms: statsData.avg_processing_time_ms || 0
+            });
+        } catch (error) {
+            console.error("Failed to fetch financial data", error);
+            setStats({
+                total_volume_24h: 0,
+                total_transactions_24h: 0,
+                failed_webhooks: 0,
+                duplicate_attempts: 0,
+                avg_processing_time_ms: 0
+            });
+            setAlerts([]);
+        } finally {
             setLoading(false);
-        }, 500);
+        }
+    };
+
+    useEffect(() => {
+        fetchData();
     }, []);
 
     const filteredAlerts = alerts.filter(a => {
@@ -95,8 +95,15 @@ export default function AdminFinancialPage() {
         }
     };
 
-    const resolveAlert = (id: string) => {
-        setAlerts(prev => prev.map(a => a.id === id ? { ...a, resolved: true } : a));
+    const resolveAlert = async (id: string) => {
+        try {
+            // API: POST /api/v1/admin/financial/alerts/:id/resolve
+            await api.post(`/admin/financial/alerts/${id}/resolve`);
+            setAlerts(prev => prev.map(a => a.id === id ? { ...a, resolved: true } : a));
+            toast.success("Alerta resolvido");
+        } catch {
+            toast.error("Falha ao resolver alerta");
+        }
     };
 
     const formatCurrency = (value: number) => {

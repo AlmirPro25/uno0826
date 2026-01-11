@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
     Search, Download, Loader2, Shield, Clock, User,
-    AlertTriangle, CheckCircle2, Info, X
+    AlertTriangle, CheckCircle2, Info, X, Brain,
+    RefreshCw
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useApp } from "@/contexts/app-context";
@@ -16,6 +17,7 @@ import { motion, AnimatePresence } from "framer-motion";
 interface AuditLog {
     id: string;
     action: string;
+    action_type?: string;
     actor_id: string;
     actor_type: string;
     actor_name?: string;
@@ -25,7 +27,11 @@ interface AuditLog {
     ip_address?: string;
     user_agent?: string;
     status: "success" | "failure" | "warning";
+    was_allowed?: boolean;
+    block_reason?: string;
     created_at: string;
+    executed_at?: string;
+    duration_ms?: number;
 }
 
 export default function AuditPage() {
@@ -35,79 +41,59 @@ export default function AuditPage() {
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
     const [filterStatus, setFilterStatus] = useState<string>("all");
+    const [source, setSource] = useState<"audit" | "rules">("rules");
 
     const fetchLogs = async () => {
         setLoading(true);
         try {
-            const res = await api.get("/audit?limit=100");
-            setLogs(res.data.logs || res.data || []);
+            if (source === "rules") {
+                // Buscar logs de auditoria do rules engine
+                const params = activeApp?.id ? `?app_id=${activeApp.id}&limit=100` : "?limit=100";
+                const res = await api.get(`/admin/rules/audit${params}`);
+                const data = res.data.logs || [];
+                setLogs(data.map((log: Record<string, unknown>) => ({
+                    id: log.id,
+                    action: log.action_type || "rule_execution",
+                    action_type: log.action_type,
+                    actor_id: log.rule_id || log.actor_id,
+                    actor_type: "rule",
+                    actor_name: log.rule_name,
+                    resource_type: log.action_domain || "action",
+                    resource_id: log.app_id || "",
+                    details: {
+                        trigger_data: log.trigger_data,
+                        action_config: log.action_config,
+                        result: log.result
+                    },
+                    status: log.was_allowed ? "success" : "failure",
+                    was_allowed: log.was_allowed,
+                    block_reason: log.block_reason,
+                    created_at: log.executed_at || log.created_at,
+                    executed_at: log.executed_at,
+                    duration_ms: log.duration_ms
+                })));
+            } else {
+                // Buscar logs de auditoria gerais
+                const res = await api.get("/audit/events?limit=100");
+                const data = res.data.data || res.data || [];
+                setLogs(data.map((log: Record<string, unknown>) => ({
+                    id: log.id,
+                    action: log.action,
+                    actor_id: log.actor_id,
+                    actor_type: log.actor_type,
+                    actor_name: log.actor_name,
+                    resource_type: log.target_type || log.resource_type,
+                    resource_id: log.target_id || log.resource_id,
+                    details: log.metadata || log.details || {},
+                    ip_address: log.ip_address,
+                    user_agent: log.user_agent,
+                    status: log.status || "success",
+                    created_at: log.created_at || log.timestamp
+                })));
+            }
         } catch (error) {
             console.error("Failed to fetch audit logs", error);
-            // Mock data
-            setLogs([
-                {
-                    id: "audit_001",
-                    action: "app.created",
-                    actor_id: "user_123",
-                    actor_type: "user",
-                    actor_name: "João Silva",
-                    resource_type: "application",
-                    resource_id: "app_456",
-                    details: { app_name: "My App", slug: "my-app" },
-                    ip_address: "192.168.1.1",
-                    status: "success",
-                    created_at: new Date(Date.now() - 3600000).toISOString()
-                },
-                {
-                    id: "audit_002",
-                    action: "credential.created",
-                    actor_id: "user_123",
-                    actor_type: "user",
-                    actor_name: "João Silva",
-                    resource_type: "credential",
-                    resource_id: "cred_789",
-                    details: { app_id: "app_456" },
-                    ip_address: "192.168.1.1",
-                    status: "success",
-                    created_at: new Date(Date.now() - 7200000).toISOString()
-                },
-                {
-                    id: "audit_003",
-                    action: "billing.subscription.upgraded",
-                    actor_id: "user_123",
-                    actor_type: "user",
-                    actor_name: "João Silva",
-                    resource_type: "subscription",
-                    resource_id: "sub_abc",
-                    details: { from_plan: "free", to_plan: "pro" },
-                    ip_address: "192.168.1.1",
-                    status: "success",
-                    created_at: new Date(Date.now() - 86400000).toISOString()
-                },
-                {
-                    id: "audit_004",
-                    action: "auth.login.failed",
-                    actor_id: "unknown",
-                    actor_type: "anonymous",
-                    resource_type: "auth",
-                    resource_id: "session_xyz",
-                    details: { reason: "invalid_password", attempts: 3 },
-                    ip_address: "10.0.0.1",
-                    status: "failure",
-                    created_at: new Date(Date.now() - 172800000).toISOString()
-                },
-                {
-                    id: "audit_005",
-                    action: "rule.triggered",
-                    actor_id: "system",
-                    actor_type: "system",
-                    resource_type: "rule",
-                    resource_id: "rule_001",
-                    details: { rule_name: "Rate Limit Alert", event_count: 150 },
-                    status: "warning",
-                    created_at: new Date(Date.now() - 259200000).toISOString()
-                }
-            ]);
+            setLogs([]);
         } finally {
             setLoading(false);
         }
@@ -115,7 +101,8 @@ export default function AuditPage() {
 
     useEffect(() => {
         fetchLogs();
-    }, []);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [source, activeApp?.id]);
 
     const getStatusIcon = (status: string) => {
         switch (status) {
@@ -164,12 +151,50 @@ export default function AuditPage() {
                         Registro imutável de todas as ações • {filteredLogs.length} registros
                     </p>
                 </div>
-                <Button 
-                    variant="outline" 
-                    className="h-11 px-5 rounded-xl border-white/10 text-white hover:bg-white/5"
+                <div className="flex items-center gap-3">
+                    <Button 
+                        variant="outline"
+                        onClick={fetchLogs}
+                        disabled={loading}
+                        className="h-11 px-4 rounded-xl border-white/10 text-white hover:bg-white/5"
+                    >
+                        <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
+                    </Button>
+                    <Button 
+                        variant="outline" 
+                        className="h-11 px-5 rounded-xl border-white/10 text-white hover:bg-white/5"
+                    >
+                        <Download className="w-4 h-4 mr-2" /> Exportar
+                    </Button>
+                </div>
+            </div>
+
+            {/* Source Toggle */}
+            <div className="flex items-center gap-2 p-1 bg-white/[0.02] border border-white/5 rounded-xl w-fit">
+                <button
+                    onClick={() => setSource("rules")}
+                    className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2",
+                        source === "rules" 
+                            ? "bg-indigo-600 text-white" 
+                            : "text-slate-400 hover:text-white"
+                    )}
                 >
-                    <Download className="w-4 h-4 mr-2" /> Exportar
-                </Button>
+                    <Brain className="w-4 h-4" />
+                    Ações de Regras
+                </button>
+                <button
+                    onClick={() => setSource("audit")}
+                    className={cn(
+                        "px-4 py-2 rounded-lg text-sm font-bold transition-all flex items-center gap-2",
+                        source === "audit" 
+                            ? "bg-indigo-600 text-white" 
+                            : "text-slate-400 hover:text-white"
+                    )}
+                >
+                    <Shield className="w-4 h-4" />
+                    Eventos Gerais
+                </button>
             </div>
 
             {/* Filters */}

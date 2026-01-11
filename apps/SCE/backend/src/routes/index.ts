@@ -1,11 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import { ProjectController } from '../controllers/project.controller.js';
-import { AuthService, loginSchema } from '../services/auth.service.js';
+import { AuthService, loginSchema, registerSchema } from '../services/auth.service.js';
 import { DeploymentService } from '../services/deployment.service.js';
 import { DockerService } from '../services/docker.service.js';
 import { ProjectService } from '../services/project.service.js';
 import { authMiddleware } from '../middleware/auth.middleware.js';
+import { kernel } from '../lib/kernel-client.js';
+import { PrismaClient } from '@prisma/client';
 
+const prisma = new PrismaClient();
 const projectCtrl = new ProjectController();
 const authService = new AuthService();
 const deployService = new DeploymentService();
@@ -37,6 +40,16 @@ export async function apiRoutes(fastify: FastifyInstance) {
       return await authService.login(data);
     } catch (error) {
       res.status(401).send({ error: 'Credenciais inválidas' });
+    }
+  });
+
+  fastify.post('/auth/register', async (req, res) => {
+    try {
+      const data = registerSchema.parse(req.body);
+      return await authService.register(data);
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Erro ao registrar';
+      res.status(400).send({ error: msg });
     }
   });
 
@@ -333,6 +346,62 @@ export async function apiRoutes(fastify: FastifyInstance) {
         return { message: 'Variável removida' };
       } catch (error) {
         res.status(400).send({ error: 'Erro ao remover variável' });
+      }
+    });
+
+    // ============================================
+    // TELEMETRIA (proxy para UNO.KERNEL)
+    // Dados isolados por usuário
+    // ============================================
+    
+    // Buscar eventos de telemetria do usuário
+    protectedRoutes.get('/telemetry/events', async (req, res) => {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).send({ error: 'Não autenticado' });
+      
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user?.kernelAppKey || !user?.kernelAppSecret) {
+        return { events: [], message: 'Kernel não configurado para este usuário' };
+      }
+      
+      const { limit, type } = req.query as { limit?: string; type?: string };
+      const events = await kernel.getTelemetry(
+        user.kernelAppKey, 
+        user.kernelAppSecret,
+        { limit: limit ? parseInt(limit) : 50, type }
+      );
+      
+      return { events };
+    });
+    
+    // Buscar alertas do usuário
+    protectedRoutes.get('/telemetry/alerts', async (req, res) => {
+      const userId = req.user?.id;
+      if (!userId) return res.status(401).send({ error: 'Não autenticado' });
+      
+      const user = await prisma.user.findUnique({ where: { id: userId } });
+      if (!user?.kernelAppKey || !user?.kernelAppSecret) {
+        return { alerts: [], message: 'Kernel não configurado para este usuário' };
+      }
+      
+      const alerts = await kernel.getAlerts(user.kernelAppKey, user.kernelAppSecret);
+      return { alerts };
+    });
+    
+    // Provisionar App no Kernel (para usuários existentes)
+    protectedRoutes.post('/kernel/provision', async (req, res) => {
+      const userId = req.user?.id;
+      const { name, password } = req.body as { name: string; password: string };
+      
+      if (!userId) return res.status(401).send({ error: 'Não autenticado' });
+      if (!name || !password) return res.status(400).send({ error: 'Nome e senha são obrigatórios' });
+      
+      try {
+        const result = await authService.provisionKernelApp(userId, name, password);
+        return { success: true, ...result };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao provisionar';
+        res.status(400).send({ error: msg });
       }
     });
   });

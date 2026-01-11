@@ -69,10 +69,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const onboardingComplete = localStorage.getItem("onboarding_complete");
 
             // Redirect based on role and onboarding status
-            if (userData.role === 'admin' || userData.role === 'super_admin') {
-                router.push("/admin");
-            } else if (!onboardingComplete) {
-                // New user - send to onboarding
+            // Todos vão pro dashboard - a sidebar mostra o que cada role pode ver
+            if (!onboardingComplete && userData.role !== 'admin' && userData.role !== 'super_admin') {
+                // New user - send to onboarding (admins skip)
                 router.push("/onboarding");
             } else {
                 router.push("/dashboard");

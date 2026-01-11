@@ -46,6 +46,9 @@ import (
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
 	"prost-qs/backend/internal/telemetry"
+	"prost-qs/backend/internal/narrative"
+	"prost-qs/backend/internal/notification"
+	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/internal/rules"
 	"prost-qs/backend/pkg/capabilities"
 	"prost-qs/backend/pkg/db"
@@ -675,6 +678,30 @@ func main() {
 		telemetryService := telemetry.NewTelemetryService(gormDB)
 		telemetry.RegisterTelemetryRoutes(v1, telemetryService, application.AppContextMiddleware(applicationService), application.RequireAppContext(), middleware.AuthMiddleware(), middleware.AdminOnly())
 		log.Println("✅ Telemetry routes registradas (/telemetry/*)")
+
+		// ========================================
+		// NARRATIVE SERVICE - Fase 32
+		// "Quando algo dá errado, o sistema explica em linguagem humana"
+		// ========================================
+		narrativeService := narrative.NewNarrativeService(gormDB)
+		narrative.RegisterNarrativeRoutes(v1, narrativeService, middleware.AuthMiddleware())
+		log.Println("✅ Narrative routes registradas (/narratives/*)")
+
+		// ========================================
+		// USAGE SERVICE - Medição de Recursos
+		// "Billing não é cobrança. Billing é medição."
+		// ========================================
+		usageService := usage.NewUsageService(gormDB)
+		usage.RegisterUsageRoutes(v1, usageService, middleware.AuthMiddleware())
+		log.Println("✅ Usage routes registradas (/usage/*)")
+
+		// ========================================
+		// NOTIFICATION SERVICE - Alertas e Notificações
+		// "O sistema avisa quando algo acontece"
+		// ========================================
+		notificationService := notification.NewNotificationService(gormDB)
+		notification.RegisterNotificationRoutes(v1, notificationService, middleware.AuthMiddleware())
+		log.Println("✅ Notification routes registradas (/notifications/*)")
 
 		// ========================================
 		// RULES ENGINE - Camada de Decisão
