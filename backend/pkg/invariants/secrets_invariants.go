@@ -33,12 +33,12 @@ import (
 
 // Padrões de API keys e tokens conhecidos que NUNCA devem aparecer em plaintext
 var sensitivePatterns = []*regexp.Regexp{
-	// Stripe
-	regexp.MustCompile(`sk_live_[a-zA-Z0-9]{20,}`),
-	regexp.MustCompile(`sk_test_[a-zA-Z0-9]{20,}`),
-	regexp.MustCompile(`pk_live_[a-zA-Z0-9]{20,}`),
-	regexp.MustCompile(`pk_test_[a-zA-Z0-9]{20,}`),
-	regexp.MustCompile(`whsec_[a-zA-Z0-9]{20,}`),
+	// Stripe (inclui underscores no padrão)
+	regexp.MustCompile(`sk_live_[a-zA-Z0-9_]{20,}`),
+	regexp.MustCompile(`sk_test_[a-zA-Z0-9_]{20,}`),
+	regexp.MustCompile(`pk_live_[a-zA-Z0-9_]{20,}`),
+	regexp.MustCompile(`pk_test_[a-zA-Z0-9_]{20,}`),
+	regexp.MustCompile(`whsec_[a-zA-Z0-9_]{20,}`),
 
 	// AWS
 	regexp.MustCompile(`AKIA[0-9A-Z]{16}`),
