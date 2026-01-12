@@ -70,7 +70,7 @@
 - [x] **1.1** Criar testes de integração SCE ↔ Kernel (antes de mexer no código)
 - [x] **1.2** Garantir que SCE tem `PROSTQS_APP_ID` configurado (via env)
 - [x] **1.3** Verificar que Kernel está acessível do SCE (via PROSTQS_URL)
-- [ ] **1.4** Mapear usuários existentes no SCE (quantos? têm kernelUserId?)
+- [x] **1.4** Criar endpoints de admin para migração (SearchUser, CreateUser, CreateMembership)
 
 ### FASE 2: Backend - Middleware (Cirúrgico)
 
@@ -360,6 +360,14 @@ Após migração bem-sucedida:
 *Baseado no contrato de Identity congelado em `multiapp_test.go`*
 
 ## 📝 CHANGELOG
+
+### 12/01/2026 — Testes de Integração + Endpoints Admin
+- ✅ `sce_integration_test.go` — 5 testes de integração SCE passando
+- ✅ `admin/handler.go` — Endpoints para migração:
+  - GET /admin/users/search?email=xxx
+  - POST /admin/users
+  - POST /admin/memberships
+- ✅ `secrets_invariants.go` — Corrigido regex para Stripe keys
 
 ### 11/01/2026 — Migração Frontend + Script de Dados
 - ✅ `axios.ts` — Corrigido para usar token do Zustand store

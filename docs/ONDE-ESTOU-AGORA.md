@@ -1,7 +1,7 @@
 # ONDE ESTOU AGORA — Verdade Nua e Crua
 
 **Data:** 12 de Janeiro de 2026  
-**Última Atualização:** 12/01/2026 10:25  
+**Última Atualização:** 12/01/2026 11:00  
 **Objetivo:** Entender exatamente o que você tem e por onde começar
 
 ---
@@ -16,6 +16,21 @@
 
 ### ✅ Implementado Hoje
 ```
+├── SCE Integration Tests (5 testes passando)
+│   ├── TestSCE_LoginFlow_NewUser
+│   ├── TestSCE_LoginFlow_CrossApp
+│   ├── TestSCE_JWTContainsMemberships
+│   ├── TestSCE_DuplicateRegistration
+│   └── TestSCE_InvalidCredentials
+│
+├── Admin Endpoints para Migração
+│   ├── GET /admin/users/search?email=xxx
+│   ├── POST /admin/users
+│   └── POST /admin/memberships
+│
+├── Secrets Invariants Fix
+│   └── Corrigido regex para detectar Stripe keys com underscores
+│
 ├── Decision Service (22 testes passando)
 │   ├── Modelo de decisões
 │   ├── Endpoints REST
@@ -36,6 +51,16 @@
 │
 └── Documentação
     └── ESTADO-SISTEMA-12-JANEIRO-2026.md
+```
+
+### 📊 Testes Backend
+```
+49 pacotes de testes passando:
+├── internal/identity (5 SCE + multiapp tests)
+├── internal/billing (30+ tests)
+├── internal/decision (22 tests)
+├── pkg/invariants (130+ tests)
+└── + 45 outros pacotes
 ```
 
 ---
@@ -88,7 +113,9 @@ APP-2: SCE (Sovereign Cloud Engine)
 ├── Integrado com kernel
 ├── Telemetria fluindo
 ├── Identity via Kernel Auth Middleware
-└── Migração SSO 80% completa
+├── Migração SSO 90% completa
+├── 5 testes de integração passando
+└── Endpoints admin para migração prontos
 ```
 
 ### Infraestrutura
