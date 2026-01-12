@@ -15,6 +15,7 @@ export * from './activity';
 export * from './webhooks';
 export * from './apikeys';
 export * from './events';
+export * from './auth';
 export * from './types';
 
 // Re-export para conveniência
