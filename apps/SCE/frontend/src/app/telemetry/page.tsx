@@ -197,14 +197,12 @@ export default function TelemetryPage() {
       </div>
 
       {/* Info */}
-      {!user?.kernelAppId && (
-        <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <p className="text-blue-300 text-sm">
-            💡 Seus dados de telemetria são armazenados de forma isolada no UNO.KERNEL.
-            Apenas você tem acesso aos eventos e alertas do seu ambiente.
-          </p>
-        </div>
-      )}
+      <div className="p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+        <p className="text-blue-300 text-sm">
+          💡 Seus dados de telemetria são armazenados de forma isolada no UNO.KERNEL.
+          Apenas você tem acesso aos eventos e alertas do seu ambiente.
+        </p>
+      </div>
     </div>
   );
 }

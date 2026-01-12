@@ -267,13 +267,48 @@ O sistema está pronto. O código está testado. Só falta você testar.
 
 ## 🎯 AÇÃO IMEDIATA
 
+### Opção 1: Testar Billing
 Abra o dashboard de billing agora:
 https://frontend-prost.vercel.app/dashboard/billing
 
 Clique em "Upgrade para Pro". Use o cartão de teste. Veja o dinheiro entrar.
 
+### Opção 2: Deploy SCE em VPS
+
+**Por que VPS?** SCE precisa de Docker Engine para hospedar apps dos usuários. Render/Vercel não permitem Docker-in-Docker.
+
+**Recomendado:** Oracle Cloud Free Tier (4 CPUs ARM + 24GB RAM GRÁTIS)
+
+1. Criar conta: https://cloud.oracle.com/
+2. Criar VM ARM (Ampere A1)
+3. Executar scripts em `apps/SCE/deploy/`
+
 **O sistema está pronto. Você é que precisa começar a usar.**
 
 ---
 
-*Documento atualizado em 12/01/2026 10:25*
+## 📦 SCE VPS DEPLOY (NOVO)
+
+Scripts prontos em `apps/SCE/deploy/`:
+
+```
+apps/SCE/deploy/
+├── README.md              # Guia completo
+├── vps-setup.sh           # Setup inicial da VPS
+├── deploy-sce.sh          # Deploy do SCE
+├── docker-compose.prod.yml # Compose de produção
+├── traefik.yml            # Config do reverse proxy
+└── .env.example           # Variáveis de ambiente
+```
+
+### Passos:
+1. Criar conta Oracle Cloud
+2. Criar VM ARM (4 CPUs, 24GB RAM)
+3. SSH na VM
+4. Executar `vps-setup.sh`
+5. Configurar DNS wildcard
+6. Executar `deploy-sce.sh`
+
+---
+
+*Documento atualizado em 12/01/2026 11:30*
