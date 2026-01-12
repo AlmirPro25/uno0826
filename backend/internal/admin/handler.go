@@ -480,6 +480,171 @@ func (h *AdminHandler) SetUserRole(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "Role atualizado"})
 }
 
+// SearchUserByEmail busca usuário por email
+// GET /api/v1/admin/users/search?email=xxx
+func (h *AdminHandler) SearchUserByEmail(c *gin.Context) {
+	email := c.Query("email")
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Email é obrigatório"})
+		return
+	}
+
+	var user identity.User
+	if err := h.service.db.Where("email = ?", email).First(&user).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Usuário não encontrado"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"user": gin.H{
+			"id":       user.ID.String(),
+			"email":    user.Email,
+			"username": user.Username,
+			"role":     user.Role,
+			"status":   user.Status,
+		},
+	})
+}
+
+// CreateUser cria um novo usuário (para migração)
+// POST /api/v1/admin/users
+func (h *AdminHandler) CreateUser(c *gin.Context) {
+	var req struct {
+		Email                string `json:"email" binding:"required,email"`
+		Name                 string `json:"name" binding:"required"`
+		Password             string `json:"password" binding:"required,min=6"`
+		OriginAppID          string `json:"origin_app_id"`
+		RequirePasswordReset bool   `json:"require_password_reset"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	// Verificar se email já existe
+	var existingUser identity.User
+	if err := h.service.db.Where("email = ?", req.Email).First(&existingUser).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":   "Email já cadastrado",
+			"user_id": existingUser.ID.String(),
+		})
+		return
+	}
+
+	// Hash da senha
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao processar senha"})
+		return
+	}
+
+	// Criar usuário
+	userID := uuid.New()
+	user := identity.User{
+		ID:           userID,
+		Username:     req.Name,
+		Email:        req.Email,
+		PasswordHash: string(hashedPassword),
+		Role:         "user",
+		Status:       "active",
+		Version:      1,
+	}
+
+	if err := h.service.db.Create(&user).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar usuário"})
+		return
+	}
+
+	// Se tem origin_app_id, criar UserOrigin e AppMembership
+	if req.OriginAppID != "" {
+		originAppID, err := uuid.Parse(req.OriginAppID)
+		if err == nil {
+			// Criar UserOrigin
+			h.service.db.Create(&identity.UserOrigin{
+				ID:        uuid.New(),
+				UserID:    userID,
+				AppID:     originAppID,
+			})
+
+			// Criar AppMembership
+			h.service.db.Create(&identity.AppMembership{
+				ID:     uuid.New(),
+				UserID: userID,
+				AppID:  originAppID,
+				Role:   "user",
+				Status: "active",
+			})
+		}
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"user_id": userID.String(),
+		"email":   req.Email,
+		"name":    req.Name,
+		"message": "Usuário criado com sucesso",
+	})
+}
+
+// CreateMembership cria uma membership para um usuário
+// POST /api/v1/admin/memberships
+func (h *AdminHandler) CreateMembership(c *gin.Context) {
+	var req struct {
+		UserID string `json:"user_id" binding:"required,uuid"`
+		AppID  string `json:"app_id" binding:"required,uuid"`
+		Role   string `json:"role"`
+		Status string `json:"status"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	userID, _ := uuid.Parse(req.UserID)
+	appID, _ := uuid.Parse(req.AppID)
+
+	// Verificar se já existe
+	var existing identity.AppMembership
+	if err := h.service.db.Where("user_id = ? AND app_id = ?", userID, appID).First(&existing).Error; err == nil {
+		c.JSON(http.StatusConflict, gin.H{
+			"error":         "Membership já existe",
+			"membership_id": existing.ID.String(),
+		})
+		return
+	}
+
+	// Criar membership
+	role := req.Role
+	if role == "" {
+		role = "user"
+	}
+	status := req.Status
+	if status == "" {
+		status = "active"
+	}
+
+	membership := identity.AppMembership{
+		ID:     uuid.New(),
+		UserID: userID,
+		AppID:  appID,
+		Role:   role,
+		Status: status,
+	}
+
+	if err := h.service.db.Create(&membership).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar membership"})
+		return
+	}
+
+	c.JSON(http.StatusCreated, gin.H{
+		"membership_id": membership.ID.String(),
+		"user_id":       userID.String(),
+		"app_id":        appID.String(),
+		"message":       "Membership criada com sucesso",
+	})
+}
+
 // ========================================
 // ECONOMY OVERVIEW
 // ========================================
@@ -584,11 +749,16 @@ func RegisterAdminRoutes(router *gin.RouterGroup, service *AdminService, authMid
 
 		// Users (novo)
 		admin.GET("/users", handler.ListUsers)
+		admin.GET("/users/search", handler.SearchUserByEmail)
+		admin.POST("/users", handler.CreateUser)
 		admin.GET("/users/:userId", handler.GetUser)
 		admin.POST("/users/:userId/suspend", handler.SuspendUser)
 		admin.POST("/users/:userId/ban", handler.BanUser)
 		admin.POST("/users/:userId/reactivate", handler.ReactivateUser)
 		admin.POST("/users/:userId/role", handler.SetUserRole)
+
+		// Memberships (para migração)
+		admin.POST("/memberships", handler.CreateMembership)
 
 		// Economy
 		admin.GET("/economy/overview", handler.GetEconomyOverview)
