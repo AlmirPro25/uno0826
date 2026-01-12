@@ -12,6 +12,8 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"prost-qs/backend/pkg/invariants"
 )
 
 // ========================================
@@ -25,6 +27,9 @@ type SecretsService struct {
 }
 
 func NewSecretsService(db *gorm.DB, masterKey string) (*SecretsService, error) {
+	// INVARIANT FATAL: Master key deve ter tamanho correto para AES-256
+	invariants.AssertMasterKeyValid(len(masterKey))
+	
 	if len(masterKey) != 32 {
 		return nil, errors.New("master key deve ter exatamente 32 bytes para AES-256")
 	}
@@ -105,6 +110,9 @@ func (s *SecretsService) maskValue(value string) string {
 
 // Create cria um novo secret
 func (s *SecretsService) Create(req CreateSecretRequest, createdBy uuid.UUID) (*SecretResponse, error) {
+	// INVARIANT FATAL: Verificar se valor não é plaintext de secret conhecido
+	invariants.AssertSecretEncrypted(req.Name, req.Value)
+	
 	// Validações
 	if !IsValidEnvironment(req.Environment) {
 		return nil, fmt.Errorf("ambiente inválido: %s", req.Environment)
@@ -173,6 +181,9 @@ func (s *SecretsService) Update(id uuid.UUID, req UpdateSecretRequest, updatedBy
 	if err := s.db.Where("id = ?", id).First(&secret).Error; err != nil {
 		return nil, errors.New("secret não encontrado")
 	}
+
+	// INVARIANT FATAL: Verificar se novo valor não é plaintext
+	invariants.AssertSecretEncrypted(secret.Name, req.Value)
 
 	if !secret.IsActive {
 		return nil, errors.New("secret está revogado")
@@ -300,8 +311,15 @@ func (s *SecretsService) Inject(appID uuid.UUID, environment string, actorID uui
 
 	result := make(map[string]string)
 	for _, secret := range secrets {
+		// INVARIANT: Verificar isolamento de app
+		if secret.AppID != nil {
+			invariants.AssertSecretBelongsToApp(secret.AppID.String(), appID.String())
+		}
+		
 		// Verificar expiração
 		if secret.ExpiresAt != nil && secret.ExpiresAt.Before(now) {
+			// INVARIANT WARNING: Tentativa de usar secret expirado
+			invariants.AssertSecretNotExpired(secret.ID.String(), secret.Name, true)
 			continue
 		}
 

@@ -62,7 +62,7 @@ func (PendingVerification) TableName() string {
 // Sessão é DERIVADA da identidade, não É a identidade
 type SovereignSession struct {
 	SessionID         uuid.UUID `gorm:"type:text;primaryKey" json:"session_id"`
-	UserID            uuid.UUID `gorm:"type:text;not null;index:idx_session_user" json:"user_id"`
+	UserID            uuid.UUID `gorm:"type:text;not null;index:idx_sovereign_session_user" json:"user_id"`
 	DeviceFingerprint string    `gorm:"type:text" json:"device_fingerprint"`
 	CreatedAt         time.Time `gorm:"not null" json:"created_at"`
 	ExpiresAt         time.Time `gorm:"not null;index:idx_session_expires" json:"expires_at"`

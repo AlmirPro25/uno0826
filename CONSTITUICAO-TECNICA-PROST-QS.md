@@ -1,456 +1,468 @@
-# CONSTITUIÇÃO TÉCNICA DO PROST-QS
+# CONSTITUIÇÃO TÉCNICA — PROST-QS / UNO.KERNEL
 
-## SOVEREIGN KERNEL - DOCUMENTO FUNDAMENTAL
+> O documento fundador. As leis que não podem ser quebradas.
 
-> "Este documento define o que o sistema se recusa a fazer, independentemente de quem peça."
-
-**Versão**: 1.0  
-**Data de Ratificação**: 28/12/2025  
-**Status**: VIGENTE  
-**Última Revisão**: —
+**Versão:** 1.0  
+**Data:** 12 de Janeiro de 2026  
+**Autor:** Almir Felix de Jesus Filho  
+**Status:** RATIFICADO
 
 ---
 
 ## PREÂMBULO
 
-O PROST-QS é um Kernel Soberano de governança institucional.
+Este documento estabelece os princípios fundamentais, leis invioláveis e contratos técnicos do sistema PROST-QS (UNO.KERNEL).
 
-Este documento estabelece os **limites invioláveis** do sistema — regras que:
-- Nenhuma feature pode contornar
-- Nenhuma refatoração pode violar
-- Nenhum administrador pode suspender sem declarar exceção formal
-- Nenhuma evolução futura pode ignorar
-
-**Se algo neste documento for quebrado, o sistema está errado — não o documento.**
+Qualquer código, feature ou decisão que viole esta constituição é **inconstitucional** e deve ser rejeitado ou corrigido.
 
 ---
 
-## PARTE I — DEFINIÇÕES FUNDAMENTAIS
+## ARTIGO I — PRINCÍPIOS FUNDAMENTAIS
 
-### Artigo 1 — Termos Canônicos
+### §1. O Kernel é a Fonte de Verdade
 
-Os seguintes termos têm significado preciso e imutável neste sistema:
-
-**§1.1 EXECUÇÃO**
-> Ato de produzir efeito real no mundo a partir de uma decisão aprovada.
-> Execução não é tentativa. Execução não é simulação. Execução altera estado.
-
-**§1.2 DECISÃO**
-> Registro formal de intenção que passou por aprovação humana.
-> Decisão não é proposta. Decisão não é sugestão. Decisão tem autor identificável.
-
-**§1.3 AUTORIDADE**
-> Capacidade limitada, escopada e rastreável de aprovar decisões.
-> Autoridade não é cargo. Autoridade não é hierarquia. Autoridade é poder delegado com limites.
-
-**§1.4 AGENTE**
-> Entidade não-humana que propõe ações ao sistema.
-> Agente não decide. Agente não executa. Agente propõe e aguarda.
-
-**§1.5 SIMULAÇÃO (Shadow Mode)**
-> Execução hipotética que não altera estado real.
-> Simulação informa. Simulação não autoriza. Simulação não cria precedente.
-
-**§1.6 CONFLITO**
-> Estado em que duas ou mais decisões ativas são mutuamente exclusivas.
-> Conflito bloqueia. Conflito não se resolve sozinho. Conflito exige humano.
-
-**§1.7 PRECEDENTE**
-> Registro histórico de decisão encerrada, apresentado como memória.
-> Precedente informa. Precedente não autoriza. Precedente não decide.
-
-**§1.8 LIFECYCLE**
-> Estado temporal de uma decisão (active, expired, revoked, superseded, under_review).
-> Lifecycle governa validade. Lifecycle não é opcional. Lifecycle tem expiração obrigatória.
-
----
-
-## PARTE II — INVARIANTES FUNDAMENTAIS
-
-### Artigo 2 — Os Seis Invariantes
-
-Estas são as leis fundamentais do PROST-QS. Violá-las é bug constitucional.
-
-**§2.1 INVARIANTE DE EXECUÇÃO**
 ```
-NENHUMA EXECUÇÃO SEM CanExecute() = true
-```
-> Toda execução DEVE passar pela verificação `CanExecute()`.
-> Não existe atalho. Não existe bypass. Não existe "execução direta".
-> Se executou sem `CanExecute()`, o sistema falhou.
+O Kernel (PROST-QS) é a única fonte de verdade para:
+├── Identity (quem é quem)
+├── Billing (quem paga o quê)
+├── Telemetry (o que aconteceu)
+├── Governance (quem pode fazer o quê)
+└── Decisions (o que o sistema decidiu)
 
-**§2.2 INVARIANTE DE EXPIRAÇÃO**
-```
-NENHUMA DECISÃO SEM expires_at OU expires_on_condition OU review_required_every
-```
-> Toda decisão DEVE declarar quando deixa de valer.
-> Não existe decisão eterna. Não existe "válido até segunda ordem".
-> Se entrou na memória sem expiração, o sistema falhou.
-
-**§2.3 INVARIANTE DE CONFLITO**
-```
-NENHUM CONFLITO COM RESOLUÇÃO AUTOMÁTICA
-```
-> Conflitos DEVEM ser resolvidos por humano com autoridade.
-> O sistema não escolhe lados. O sistema não pondera. O sistema não otimiza.
-> Se conflito se resolveu sozinho, o sistema falhou.
-
-**§2.4 INVARIANTE DE REVISÃO**
-```
-NENHUMA REVISÃO SEM SUSPENSÃO DE EFEITOS
-```
-> Decisão em revisão (under_review) NÃO PODE produzir efeitos.
-> Revisão suspende. Revisão não "continua enquanto analisa".
-> Se decisão em revisão executou, o sistema falhou.
-
-**§2.5 INVARIANTE DE JUSTIFICATIVA**
-```
-NENHUMA APROVAÇÃO SEM JUSTIFICATIVA HUMANA
-```
-> Toda aprovação DEVE ter justificativa textual (mínimo 10 caracteres).
-> Não existe aprovação silenciosa. Não existe "ok" sem razão.
-> Se aprovou sem justificativa, o sistema falhou.
-
-**§2.6 INVARIANTE DE SIMULAÇÃO**
-```
-NENHUMA SIMULAÇÃO ALTERA ESTADO REAL
-```
-> Shadow Mode NUNCA modifica dados reais.
-> Simulação é read-only no mundo. Simulação é write-only no log.
-> Se simulação alterou estado, o sistema falhou.
-
-
----
-
-## PARTE III — AXIOMAS DE AUTORIDADE
-
-### Artigo 3 — Natureza da Autoridade
-
-**§3.1 AUTORIDADE É DELEGADA, NÃO INERENTE**
-> Ninguém nasce com autoridade no sistema.
-> Autoridade é concedida, escopada e pode ser revogada.
-> Cargo não é autoridade. Título não é autoridade.
-
-**§3.2 AUTORIDADE TEM LIMITES EXPLÍCITOS**
-> Toda autoridade declara:
-> - Domínios onde pode atuar
-> - Impacto máximo que pode aprovar
-> - Ações específicas permitidas
-
-**§3.3 AUTORIDADE NÃO SE HERDA DO PASSADO**
-> Ter aprovado antes não aumenta poder de aprovar agora.
-> Histórico "limpo" não habilita autonomia.
-> Frequência não legitima.
-
-**§3.4 AUTO-APROVAÇÃO É PROIBIDA**
-> Quem solicita não pode aprovar a própria solicitação.
-> Isso é inviolável. Não existe exceção.
-
-**§3.5 ESCALAÇÃO É OBRIGATÓRIA QUANDO NECESSÁRIA**
-> Se nenhuma autoridade disponível tem escopo suficiente, a decisão escala.
-> O sistema não "dá um jeito". O sistema escala ou bloqueia.
-
----
-
-## PARTE IV — AXIOMAS DE MEMÓRIA
-
-### Artigo 4 — Natureza da Memória Institucional
-
-**§4.1 MEMÓRIA INFORMA, NÃO DECIDE**
-> A memória responde: "isso já aconteceu?"
-> A memória NÃO responde: "então pode fazer de novo"
-
-**§4.2 PRECEDENTE NÃO AUTORIZA**
-> Precedente é descrição do passado, não permissão para o futuro.
-> "Foi aprovado antes" não é justificativa válida.
-
-**§4.3 FREQUÊNCIA NÃO LEGITIMA**
-> Fazer algo muitas vezes não torna esse algo correto.
-> O sistema não aprende padrões decisórios.
-> O sistema não sugere baseado em histórico.
-
-**§4.4 SIMILARIDADE NÃO DECIDE**
-> Casos parecidos não herdam aprovação.
-> Cada decisão é avaliada por si mesma.
-
-**§4.5 MEMÓRIA NÃO CRIA AUTORIDADE NOVA**
-> Nenhum registro histórico aumenta o poder de ninguém.
-> Memória é contexto, não promoção.
-
----
-
-## PARTE V — AXIOMAS DE TEMPO
-
-### Artigo 5 — Natureza da Validade Temporal
-
-**§5.1 TODA DECISÃO TEM FIM**
-> Não existe decisão eterna.
-> Toda decisão declara: data de expiração, condição de expiração, ou intervalo de revisão.
-
-**§5.2 EXPIRAÇÃO NÃO É ERRO**
-> Decisão expirada não é decisão errada.
-> É decisão que cumpriu seu tempo.
-> Nova aprovação é necessária, não correção.
-
-**§5.3 TEMPO VENCE AUTORIDADE**
-> Mesmo quem aprovou não "mantém" decisão viva sem renovação.
-> Autoridade passada não estende validade presente.
-
-**§5.4 REVOGAÇÃO É TERMINAL**
-> Decisão revogada não volta a ser ativa.
-> Não existe "des-revogar".
-> Nova decisão é necessária, não restauração.
-
-**§5.5 SUPERSESSÃO É EXPLÍCITA**
-> Decisão substituída aponta para sua sucessora.
-> Não existe substituição implícita.
-> A cadeia de sucessão é rastreável.
-
----
-
-## PARTE VI — AXIOMAS DE EMERGÊNCIA
-
-### Artigo 6 — Natureza do Kill Switch
-
-**§6.1 KILL SWITCH PARA TUDO**
-> Quando ativado, o escopo afetado para completamente.
-> Não existe "parar parcialmente".
-> Não existe "continuar o que já começou".
-
-**§6.2 KILL SWITCH EXIGE JUSTIFICATIVA**
-> Ativação sem razão é proibida.
-> A justificativa é registrada e auditável.
-
-**§6.3 KILL SWITCH TEM DONO**
-> Apenas super_admin pode ativar.
-> Isso é concentração intencional de poder de emergência.
-
-**§6.4 KILL SWITCH PODE EXPIRAR**
-> Expiração automática é opcional mas recomendada.
-> Evita "ditadura acidental" por esquecimento.
-
-**§6.5 KILL SWITCH NÃO É PUNIÇÃO**
-> É proteção do sistema, não sanção a usuários.
-> Ativação é ato de prudência, não de autoridade punitiva.
-
----
-
-## PARTE VII — COMPORTAMENTOS PROIBIDOS
-
-### Artigo 7 — O Que o Sistema Nunca Faz
-
-**§7.1 PROIBIÇÕES DE EXECUÇÃO**
-```
-❌ Executar sem verificar CanExecute()
-❌ Executar decisão expirada
-❌ Executar decisão revogada
-❌ Executar decisão em revisão
-❌ Executar durante conflito aberto
-❌ Executar durante Kill Switch ativo
+Apps satélites CONSOMEM. Nunca DUPLICAM.
 ```
 
-**§7.2 PROIBIÇÕES DE APROVAÇÃO**
+### §2. Multi-Tenant por Design
+
 ```
-❌ Aprovar sem justificativa
-❌ Aprovar a própria solicitação
-❌ Aprovar fora do escopo de autoridade
-❌ Aprovar acima do limite de impacto
-❌ Aprovar automaticamente baseado em histórico
+TODA tabela que contém dados de usuário DEVE ter app_id.
+TODA query DEVE filtrar por app_id.
+NENHUM dado de um app pode vazar para outro.
+
+Violação = Falha de segurança crítica.
 ```
 
-**§7.3 PROIBIÇÕES DE MEMÓRIA**
+### §3. Governança Nativa
+
 ```
-❌ Inferir permissão de precedente
-❌ Criar precedente automaticamente
-❌ Rankear precedentes por "sucesso"
-❌ Sugerir decisão baseada em padrão
-❌ Aprender comportamento decisório
+O sistema DEVE ser capaz de:
+├── Desligar qualquer componente instantaneamente (Kill Switch)
+├── Testar mudanças sem afetar produção (Shadow Mode)
+├── Explicar qualquer decisão (Explainability)
+└── Registrar toda ação sensível (Audit Trail)
+
+Sistema sem governança = Sistema fora de controle.
 ```
 
-**§7.4 PROIBIÇÕES DE CONFLITO**
-```
-❌ Resolver conflito automaticamente
-❌ Escolher lado em conflito
-❌ Ponderar conflito por critério
-❌ Expirar conflito por tempo
-❌ Executar parcialmente durante conflito
-```
+### §4. Falha Segura
 
-**§7.5 PROIBIÇÕES DE SIMULAÇÃO**
 ```
-❌ Alterar estado real em Shadow Mode
-❌ Criar decisão a partir de simulação sem aprovação
-❌ Usar simulação como justificativa suficiente
-❌ Promover automaticamente de shadow para execução
-```
+Quando em dúvida, o sistema DEVE:
+├── Negar acesso (fail closed)
+├── Logar o evento
+├── Alertar se necessário
+└── Nunca falhar silenciosamente
 
-
----
-
-## PARTE VIII — GARANTIAS DO SISTEMA
-
-### Artigo 8 — O Que o Sistema Sempre Garante
-
-**§8.1 GARANTIAS DE RASTREABILIDADE**
-```
-✅ Toda execução tem decisão associada
-✅ Toda decisão tem autor humano identificável
-✅ Toda aprovação tem justificativa registrada
-✅ Toda transição de estado tem log imutável
-✅ Todo conflito tem ambas as partes visíveis
-```
-
-**§8.2 GARANTIAS DE CONTROLE**
-```
-✅ Kill Switch funciona instantaneamente
-✅ Conflito bloqueia execução imediatamente
-✅ Expiração invalida decisão automaticamente
-✅ Revisão suspende efeitos imediatamente
-✅ Revogação é irreversível
-```
-
-**§8.3 GARANTIAS DE TRANSPARÊNCIA**
-```
-✅ Autoridades elegíveis são visíveis antes da decisão
-✅ Motivo de bloqueio é sempre informado
-✅ Precedentes são apresentados sem viés
-✅ Simulações mostram o que teria acontecido
-✅ Audit log é consultável por autoridades
-```
-
-**§8.4 GARANTIAS DE INTEGRIDADE**
-```
-✅ Decisões têm hash de integridade
-✅ Transições têm hash de integridade
-✅ Ledger contábil é append-only
-✅ Audit log é append-only
-✅ Nenhum registro é deletado, apenas marcado
+Silêncio em falha = Bug crítico.
 ```
 
 ---
 
-## PARTE IX — EXCEÇÕES E EMENDAS
+## ARTIGO II — LEIS DE DADOS
 
-### Artigo 9 — Como Modificar Esta Constituição
+### §1. Lei do Isolamento
 
-**§9.1 EXCEÇÕES TEMPORÁRIAS**
-> Exceções a esta Constituição DEVEM ser:
-> - Declaradas explicitamente
-> - Justificadas por escrito
-> - Limitadas no tempo
-> - Registradas em audit log
-> - Aprovadas por super_admin
+```go
+// TODA query DEVE incluir app_id
+// CORRETO:
+SELECT * FROM users WHERE app_id = $1 AND id = $2
 
-**§9.2 EMENDAS PERMANENTES**
-> Modificações permanentes a esta Constituição DEVEM:
-> - Passar por revisão formal
-> - Não violar os 6 Invariantes Fundamentais (Artigo 2)
-> - Ser documentadas com data e autor
-> - Incrementar a versão do documento
+// INCONSTITUCIONAL:
+SELECT * FROM users WHERE id = $1  // ← PROIBIDO
+```
 
-**§9.3 INVARIANTES SÃO IMUTÁVEIS**
-> Os 6 Invariantes Fundamentais (Artigo 2) NÃO PODEM ser emendados.
-> Eles são a identidade do sistema.
-> Violá-los é destruir o sistema, não modificá-lo.
-
----
-
-## PARTE X — VERIFICAÇÃO DE CONFORMIDADE
-
-### Artigo 10 — Como Verificar Se o Sistema Está Conforme
-
-**§10.1 TESTES OBRIGATÓRIOS**
-
-Para cada invariante, deve existir teste automatizado:
-
-| Invariante | Teste |
-|------------|-------|
-| §2.1 Execução | Tentar executar sem `CanExecute()` → DEVE falhar |
-| §2.2 Expiração | Criar decisão sem expiração → DEVE falhar |
-| §2.3 Conflito | Conflito aberto + execução → DEVE bloquear |
-| §2.4 Revisão | Decisão under_review + execução → DEVE bloquear |
-| §2.5 Justificativa | Aprovar sem justificativa → DEVE falhar |
-| §2.6 Simulação | Shadow mode + verificar estado → DEVE estar inalterado |
-
-**§10.2 AUDITORIA PERIÓDICA**
-
-Recomenda-se auditoria trimestral verificando:
-- Nenhuma execução sem decisão associada
-- Nenhuma decisão sem expiração
-- Nenhum conflito resolvido automaticamente
-- Nenhuma aprovação sem justificativa
-- Integridade de hashes
-
-**§10.3 ALERTAS DE VIOLAÇÃO**
-
-O sistema DEVE alertar imediatamente se detectar:
-- Tentativa de execução bloqueada
-- Decisão criada sem expiração
-- Conflito detectado
-- Kill Switch ativado
-- Transição de estado inválida
-
----
-
-## PARTE XI — ASSINATURAS
-
-### Artigo 11 — Ratificação
-
-Este documento entra em vigor na data de sua ratificação.
+### §2. Lei da Imutabilidade de Audit
 
 ```
-RATIFICADO EM: 28/12/2025
+Registros de audit NUNCA podem ser:
+├── Deletados
+├── Modificados
+└── Truncados
 
-SISTEMA: PROST-QS Sovereign Kernel
-VERSÃO: Fase 14 Completa
-DOCUMENTO: Constituição Técnica v1.0
+Audit é append-only. Sempre.
+```
 
-TESTEMUNHAS:
-- Tech Lead (ChatGPT) - Validação arquitetural
-- Desenvolvedor (Kiro) - Implementação técnica
-- Proprietário do Sistema - Autoridade final
+### §3. Lei do Ledger
+
+```
+O ledger de billing DEVE satisfazer:
+
+∑(créditos) - ∑(débitos) = saldo_atual
+
+Se esta equação falhar:
+├── ALERTA CRÍTICO
+├── Kill switch de billing
+└── Investigação imediata
 ```
 
 ---
 
-## ANEXO A — REFERÊNCIA RÁPIDA DOS INVARIANTES
+## ARTIGO III — CLASSIFICAÇÃO DE ERROS
+
+### §1. Tipos de Erro (Lei da Classificação)
+
+```go
+// Todo erro DEVE ser classificado em um destes tipos:
+
+type ErrorType string
+
+const (
+    ErrValidation ErrorType = "VALIDATION"  // Dados inválidos do cliente
+    ErrBusiness   ErrorType = "BUSINESS"    // Regra de negócio violada
+    ErrSystem     ErrorType = "SYSTEM"      // Falha interna do sistema
+    ErrSecurity   ErrorType = "SECURITY"    // Tentativa de violação
+    ErrExternal   ErrorType = "EXTERNAL"    // Serviço externo falhou
+    ErrInvariant  ErrorType = "INVARIANT"   // Invariante violada (CRÍTICO)
+)
+```
+
+### §2. Matriz de Resposta
+
+| Tipo | HTTP | Alerta | Retry | Ação |
+|------|------|--------|-------|------|
+| VALIDATION | 400 | ❌ | ❌ | Retornar erro |
+| BUSINESS | 422 | ❌ | ❌ | Retornar erro |
+| SYSTEM | 500 | ✅ | ✅ | Alertar + retry |
+| SECURITY | 403 | ✅ | ❌ | Alertar + logar IP |
+| EXTERNAL | 502 | ⚠️ | ✅ | Retry + alertar se persistir |
+| INVARIANT | 500 | 🚨 | ❌ | ALERTA CRÍTICO + kill switch |
+
+### §3. Lei da Não-Mistura
 
 ```
-╔═══════════════════════════════════════════════════════════════════════════════╗
-║                    OS 6 INVARIANTES FUNDAMENTAIS                               ║
-╠═══════════════════════════════════════════════════════════════════════════════╣
-║                                                                               ║
-║  1. NENHUMA EXECUÇÃO SEM CanExecute() = true                                  ║
-║                                                                               ║
-║  2. NENHUMA DECISÃO SEM expires_at                                            ║
-║                                                                               ║
-║  3. NENHUM CONFLITO COM RESOLUÇÃO AUTOMÁTICA                                  ║
-║                                                                               ║
-║  4. NENHUMA REVISÃO SEM SUSPENSÃO DE EFEITOS                                  ║
-║                                                                               ║
-║  5. NENHUMA APROVAÇÃO SEM JUSTIFICATIVA                                       ║
-║                                                                               ║
-║  6. NENHUMA SIMULAÇÃO ALTERA ESTADO REAL                                      ║
-║                                                                               ║
-╠═══════════════════════════════════════════════════════════════════════════════╣
-║  Se qualquer um destes for violado → BUG CONSTITUCIONAL                       ║
-╚═══════════════════════════════════════════════════════════════════════════════╝
+Erro de NEGÓCIO ≠ Erro de SISTEMA
+
+"Saldo insuficiente" = BUSINESS (esperado, não alertar)
+"Banco de dados caiu" = SYSTEM (inesperado, alertar)
+
+Misturar = Alertas inúteis + Problemas ignorados
 ```
 
 ---
 
-## ANEXO B — LOCALIZAÇÃO NO CÓDIGO
+## ARTIGO IV — KILL SWITCH
 
-| Invariante | Arquivo | Função |
-|------------|---------|--------|
-| §2.1 Execução | `memory/service.go` | `CanExecute()` |
-| §2.1 Execução | `agent/governed_service.go` | `ExecuteDecisionGoverned()` |
-| §2.2 Expiração | `memory/service.go` | `CreateLifecycle()` |
-| §2.3 Conflito | `memory/service.go` | `ResolveConflict()` |
-| §2.4 Revisão | `memory/service.go` | `CreateReview()` |
-| §2.5 Justificativa | `approval/service.go` | `Decide()` |
-| §2.6 Simulação | `shadow/service.go` | `Execute()` |
+### §1. Lei do Escopo Explícito
+
+```go
+// Kill switch DEVE ter escopo explícito
+// Formatos válidos:
+
+"all"                    // Desliga TUDO (emergência total)
+"billing"                // Desliga billing global
+"billing:global"         // Mesmo que acima
+"billing:app:{app_id}"   // Desliga billing só para um app
+"rules:{rule_id}"        // Desliga uma regra específica
+"agents:{agent_id}"      // Desliga um agente específico
+```
+
+### §2. Lei da Granularidade
+
+```
+Kill switch que ninguém usa = Kill switch inútil.
+
+O sistema DEVE permitir desligar:
+├── Tudo (emergência)
+├── Um domínio (billing, agents, ads)
+├── Um app específico
+├── Um recurso específico (regra, agente)
+
+Quanto mais granular, mais útil.
+```
+
+### §3. Lei da Verificação
+
+```go
+// TODA operação crítica DEVE verificar kill switch ANTES de executar
+
+func (s *Service) ProcessPayment(ctx context.Context, req Request) error {
+    // PRIMEIRO: verificar kill switch
+    if err := s.killSwitch.CheckForApp("billing", req.AppID); err != nil {
+        return err
+    }
+    
+    // DEPOIS: executar operação
+    return s.process(ctx, req)
+}
+```
 
 ---
 
-*Fim da Constituição Técnica do PROST-QS*
+## ARTIGO V — TELEMETRIA
+
+### §1. Lei da Separação Event/Decision
+
+```
+EVENT = Algo que ACONTECEU (fato, passivo)
+DECISION = Algo que o sistema DECIDIU (ação, ativo)
+
+Exemplos:
+├── EVENT: user.login (usuário fez login)
+├── DECISION: access.denied (sistema negou acesso)
+├── EVENT: payment.attempted (usuário tentou pagar)
+├── DECISION: payment.blocked (sistema bloqueou pagamento)
+```
+
+### §2. Estrutura de Decision
+
+```go
+type SystemDecision struct {
+    Type        string    // "payment.blocked"
+    Outcome     string    // "blocked"
+    Reason      string    // "Invariante de billing violada"
+    ReasonCode  string    // "INVARIANT_LEDGER_MISMATCH"
+    TriggerType string    // "invariant"
+    TriggerID   string    // "inv-billing-001"
+    Severity    string    // "critical"
+    Reversible  bool      // false
+}
+```
+
+### §3. Lei da Rastreabilidade
+
+```
+Toda DECISION deve ser rastreável até:
+├── O que causou (trigger)
+├── Por que decidiu (reason)
+├── Quem foi afetado (user/app)
+├── Quando aconteceu (timestamp)
+└── Se pode ser revertida (reversible)
+```
+
+---
+
+## ARTIGO VI — INVARIANTES
+
+### §1. Lei das Invariantes em Produção
+
+```
+Invariantes são testes que rodam em PRODUÇÃO.
+Não são testes de desenvolvimento.
+São guardas que protegem o sistema 24/7.
+```
+
+### §2. Invariantes Obrigatórias
+
+```go
+// Estas invariantes DEVEM existir e passar sempre:
+
+// 1. Ledger Balance
+assert(sum(credits) - sum(debits) == current_balance)
+
+// 2. User Isolation
+assert(user.app_id == request.app_id)
+
+// 3. Session Integrity
+assert(session.user_id == token.user_id)
+
+// 4. Audit Completeness
+assert(sensitive_action.has_audit_log == true)
+```
+
+### §3. Lei da Resposta a Violação
+
+```
+Quando uma invariante é violada:
+
+1. LOGAR imediatamente (com todos os dados)
+2. ALERTAR (severity: critical)
+3. DECIDIR (registrar SystemDecision)
+4. CONSIDERAR kill switch (se crítico)
+5. NUNCA ignorar
+```
+
+---
+
+## ARTIGO VII — SEGURANÇA
+
+### §1. Lei do Fail Closed
+
+```
+Na dúvida, NEGAR.
+
+if !canVerifyPermission() {
+    return ErrAccessDenied  // ← CORRETO
+}
+
+if !canVerifyPermission() {
+    return nil  // ← INCONSTITUCIONAL
+}
+```
+
+### §2. Lei do Audit Obrigatório
+
+```
+Ações que DEVEM ser auditadas:
+├── Login/Logout
+├── Criação/Deleção de recursos
+├── Mudanças de permissão
+├── Operações de billing
+├── Ativação/Desativação de kill switch
+├── Mudanças em regras
+└── Qualquer ação de admin
+```
+
+### §3. Lei da Não-Exposição
+
+```
+NUNCA expor em logs ou respostas:
+├── Senhas (nem hash)
+├── Tokens completos
+├── Chaves de API completas
+├── Dados de cartão
+├── PII sem necessidade
+
+Mascarar: token_abc***xyz
+```
+
+---
+
+## ARTIGO VIII — CÓDIGO
+
+### §1. Lei da Clareza
+
+```go
+// CORRETO: Claro e explícito
+func (s *Service) CreateSubscription(ctx context.Context, req CreateSubscriptionRequest) (*Subscription, error)
+
+// INCONSTITUCIONAL: Ambíguo
+func (s *Service) Create(ctx context.Context, data interface{}) (interface{}, error)
+```
+
+### §2. Lei do Contexto
+
+```go
+// Context SEMPRE é o primeiro parâmetro
+func (s *Service) Process(ctx context.Context, ...) error  // ← CORRETO
+func (s *Service) Process(..., ctx context.Context) error  // ← ERRADO
+```
+
+### §3. Lei do Erro Explícito
+
+```go
+// Erro SEMPRE é o último retorno
+func (s *Service) Get() (*Data, error)  // ← CORRETO
+func (s *Service) Get() (error, *Data)  // ← ERRADO
+
+// NUNCA ignorar erro
+result, _ := s.Get()  // ← INCONSTITUCIONAL
+```
+
+---
+
+## ARTIGO IX — DEPLOY
+
+### §1. Lei do Checklist
+
+```
+Antes de QUALQUER deploy:
+├── [ ] Testes passando
+├── [ ] Build sem erros
+├── [ ] Migrations aplicadas
+├── [ ] Variáveis de ambiente configuradas
+├── [ ] Health check respondendo
+└── [ ] Rollback plan definido
+```
+
+### §2. Lei do Rollback
+
+```
+Todo deploy DEVE ter plano de rollback.
+Se não sabe como voltar, não faça deploy.
+```
+
+### §3. Lei da Observação
+
+```
+Após deploy:
+├── Observar logs por 15 minutos
+├── Verificar métricas de erro
+├── Confirmar health checks
+└── Só então considerar "sucesso"
+```
+
+---
+
+## ARTIGO X — EMENDAS
+
+### §1. Processo de Emenda
+
+```
+Esta constituição pode ser emendada quando:
+├── Há consenso técnico
+├── A mudança melhora o sistema
+├── Não viola princípios fundamentais
+└── É documentada com justificativa
+```
+
+### §2. Princípios Imutáveis
+
+```
+Estes princípios NÃO podem ser alterados:
+├── Multi-tenant isolation
+├── Audit immutability
+├── Fail closed security
+├── Kernel as source of truth
+```
+
+---
+
+## ASSINATURAS
+
+```
+Ratificado em: 12 de Janeiro de 2026
+Autor: Almir Felix de Jesus Filho
+Versão: 1.0
+
+Este documento é a lei suprema do sistema PROST-QS.
+Todo código está subordinado a esta constituição.
+```
+
+---
+
+## ANEXO A — CHECKLIST DE CONFORMIDADE
+
+### Para cada PR/Commit, verificar:
+
+```
+[ ] Queries filtram por app_id?
+[ ] Erros estão classificados corretamente?
+[ ] Operações críticas verificam kill switch?
+[ ] Ações sensíveis são auditadas?
+[ ] Decisões do sistema são registradas?
+[ ] Invariantes relevantes existem?
+[ ] Secrets não estão expostos?
+[ ] Context é primeiro parâmetro?
+[ ] Erros não são ignorados?
+```
+
+---
+
+## ANEXO B — GLOSSÁRIO CONSTITUCIONAL
+
+| Termo | Definição |
+|-------|-----------|
+| Kernel | Sistema central (PROST-QS) que é fonte de verdade |
+| App Satélite | Aplicação que consome APIs do kernel |
+| Invariante | Condição que DEVE ser sempre verdadeira |
+| Kill Switch | Mecanismo de desligamento de emergência |
+| Shadow Mode | Execução de teste sem afetar produção |
+| Decision | Ação deliberada do sistema (diferente de Event) |
+| Audit Trail | Registro imutável de ações sensíveis |
+| Fail Closed | Negar acesso quando em dúvida |
+
+---
+
+*"Um sistema sem constituição é um sistema sem lei."*
+
+*— PROST-QS Engineering Constitution v1.0*

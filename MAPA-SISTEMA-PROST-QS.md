@@ -399,6 +399,73 @@ internal/memory/
 
 ---
 
+### 5.9 SISTEMA IMUNOLÓGICO (pkg/immunity)
+**Propósito**: Auto-defesa, auto-cura e proteção ativa do sistema
+
+```
+pkg/immunity/
+├── immunity.go           # Orquestrador central
+├── auto_healing.go       # Sistema de auto-cura
+├── circuit_breaker.go    # Circuit breakers
+├── quarantine.go         # Gerenciador de quarentena
+├── alert_escalation.go   # Escalonamento de alertas
+├── self_defense.go       # Defesa ativa contra ataques
+├── handler.go            # API HTTP
+├── immunity_test.go      # Testes completos
+```
+
+**Componentes**:
+
+1. **Auto-Healing** - Recuperação automática de falhas
+   - Retry com backoff exponencial
+   - Handlers customizáveis por tipo de ação
+   - Histórico de tentativas
+
+2. **Circuit Breaker** - Proteção contra cascata de falhas
+   - Estados: closed → open → half_open
+   - Thresholds configuráveis
+   - Reset automático
+
+3. **Quarantine** - Isolamento de elementos suspeitos
+   - Tipos: soft (limitado) e hard (bloqueado)
+   - Auto-expiração
+   - Liberação manual com auditoria
+
+4. **Alert Escalation** - Escalonamento progressivo
+   - 5 níveis: Log → Dashboard → Team → OnCall → Management
+   - Deduplicação por fingerprint
+   - Acknowledge e resolve
+
+5. **Self Defense** - Defesa ativa contra ataques
+   - Detecção de brute force, DDoS, API abuse
+   - Ações progressivas: throttle → tarpit → block → blackhole
+   - Honeypots para detectar bots
+   - Rate limiting integrado
+
+**Endpoints**:
+```
+GET  /immunity/health           # Saúde do sistema
+GET  /immunity/stats            # Estatísticas completas
+GET  /immunity/alerts           # Alertas ativos
+POST /immunity/alerts/:id/ack   # Reconhecer alerta
+POST /immunity/alerts/:id/resolve # Resolver alerta
+GET  /immunity/quarantine       # Quarentenas ativas
+POST /immunity/quarantine/release # Liberar quarentena
+GET  /immunity/circuits         # Status dos circuit breakers
+POST /immunity/circuits/:name/reset # Reset circuit breaker
+GET  /immunity/threats          # Fontes bloqueadas
+POST /immunity/threats/block    # Bloquear IP
+POST /immunity/threats/unblock  # Desbloquear IP
+GET  /immunity/healing/history  # Histórico de healing
+POST /immunity/healing/trigger  # Disparar healing manual
+```
+
+**Filosofia**:
+> "O sistema deve se defender sozinho. Humanos são para casos excepcionais."
+
+
+---
+
 ## 6. FLUXO DE UMA DECISÃO DE AGENTE
 
 ```

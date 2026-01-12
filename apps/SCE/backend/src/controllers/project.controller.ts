@@ -7,11 +7,11 @@ const projectService = new ProjectService();
 export class ProjectController {
   /**
    * Cria um novo projeto
-   * O ownerId vem do token JWT (usuário autenticado via PROST-QS)
+   * O ownerId vem do token JWT do Kernel (usuário autenticado via PROST-QS)
    */
   async create(request: FastifyRequest, reply: FastifyReply) {
     const data = createProjectSchema.parse(request.body);
-    const ownerId = request.user?.id;
+    const ownerId = request.kernelUser?.id;
     
     if (!ownerId) {
       return reply.status(401).send({ error: 'Usuário não autenticado' });
@@ -26,8 +26,8 @@ export class ProjectController {
    * Admin vê todos, usuário comum vê apenas os seus
    */
   async list(request: FastifyRequest, reply: FastifyReply) {
-    const userId = request.user?.id;
-    const isAdmin = ['admin', 'super_admin', 'ADMIN'].includes(request.user?.role || '');
+    const userId = request.kernelUser?.id;
+    const isAdmin = ['admin', 'super_admin', 'ADMIN'].includes(request.kernelUser?.role || '');
     
     const projects = isAdmin 
       ? await projectService.listAll()
@@ -42,8 +42,8 @@ export class ProjectController {
    */
   async getOne(request: FastifyRequest, reply: FastifyReply) {
     const { id } = request.params as { id: string };
-    const userId = request.user?.id;
-    const isAdmin = ['admin', 'super_admin', 'ADMIN'].includes(request.user?.role || '');
+    const userId = request.kernelUser?.id;
+    const isAdmin = ['admin', 'super_admin', 'ADMIN'].includes(request.kernelUser?.role || '');
     
     const project = await projectService.getById(id);
     

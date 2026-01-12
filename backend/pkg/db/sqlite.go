@@ -20,6 +20,7 @@ import (
 	"prost-qs/backend/internal/authority"
 	"prost-qs/backend/internal/autonomy"
 	"prost-qs/backend/internal/billing"
+	"prost-qs/backend/internal/decision"
 	"prost-qs/backend/internal/event"
 	"prost-qs/backend/internal/explainability"
 	"prost-qs/backend/internal/federation"
@@ -41,6 +42,7 @@ import (
 	"prost-qs/backend/internal/telemetry"
 	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/pkg/capabilities"
+	"prost-qs/backend/pkg/invariants"
 )
 
 // InitSQLite inicializa a conexão com o banco de dados SQLite.
@@ -126,6 +128,16 @@ func MigrateSchema(db *gorm.DB) error {
 		&ads.AdCampaign{},
 		&ads.AdSpendEvent{},
 		&ads.AdGovernanceLimit{},
+
+		// ========================================
+		// AD DECISION ENGINE - Motor de Decisão em Tempo Real
+		// "Quem pode ver anúncio, qual anúncio, quanto vale"
+		// ========================================
+		&ads.AdSlot{},
+		&ads.AdCreative{},
+		&ads.AdTargeting{},
+		&ads.AdImpression{},
+		&ads.AdClick{},
 
 		// ========================================
 		// AGENT GOVERNANCE LAYER
@@ -337,6 +349,18 @@ func MigrateSchema(db *gorm.DB) error {
 		&notification.Notification{},
 		&notification.NotificationPreference{},
 		&notification.WebhookEndpoint{},
+
+		// ========================================
+		// DECISION SERVICE - Registro de Decisões
+		// "O que o sistema DECIDIU, não só o que aconteceu"
+		// ========================================
+		&decision.Decision{},
+
+		// ========================================
+		// INVARIANTS RUNNER - Histórico de Verificações
+		// "Testes ativos que vivem em produção"
+		// ========================================
+		&invariants.InvariantCheckRecord{},
 	)
 	if err != nil {
 		return fmt.Errorf("falha ao executar migrações: %w", err)

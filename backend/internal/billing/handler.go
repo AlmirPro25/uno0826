@@ -979,9 +979,9 @@ func (h *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 
 	// Criar checkout session via Stripe
 	ctx := c.Request.Context()
-	// URLs temporárias - depois trocar para páginas reais do frontend
-	successURL := "https://example.com/success"
-	cancelURL := "https://example.com/cancel"
+	// URLs do frontend real
+	successURL := "https://frontend-prost.vercel.app/dashboard/billing?success=true"
+	cancelURL := "https://frontend-prost.vercel.app/dashboard/billing?canceled=true"
 	
 	// CRÍTICO: Passar accountID como client_reference_id para resolução determinística
 	sessionURL, sessionID, err := h.stripeService.CreateCheckoutSession(ctx, account.StripeCustomerID, account.AccountID.String(), successURL, cancelURL)
@@ -995,6 +995,50 @@ func (h *BillingHandler) CreateCheckoutSession(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"checkout_url": sessionURL,
 		"session_id":   sessionID,
+		"url":          sessionURL, // Alias para frontend
+	})
+}
+
+// CreatePortalSession cria uma sessão do Stripe Customer Portal
+func (h *BillingHandler) CreatePortalSession(c *gin.Context) {
+	userIDStr := c.GetString("userID")
+	if userIDStr == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "Não autenticado"})
+		return
+	}
+
+	userID, err := uuid.Parse(userIDStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ID inválido"})
+		return
+	}
+
+	// Buscar billing account
+	account, err := h.service.GetBillingAccount(userID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Conta de billing não encontrada"})
+		return
+	}
+
+	if account.StripeCustomerID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Conta não tem customer Stripe vinculado"})
+		return
+	}
+
+	// Criar portal session via Stripe
+	ctx := c.Request.Context()
+	returnURL := "https://frontend-prost.vercel.app/dashboard/billing"
+	
+	portalURL, err := h.stripeService.CreatePortalSession(ctx, account.StripeCustomerID, returnURL)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar portal: " + err.Error()})
+		return
+	}
+
+	log.Printf("🔗 [PORTAL] Sessão criada: user=%s customer=%s", userID, account.StripeCustomerID)
+
+	c.JSON(http.StatusOK, gin.H{
+		"url": portalURL,
 	})
 }
 
@@ -1019,6 +1063,10 @@ func RegisterBillingRoutes(router *gin.RouterGroup, service *BillingService, gov
 
 		// Checkout Session (Stripe real)
 		billing.POST("/checkout", authMiddleware, handler.CreateCheckoutSession)
+		billing.POST("/checkout/pro", authMiddleware, handler.CreateCheckoutSession) // Alias para frontend
+		
+		// Stripe Customer Portal
+		billing.POST("/portal", authMiddleware, handler.CreatePortalSession)
 
 		// Ledger
 		billing.GET("/ledger", authMiddleware, handler.GetLedger)

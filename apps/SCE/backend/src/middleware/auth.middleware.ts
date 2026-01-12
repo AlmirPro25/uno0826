@@ -1,3 +1,22 @@
+/**
+ * ================================================================================
+ * ⚠️  DEPRECATED — NÃO USAR
+ * ================================================================================
+ * 
+ * Este middleware foi substituído por `kernel-auth.middleware.ts`.
+ * 
+ * MOTIVO: SCE não autentica ninguém. Apenas confia no Kernel.
+ * 
+ * O que usar agora:
+ *   import { kernelAuthMiddleware } from './kernel-auth.middleware.js';
+ * 
+ * Este arquivo será DELETADO após a migração completa.
+ * Data prevista: Janeiro 2026
+ * 
+ * ================================================================================
+ * @deprecated Use kernel-auth.middleware.ts
+ */
+
 import { FastifyRequest, FastifyReply } from 'fastify';
 import jwt from 'jsonwebtoken';
 

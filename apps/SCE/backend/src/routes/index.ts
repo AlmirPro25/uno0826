@@ -1,10 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { ProjectController } from '../controllers/project.controller.js';
-import { AuthService, loginSchema, registerSchema } from '../services/auth.service.js';
+import { AuthService } from '../services/auth.service.js'; // Apenas para provisionKernelApp (migração)
 import { DeploymentService } from '../services/deployment.service.js';
 import { DockerService } from '../services/docker.service.js';
 import { ProjectService } from '../services/project.service.js';
-import { authMiddleware } from '../middleware/auth.middleware.js';
+import { kernelAuthMiddleware } from '../middleware/kernel-auth.middleware.js'; // KERNEL ONLY
 import { kernel } from '../lib/kernel-client.js';
 import { PrismaClient } from '@prisma/client';
 
@@ -32,32 +32,34 @@ export async function apiRoutes(fastify: FastifyInstance) {
   });
 
   // ============================================
-  // AUTH (público)
+  // AUTH — SCE NÃO AUTENTICA NINGUÉM
+  // Redireciona para o Kernel Identity
   // ============================================
   fastify.post('/auth/login', async (req, res) => {
-    try {
-      const data = loginSchema.parse(req.body);
-      return await authService.login(data);
-    } catch (error) {
-      res.status(401).send({ error: 'Credenciais inválidas' });
-    }
+    // SCE não faz login. Redireciona para Kernel.
+    return res.status(410).send({
+      error: 'Auth local desativado. Use o Kernel Identity.',
+      code: 'AUTH_DEPRECATED',
+      redirect: `${process.env.PROSTQS_URL || 'http://localhost:8080'}/api/v1/identity/login`,
+      message: 'Faça login via PROST-QS Kernel e use o token retornado.'
+    });
   });
 
   fastify.post('/auth/register', async (req, res) => {
-    try {
-      const data = registerSchema.parse(req.body);
-      return await authService.register(data);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Erro ao registrar';
-      res.status(400).send({ error: msg });
-    }
+    // SCE não registra usuários. Redireciona para Kernel.
+    return res.status(410).send({
+      error: 'Registro local desativado. Use o Kernel Identity.',
+      code: 'AUTH_DEPRECATED',
+      redirect: `${process.env.PROSTQS_URL || 'http://localhost:8080'}/api/v1/identity/register`,
+      message: 'Registre-se via PROST-QS Kernel.'
+    });
   });
 
   // ============================================
-  // ROTAS PROTEGIDAS
+  // ROTAS PROTEGIDAS — APENAS JWT DO KERNEL
   // ============================================
   fastify.register(async (protectedRoutes) => {
-    protectedRoutes.addHook('preHandler', authMiddleware);
+    protectedRoutes.addHook('preHandler', kernelAuthMiddleware);
 
     // --- PROJECTS ---
     protectedRoutes.get('/projects', projectCtrl.list);
@@ -67,8 +69,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
     // Editar projeto
     protectedRoutes.put('/projects/:id', async (req, res) => {
       const { id } = req.params as { id: string };
-      const userId = req.user?.id;
-      const userRole = req.user?.role || '';
+      const userId = req.kernelUser?.id;
+      const userRole = req.kernelUser?.role || '';
       
       const canEdit = await ProjectController.canDeploy(id, userId!, userRole);
       if (!canEdit) {
@@ -89,8 +91,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
     
     protectedRoutes.delete('/projects/:id', async (req, res) => {
       const { id } = req.params as { id: string };
-      const userId = req.user?.id;
-      const userRole = req.user?.role || '';
+      const userId = req.kernelUser?.id;
+      const userRole = req.kernelUser?.role || '';
       
       // Validação de ownership
       const canDelete = await ProjectController.canDeploy(id, userId!, userRole);
@@ -128,8 +130,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
     // --- DEPLOYMENTS ---
     protectedRoutes.post('/projects/:id/deploy', async (req, res) => {
       const { id } = req.params as { id: string };
-      const userId = req.user?.id;
-      const userRole = req.user?.role || '';
+      const userId = req.kernelUser?.id;
+      const userRole = req.kernelUser?.role || '';
       
       // Validação de ownership
       const canDeploy = await ProjectController.canDeploy(id, userId!, userRole);
@@ -152,7 +154,7 @@ export async function apiRoutes(fastify: FastifyInstance) {
     // --- QUICK DEPLOY (ONBOARDING) ---
     // Cria projeto + deploy em 1 clique usando template
     protectedRoutes.post('/quick-deploy', async (req, res) => {
-      const userId = req.user?.id;
+      const userId = req.kernelUser?.id;
       
       if (!userId) {
         return res.status(401).send({ error: 'Não autenticado' });
@@ -284,8 +286,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
     // Listar variáveis de ambiente de um projeto (valores mascarados)
     protectedRoutes.get('/projects/:id/env', async (req, res) => {
       const { id } = req.params as { id: string };
-      const userId = req.user?.id;
-      const userRole = req.user?.role || '';
+      const userId = req.kernelUser?.id;
+      const userRole = req.kernelUser?.role || '';
       
       const canAccess = await ProjectController.canDeploy(id, userId!, userRole);
       if (!canAccess) {
@@ -309,8 +311,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
     protectedRoutes.post('/projects/:id/env', async (req, res) => {
       const { id } = req.params as { id: string };
       const { key, value } = req.body as { key: string; value: string };
-      const userId = req.user?.id;
-      const userRole = req.user?.role || '';
+      const userId = req.kernelUser?.id;
+      const userRole = req.kernelUser?.role || '';
       
       if (!key || !value) {
         return res.status(400).send({ error: 'Key e value são obrigatórios' });
@@ -333,8 +335,8 @@ export async function apiRoutes(fastify: FastifyInstance) {
     // Deletar variável de ambiente
     protectedRoutes.delete('/projects/:projectId/env/:envId', async (req, res) => {
       const { projectId, envId } = req.params as { projectId: string; envId: string };
-      const userId = req.user?.id;
-      const userRole = req.user?.role || '';
+      const userId = req.kernelUser?.id;
+      const userRole = req.kernelUser?.role || '';
       
       const canAccess = await ProjectController.canDeploy(projectId, userId!, userRole);
       if (!canAccess) {
@@ -356,7 +358,7 @@ export async function apiRoutes(fastify: FastifyInstance) {
     
     // Buscar eventos de telemetria do usuário
     protectedRoutes.get('/telemetry/events', async (req, res) => {
-      const userId = req.user?.id;
+      const userId = req.kernelUser?.id;
       if (!userId) return res.status(401).send({ error: 'Não autenticado' });
       
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -376,7 +378,7 @@ export async function apiRoutes(fastify: FastifyInstance) {
     
     // Buscar alertas do usuário
     protectedRoutes.get('/telemetry/alerts', async (req, res) => {
-      const userId = req.user?.id;
+      const userId = req.kernelUser?.id;
       if (!userId) return res.status(401).send({ error: 'Não autenticado' });
       
       const user = await prisma.user.findUnique({ where: { id: userId } });
@@ -388,9 +390,10 @@ export async function apiRoutes(fastify: FastifyInstance) {
       return { alerts };
     });
     
-    // Provisionar App no Kernel (para usuários existentes)
+    // Provisionar App no Kernel (para usuários existentes — MIGRAÇÃO)
+    // TODO: Remover após migração completa
     protectedRoutes.post('/kernel/provision', async (req, res) => {
-      const userId = req.user?.id;
+      const userId = req.kernelUser?.id;
       const { name, password } = req.body as { name: string; password: string };
       
       if (!userId) return res.status(401).send({ error: 'Não autenticado' });

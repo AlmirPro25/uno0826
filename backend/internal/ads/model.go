@@ -130,7 +130,8 @@ type AdCampaign struct {
 	Name            string    `gorm:"type:text;not null" json:"name"`
 	Objective       string    `gorm:"type:text;not null" json:"objective"`
 	BidStrategy     string    `gorm:"type:text;not null;default:'lowest_cost'" json:"bid_strategy"`
-	BidAmount       int64     `gorm:"default:0" json:"bid_amount"` // Para manual bidding
+	BidAmount       int64     `gorm:"default:0" json:"bid_amount"`       // Lance em centavos (CPM/CPC/CPA)
+	DailyBudget     int64     `gorm:"default:0" json:"daily_budget"`     // Limite diário em centavos
 	DailySpendLimit int64     `gorm:"default:0" json:"daily_spend_limit"` // 0 = sem limite
 	TotalSpent      int64     `gorm:"default:0" json:"total_spent"`
 	Status          string    `gorm:"type:text;not null;default:'draft'" json:"status"`
@@ -139,6 +140,9 @@ type AdCampaign struct {
 	EndAt           *time.Time `json:"end_at,omitempty"`
 	CreatedAt       time.Time `gorm:"not null" json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
+	
+	// Campo transiente (não persiste) - usado durante auction
+	WinningPrice    int64     `gorm:"-" json:"winning_price,omitempty"`
 }
 
 func (AdCampaign) TableName() string {

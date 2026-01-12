@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"prost-qs/backend/pkg/invariants"
 )
 
 // ========================================
@@ -408,8 +409,16 @@ func (h *MultiAppIdentityHandler) generateJWT(userID uuid.UUID, email, name, rol
 		appIDs[i] = m.AppID
 	}
 
+	// INVARIANT: user_id nunca pode ser nil
+	invariants.AssertCritical(
+		userID != uuid.Nil,
+		"jwt_nil_user_id",
+		"Attempted to generate JWT with nil user_id",
+		map[string]interface{}{"email": email},
+	)
+
 	// IMPORTANTE: usar "user_id" (não "sub") para compatibilidade com AuthMiddleware
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+	claims := jwt.MapClaims{
 		"user_id":        userID.String(),
 		"email":          email,
 		"name":           name,
@@ -420,7 +429,17 @@ func (h *MultiAppIdentityHandler) generateJWT(userID uuid.UUID, email, name, rol
 		"type":           "global_user",
 		"exp":            expiresAt.Unix(),
 		"iat":            time.Now().Unix(),
+	}
+
+	// INVARIANT: senha NUNCA pode estar no JWT
+	invariants.AssertNoPasswordInJWT(map[string]interface{}{
+		"user_id": claims["user_id"],
+		"email":   claims["email"],
+		"name":    claims["name"],
+		"role":    claims["role"],
 	})
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	tokenString, _ := token.SignedString([]byte(h.jwtSecret))
 	return tokenString, expiresAt
 }

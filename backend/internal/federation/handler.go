@@ -2,6 +2,7 @@ package federation
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -163,7 +164,18 @@ func (h *FederationHandler) GoogleCallback(c *gin.Context) {
 }
 
 // MockGoogleCallback simula callback do Google para desenvolvimento
+// PROTEGIDO: Só funciona em ambiente de desenvolvimento
 func (h *FederationHandler) MockGoogleCallback(c *gin.Context) {
+	// Bloquear em produção
+	if os.Getenv("GIN_MODE") == "release" {
+		c.JSON(http.StatusForbidden, gin.H{
+			"error":   "Endpoint não disponível em produção",
+			"code":    "PROD_BLOCKED",
+			"message": "Mock OAuth só está disponível em desenvolvimento",
+		})
+		return
+	}
+
 	stateStr := c.Query("state")
 	if stateStr == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing state"})

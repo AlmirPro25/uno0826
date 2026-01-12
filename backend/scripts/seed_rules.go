@@ -37,6 +37,16 @@ type Rule struct {
 }
 
 func main() {
+	// PROTEÇÃO: Bloquear em produção
+	ginMode := os.Getenv("GIN_MODE")
+	if ginMode == "release" {
+		log.Fatal("❌ ERRO: Seeds não podem ser executados em produção (GIN_MODE=release)")
+	}
+
+	// Aviso adicional
+	fmt.Println("⚠️  ATENÇÃO: Este script é apenas para desenvolvimento/testes")
+	fmt.Println("")
+
 	// Carregar .env
 	godotenv.Load()
 	godotenv.Load("../.env")

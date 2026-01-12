@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"prost-qs/backend/pkg/invariants"
 )
 
 // ========================================
@@ -179,6 +180,12 @@ type IngestEventRequest struct {
 
 // IngestEvent processa um evento de um app
 func (s *TelemetryService) IngestEvent(appID uuid.UUID, req *IngestEventRequest, ip, userAgent string) error {
+	// ========================================
+	// INVARIANT: Telemetria DEVE ter app_id válido
+	// "Evento sem dono é evento perdido"
+	// ========================================
+	invariants.AssertTelemetryHasAppID(appID.String())
+	
 	// Parse user_id
 	userID, err := uuid.Parse(req.UserID)
 	if err != nil {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CreditCard, Zap, FileText, CheckCircle2, BarChart, History, Wallet, Loader2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/app-context";
@@ -28,12 +29,25 @@ type SubscriptionStatus = {
     message: string;
 }
 
-export default function BillingPage() {
+function BillingContent() {
     const { activeApp } = useApp();
+    const searchParams = useSearchParams();
     const [account, setAccount] = useState<BillingAccount | null>(null);
     const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
     const [loading, setLoading] = useState(true);
     const [upgrading, setUpgrading] = useState(false);
+
+    useEffect(() => {
+        // Check for success/canceled params from Stripe redirect
+        const success = searchParams.get('success');
+        const canceled = searchParams.get('canceled');
+        
+        if (success === 'true') {
+            toast.success("🎉 Pagamento realizado com sucesso! Seu plano Pro está ativo.");
+        } else if (canceled === 'true') {
+            toast.info("Checkout cancelado. Você pode tentar novamente quando quiser.");
+        }
+    }, [searchParams]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -274,5 +288,17 @@ export default function BillingPage() {
                 </div>
             </div>
         </div>
+    );
+}
+
+export default function BillingPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex items-center justify-center h-[60vh]">
+                <Zap className="w-8 h-8 text-indigo-500 animate-pulse" />
+            </div>
+        }>
+            <BillingContent />
+        </Suspense>
     );
 }

@@ -12,6 +12,16 @@ import (
 
 func main() {
 	godotenv.Load("../.env")
+
+	// PROTEÇÃO: Requer confirmação explícita
+	if os.Getenv("CONFIRM_ADMIN_PROMOTION") != "yes" {
+		fmt.Println("⚠️  ATENÇÃO: Este script promove um usuário a super_admin")
+		fmt.Println("")
+		fmt.Println("Para executar, defina a variável de ambiente:")
+		fmt.Println("  CONFIRM_ADMIN_PROMOTION=yes go run scripts/promote_admin.go")
+		fmt.Println("")
+		log.Fatal("❌ Execução cancelada por segurança")
+	}
 	
 	dbPath := os.Getenv("SQLITE_DB_PATH")
 	if dbPath == "" {

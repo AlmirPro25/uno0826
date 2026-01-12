@@ -204,3 +204,118 @@ const (
 	PresenceActive1hThreshold = 1 * time.Hour    // Ativo última hora
 	PresenceActive24hThreshold = 24 * time.Hour  // Ativo últimas 24h
 )
+
+// ========================================
+// 6. DECISION - AJUSTE 3: Separar EVENTO de DECISÃO
+// "Event = algo que aconteceu"
+// "Decision = algo que o sistema decidiu"
+// ========================================
+
+// SystemDecision representa uma decisão tomada pelo sistema
+// Diferente de Event (fato), Decision é uma ação deliberada do kernel
+type SystemDecision struct {
+	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
+	AppID       uuid.UUID  `gorm:"type:uuid;index:idx_decision_app" json:"app_id"`
+	
+	// Tipo de decisão (hierárquico)
+	// Exemplos: payment.blocked, access.denied, rule.triggered, killswitch.activated
+	Type        string     `gorm:"size:100;not null;index:idx_decision_type" json:"type"`
+	
+	// Resultado da decisão
+	Outcome     string     `gorm:"size:50;not null" json:"outcome"` // allowed, blocked, deferred, escalated
+	
+	// Razão da decisão (para auditoria e explainability)
+	Reason      string     `gorm:"size:200;not null" json:"reason"`
+	ReasonCode  string     `gorm:"size:50" json:"reason_code,omitempty"` // código máquina
+	
+	// Contexto da decisão
+	UserID      *uuid.UUID `gorm:"type:uuid;index:idx_decision_user" json:"user_id,omitempty"`
+	SessionID   *uuid.UUID `gorm:"type:uuid" json:"session_id,omitempty"`
+	ResourceID  string     `gorm:"size:100" json:"resource_id,omitempty"`  // ID do recurso afetado
+	ResourceType string    `gorm:"size:50" json:"resource_type,omitempty"` // tipo do recurso
+	
+	// O que causou a decisão
+	TriggerType string     `gorm:"size:50" json:"trigger_type,omitempty"` // rule, invariant, killswitch, manual
+	TriggerID   string     `gorm:"size:100" json:"trigger_id,omitempty"`  // ID da regra/invariant
+	
+	// Dados extras para análise
+	Context     string     `gorm:"type:text" json:"context,omitempty"`   // JSON com dados contextuais
+	Metadata    string     `gorm:"type:text" json:"metadata,omitempty"`  // JSON com dados extras
+	
+	// Impacto
+	Severity    string     `gorm:"size:20" json:"severity"` // low, medium, high, critical
+	Reversible  bool       `gorm:"default:true" json:"reversible"`
+	
+	// Timestamps
+	DecidedAt   time.Time  `gorm:"not null;index:idx_decision_timestamp" json:"decided_at"`
+	ExpiresAt   *time.Time `json:"expires_at,omitempty"` // para decisões temporárias
+	
+	CreatedAt   time.Time  `json:"created_at"`
+}
+
+func (SystemDecision) TableName() string {
+	return "telemetry_decisions"
+}
+
+// ========================================
+// 7. DECISION TYPES - Contrato oficial
+// ========================================
+
+// Tipos de decisões do sistema
+const (
+	// Acesso
+	DecisionAccessAllowed    = "access.allowed"
+	DecisionAccessDenied     = "access.denied"
+	DecisionAccessDeferred   = "access.deferred"
+	
+	// Pagamento
+	DecisionPaymentAllowed   = "payment.allowed"
+	DecisionPaymentBlocked   = "payment.blocked"
+	DecisionPaymentRetry     = "payment.retry"
+	
+	// Regras
+	DecisionRuleTriggered    = "rule.triggered"
+	DecisionRuleSkipped      = "rule.skipped"
+	DecisionRuleShadow       = "rule.shadow"      // executou em shadow mode
+	
+	// Kill Switch
+	DecisionKillswitchBlock  = "killswitch.block"
+	DecisionKillswitchAllow  = "killswitch.allow"
+	
+	// Segurança
+	DecisionSecurityBlock    = "security.block"
+	DecisionSecurityQuarantine = "security.quarantine"
+	DecisionSecurityEscalate = "security.escalate"
+	
+	// Invariantes
+	DecisionInvariantViolation = "invariant.violation"
+	DecisionInvariantRecovery  = "invariant.recovery"
+	
+	// Rate Limit
+	DecisionRateLimitBlock   = "ratelimit.block"
+	DecisionRateLimitThrottle = "ratelimit.throttle"
+	
+	// Agentes
+	DecisionAgentAllowed     = "agent.allowed"
+	DecisionAgentBlocked     = "agent.blocked"
+	DecisionAgentSuspended   = "agent.suspended"
+)
+
+// Outcomes possíveis
+const (
+	OutcomeAllowed   = "allowed"
+	OutcomeBlocked   = "blocked"
+	OutcomeDeferred  = "deferred"
+	OutcomeEscalated = "escalated"
+	OutcomeRetry     = "retry"
+)
+
+// Trigger types
+const (
+	TriggerRule      = "rule"
+	TriggerInvariant = "invariant"
+	TriggerKillswitch = "killswitch"
+	TriggerManual    = "manual"
+	TriggerAutomatic = "automatic"
+	TriggerPolicy    = "policy"
+)

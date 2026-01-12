@@ -6,6 +6,8 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"prost-qs/backend/pkg/invariants"
 )
 
 // ========================================
@@ -48,6 +50,12 @@ func (s *AuditService) Log(event *AuditEvent) error {
 	event.CreatedAt = time.Now()
 	event.PreviousHash = s.lastHash
 	event.Hash = event.ComputeHash()
+
+	// INVARIANT: Validar timestamp
+	invariants.AssertAuditTimestampValid(event.ID.String(), event.CreatedAt)
+
+	// INVARIANT: Verificar se tem ator identificado (warning se não tiver)
+	invariants.AssertAuditHasActor(event.ID.String(), event.ActorID.String(), event.ActorType)
 
 	if err := s.db.Create(event).Error; err != nil {
 		return err
@@ -321,12 +329,16 @@ func (s *AuditService) VerifyChain(startSeq, endSeq int64) (bool, error) {
 		// Verificar hash
 		computedHash := event.ComputeHash()
 		if computedHash != event.Hash {
+			// INVARIANT: Hash não bate - evento foi modificado
+			invariants.AssertAuditEventImmutable(event.ID.String(), event.Hash, computedHash)
 			return false, nil
 		}
 
 		// Verificar encadeamento
 		if i > 0 {
 			if event.PreviousHash != events[i-1].Hash {
+				// INVARIANT: Cadeia quebrada
+				invariants.AssertAuditChainIntegrity(event.ID.String(), events[i-1].Hash, event.PreviousHash)
 				return false, nil
 			}
 		}

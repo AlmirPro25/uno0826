@@ -13,6 +13,7 @@ import (
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"prost-qs/backend/pkg/invariants"
 )
 
 // ========================================
@@ -23,6 +24,7 @@ type RulesService struct {
 	db          *gorm.DB
 	stopEval    chan struct{}
 	evalWg      sync.WaitGroup
+	planGuard   *PlanGuard // Verificador de plano
 	
 	// Callbacks para ações
 	alertCallback   func(appID uuid.UUID, alertType, message string, data map[string]interface{})
@@ -35,8 +37,9 @@ func NewRulesService(db *gorm.DB) *RulesService {
 	db.AutoMigrate(&Rule{}, &RuleExecution{}, &AppConfig{}, &TemporaryRule{}, &ActionAuditLog{}, &ShadowExecution{}, &AuthorityGrant{})
 	
 	svc := &RulesService{
-		db:       db,
-		stopEval: make(chan struct{}),
+		db:        db,
+		stopEval:  make(chan struct{}),
+		planGuard: NewPlanGuard(db), // Inicializar PlanGuard
 	}
 	
 	// Seed regras padrão para VOX-BRIDGE
@@ -280,10 +283,23 @@ func (s *RulesService) evaluateAllMetricRules() {
 // ========================================
 
 // CreateRule cria uma nova regra
+// PROTEGIDO POR PLAN GUARD: Verifica se o plano permite o tipo de ação
 func (s *RulesService) CreateRule(rule *Rule) error {
+	// Verificar se o plano permite criar esta regra
+	validation := s.planGuard.ValidateRuleCreation(rule.AppID, rule.ActionType)
+	if !validation.Allowed {
+		log.Printf("🚫 [RULES] Criação bloqueada: app=%s action=%s reason=%s plan=%s",
+			rule.AppID, rule.ActionType, validation.Reason, validation.PlanID)
+		return fmt.Errorf("PLAN_BLOCKED: %s (upgrade para: %s)", validation.Reason, validation.UpgradeTo)
+	}
+
 	rule.ID = uuid.New()
 	rule.CreatedAt = time.Now()
 	rule.UpdatedAt = time.Now()
+	
+	log.Printf("✅ [RULES] Regra criada: app=%s action=%s plan=%s",
+		rule.AppID, rule.ActionType, validation.PlanID)
+	
 	return s.db.Create(rule).Error
 }
 
@@ -326,8 +342,27 @@ func (s *RulesService) ToggleRule(id uuid.UUID, active bool) error {
 // ========================================
 
 // EvaluateRule avalia uma regra específica
+// PROTEGIDO POR INVARIANTS: Anti-recursão e rate limiting
 func (s *RulesService) evaluateRule(rule *Rule) {
 	start := time.Now()
+	
+	// ========================================
+	// INVARIANT: Proteção contra recursão
+	// ========================================
+	cleanup, err := startRuleExecutionTracking(rule.AppID.String(), rule.ID.String())
+	if err != nil {
+		log.Printf("🚫 [RULES] Execução bloqueada por invariant: %s - %v", rule.ID, err)
+		return
+	}
+	defer cleanup()
+	
+	// ========================================
+	// INVARIANT: Verificar killswitch
+	// ========================================
+	if checkKillswitchForRules(rule.AppID.String()) {
+		log.Printf("🛑 [RULES] Execução bloqueada por killswitch: app=%s rule=%s", rule.AppID, rule.ID)
+		return
+	}
 	
 	// Verificar cooldown
 	if rule.LastTriggeredAt != nil {
@@ -336,6 +371,11 @@ func (s *RulesService) evaluateRule(rule *Rule) {
 			return // Ainda em cooldown
 		}
 	}
+	
+	// ========================================
+	// INVARIANT: Rate limiting de execuções
+	// ========================================
+	trackRuleExecution(rule.AppID.String(), rule.ID.String())
 	
 	// Buscar métricas do app
 	metrics, err := s.getAppMetrics(rule.AppID)
@@ -555,6 +595,20 @@ func (s *RulesService) evalComparison(expr string) (bool, error) {
 
 func (s *RulesService) executeAction(rule *Rule, metrics map[string]float64) (map[string]interface{}, error) {
 	result := make(map[string]interface{})
+	
+	// VALIDAÇÃO DE PLANO - Verificar se o plano permite esta ação
+	planValidation := s.planGuard.ValidateActionExecution(rule.AppID, rule.ActionType)
+	if !planValidation.Allowed {
+		log.Printf("🚫 [RULES] Execução bloqueada por plano: app=%s action=%s plan=%s reason=%s",
+			rule.AppID, rule.ActionType, planValidation.PlanID, planValidation.Reason)
+		s.logBlockedAction(rule, fmt.Sprintf("PLAN: %s", planValidation.Reason))
+		return map[string]interface{}{
+			"blocked":     true,
+			"reason":      planValidation.Reason,
+			"plan":        planValidation.PlanID,
+			"upgrade_to":  planValidation.UpgradeTo,
+		}, fmt.Errorf("action blocked by plan: %s", planValidation.Reason)
+	}
 	
 	// VALIDAÇÃO DE POLÍTICA - Antes de qualquer ação
 	validation := ValidateAction(rule.ActionType, rule.AppID, rule.ActionConfig)
@@ -1183,4 +1237,75 @@ func (s *RulesService) GetAppConfigValue(appID uuid.UUID, key string, defaultVal
 	}
 	
 	return config.Value
+}
+
+// ========================================
+// INVARIANTS INTEGRATION
+// "O sistema se recusa a entrar em colapso"
+// ========================================
+
+// Tracking de execuções por regra (para rate limiting)
+var (
+	ruleExecutionCounts     = make(map[string][]time.Time)
+	ruleExecutionCountsLock sync.RWMutex
+)
+
+// startRuleExecutionTracking inicia tracking de execução com proteção anti-recursão
+func startRuleExecutionTracking(appID, ruleID string) (func(), error) {
+	return invariants.StartRuleExecution(appID, ruleID)
+}
+
+// checkKillswitchForRules verifica se o killswitch está ativo para regras
+func checkKillswitchForRules(appID string) bool {
+	return invariants.CheckKillswitchSafe(appID)
+}
+
+// trackRuleExecution registra execução para rate limiting
+func trackRuleExecution(appID, ruleID string) {
+	ruleExecutionCountsLock.Lock()
+	defer ruleExecutionCountsLock.Unlock()
+	
+	key := appID + ":" + ruleID
+	now := time.Now()
+	oneMinuteAgo := now.Add(-1 * time.Minute)
+	
+	// Limpar execuções antigas
+	if times, exists := ruleExecutionCounts[key]; exists {
+		newTimes := make([]time.Time, 0)
+		for _, t := range times {
+			if t.After(oneMinuteAgo) {
+				newTimes = append(newTimes, t)
+			}
+		}
+		ruleExecutionCounts[key] = newTimes
+	}
+	
+	// Adicionar nova execução
+	ruleExecutionCounts[key] = append(ruleExecutionCounts[key], now)
+	
+	// Verificar rate limit via invariant
+	count := len(ruleExecutionCounts[key])
+	invariants.AssertRuleExecutionLimit(appID, ruleID, count)
+}
+
+// GetRuleExecutionRate retorna a taxa de execução de uma regra no último minuto
+func (s *RulesService) GetRuleExecutionRate(appID, ruleID string) int {
+	ruleExecutionCountsLock.RLock()
+	defer ruleExecutionCountsLock.RUnlock()
+	
+	key := appID + ":" + ruleID
+	if times, exists := ruleExecutionCounts[key]; exists {
+		return len(times)
+	}
+	return 0
+}
+
+// NotifyKillswitchChange notifica o sistema de invariants sobre mudança no killswitch
+func NotifyKillswitchChange(appID string, isActive bool) {
+	invariants.UpdateKillswitchCache(appID, isActive)
+}
+
+// NotifyGlobalKillswitchChange notifica mudança no killswitch global
+func NotifyGlobalKillswitchChange(isActive bool) {
+	invariants.UpdateGlobalKillswitch(isActive)
 }

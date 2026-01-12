@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"prost-qs/backend/pkg/invariants"
 	"prost-qs/backend/pkg/statemachine"
 )
 
@@ -299,12 +300,25 @@ func (s *BillingService) ListPaymentIntents(accountID uuid.UUID, limit int) ([]P
 // LEDGER
 // ========================================
 
+// AddLedgerEntry é o método público para adicionar entradas no ledger
+// Usado em testes de concorrência e operações externas
+func (s *BillingService) AddLedgerEntry(accountID uuid.UUID, entryType string, amount int64, currency, description, referenceID string) error {
+	return s.addLedgerEntry(accountID, entryType, amount, currency, description, referenceID)
+}
+
 // addLedgerEntry adiciona uma entrada no ledger e atualiza o saldo
+// PROTEGIDO POR INVARIANTS: Saldo negativo e transações sem origem são detectados
 func (s *BillingService) addLedgerEntry(accountID uuid.UUID, entryType string, amount int64, currency, description, referenceID string) error {
+	// INVARIANT: Toda transação deve ter origem rastreável
+	invariants.AssertTransactionHasOrigin(uuid.New().String(), referenceID, entryType)
+	
+	// INVARIANT: Valor da transação deve ser positivo
+	invariants.AssertTransactionAmountPositive("pre-create", amount)
+
 	return s.db.Transaction(func(tx *gorm.DB) error {
-		// Get current balance
+		// Get current balance with row lock for concurrency safety
 		var account BillingAccount
-		if err := tx.Where("account_id = ?", accountID).First(&account).Error; err != nil {
+		if err := tx.Set("gorm:query_option", "FOR UPDATE").Where("account_id = ?", accountID).First(&account).Error; err != nil {
 			return err
 		}
 
@@ -313,6 +327,12 @@ func (s *BillingService) addLedgerEntry(accountID uuid.UUID, entryType string, a
 		if entryType == "credit" {
 			newBalance = account.Balance + amount
 		} else {
+			// BLOQUEIO: Débito não pode resultar em saldo negativo
+			if account.Balance < amount {
+				// Registrar violação para auditoria
+				invariants.AssertNoNegativeBalance(accountID.String(), account.Balance, amount)
+				return ErrInsufficientBalance
+			}
 			newBalance = account.Balance - amount
 		}
 
@@ -354,7 +374,14 @@ func (s *BillingService) GetLedgerEntries(accountID uuid.UUID, limit int) ([]Led
 // ========================================
 
 // CreateSubscription cria uma assinatura
+// PROTEGIDO POR INVARIANTS: Subscription sem owner é bloqueada
 func (s *BillingService) CreateSubscription(ctx context.Context, accountID uuid.UUID, planID string, amount int64, currency, interval string) (*Subscription, error) {
+	// INVARIANT FATAL: Subscription DEVE ter owner válido
+	invariants.AssertSubscriptionHasOwner(uuid.New(), accountID)
+	
+	// INVARIANT: Subscription DEVE ter plano válido
+	invariants.AssertSubscriptionHasValidPlan(uuid.Nil, planID)
+
 	account, err := s.GetBillingAccountByID(accountID)
 	if err != nil {
 		return nil, err
@@ -427,11 +454,15 @@ func (s *BillingService) GetActiveSubscription(accountID uuid.UUID) (*Subscripti
 // ========================================
 
 // RequestPayout solicita um saque
+// PROTEGIDO POR INVARIANTS: Payout maior que saldo é bloqueado
 func (s *BillingService) RequestPayout(accountID uuid.UUID, amount int64, currency, destination string) (*Payout, error) {
 	account, err := s.GetBillingAccountByID(accountID)
 	if err != nil {
 		return nil, err
 	}
+
+	// INVARIANT FATAL: Payout não pode exceder saldo disponível
+	invariants.AssertPayoutWithinBalance(accountID.String(), account.Balance, amount)
 
 	if account.Balance < amount {
 		return nil, ErrInsufficientBalance

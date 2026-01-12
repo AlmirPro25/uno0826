@@ -32,7 +32,9 @@ import {
     Database,
     Eye,
     Scale,
-    Bell
+    Bell,
+    ShieldCheck,
+    Megaphone
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
@@ -71,11 +73,15 @@ const governanceItems = [
     { href: "/dashboard/authority", label: "Autoridade", icon: Crown },
     { href: "/dashboard/agents", label: "Agentes", icon: Bot },
     { href: "/dashboard/approvals", label: "Aprovações", icon: UserCheck },
+    { href: "/dashboard/decisions", label: "Decisões", icon: Scale },
     { href: "/dashboard/memory", label: "Memória", icon: Database },
     { href: "/dashboard/observer", label: "Observer", icon: Eye },
     { href: "/dashboard/timeline", label: "Timeline", icon: GitBranch },
     { href: "/dashboard/secrets", label: "Secrets", icon: Key },
     { href: "/dashboard/killswitch", label: "Kill Switch", icon: Power },
+    { href: "/dashboard/invariants", label: "Invariants", icon: ShieldCheck },
+    { href: "/dashboard/immunity", label: "Imunidade", icon: Shield },
+    { href: "/dashboard/ads", label: "Ad Gateway", icon: Megaphone },
 ];
 
 // Items de super admin global

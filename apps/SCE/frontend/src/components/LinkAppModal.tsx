@@ -1,36 +1,90 @@
 'use client';
 
 import { useState } from 'react';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 interface LinkAppModalProps {
   isOpen: boolean;
-  appName: string;
-  userEmail: string;
-  onConfirm: () => Promise<void>;
-  onCancel: () => void;
+  onClose?: () => void;
+  onConfirm?: () => Promise<void>;
+  onCancel?: () => void;
+  appName?: string;
+  userEmail?: string;
 }
 
+const PROSTQS_URL = process.env.NEXT_PUBLIC_PROSTQS_URL || 'https://uno0826.onrender.com';
+const APP_ID = process.env.NEXT_PUBLIC_PROSTQS_APP_ID || '011c6e88-9556-43ff-ad4e-27e20a5f5ea5';
+
 /**
- * Modal de confirmação para vincular usuário a um novo app
+ * Modal de confirmação para vincular usuário ao SCE
  * 
  * Usado quando:
- * - Usuário já tem conta no PROST-QS
- * - Mas ainda não tem membership neste app
+ * - Usuário já tem conta no PROST-QS (Kernel)
+ * - Mas ainda não tem membership no SCE
  * - Login retorna needs_link: true
  * 
  * Princípio: "Login unificado sem consentimento explícito é só um bug elegante."
  */
-export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }: LinkAppModalProps) {
+export function LinkAppModal({ 
+  isOpen, 
+  onClose, 
+  onConfirm, 
+  onCancel,
+  appName = 'SCE',
+  userEmail 
+}: LinkAppModalProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { user, token, updateAfterLink, logout } = useAuthStore();
 
-  if (!isOpen) return null;
+  if (!isOpen || !user) return null;
 
   const handleConfirm = async () => {
+    // Se callback externo foi fornecido, usar ele
+    if (onConfirm) {
+      setIsLoading(true);
+      try {
+        await onConfirm();
+      } catch (err: any) {
+        setError(err.message || 'Erro ao vincular conta');
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // Comportamento padrão
+    if (!token) {
+      setError('Token não disponível. Faça login novamente.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+
     try {
-      await onConfirm();
+      const response = await fetch(`${PROSTQS_URL}/api/v1/identity/link-app`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ app_id: APP_ID }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Erro ao vincular conta');
+      }
+
+      const data = await response.json();
+
+      // Atualizar store com novo token e memberships
+      updateAfterLink(data.token, data.memberships);
+
+      // Fechar modal — AuthGuard vai permitir acesso agora
+      onClose?.();
+
     } catch (err: any) {
       setError(err.message || 'Erro ao vincular conta');
     } finally {
@@ -38,12 +92,25 @@ export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }
     }
   };
 
+  const handleCancel = () => {
+    if (onCancel) {
+      onCancel();
+      return;
+    }
+    // Comportamento padrão: logout e fechar
+    logout();
+    onClose?.();
+  };
+
+  const displayEmail = userEmail || user.email;
+  const displayName = user.name;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div 
         className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onCancel}
+        onClick={handleCancel}
       />
       
       {/* Modal */}
@@ -56,7 +123,7 @@ export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }
             </svg>
           </div>
           <h2 className="text-lg font-semibold text-white">
-            Vincular conta
+            Vincular conta ao {appName}
           </h2>
         </div>
 
@@ -66,7 +133,7 @@ export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }
             Você já tem uma conta no <span className="text-white font-medium">PROST-QS</span>.
           </p>
           <p className="text-zinc-400 text-sm mb-4">
-            Deseja criar uma conta no <span className="text-white font-medium">{appName}</span> usando:
+            Deseja vincular sua conta ao <span className="text-white font-medium">{appName}</span>?
           </p>
           
           {/* Email badge */}
@@ -76,8 +143,18 @@ export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <span className="text-white text-sm font-mono">{userEmail}</span>
+            <div>
+              <span className="text-white text-sm font-medium block">{displayName}</span>
+              <span className="text-zinc-400 text-xs">{displayEmail}</span>
+            </div>
           </div>
+
+          {/* Info sobre origem */}
+          {user.originAppId && (
+            <p className="mt-3 text-xs text-zinc-500">
+              Conta criada originalmente em outro app do ecossistema PROST-QS.
+            </p>
+          )}
         </div>
 
         {/* Error */}
@@ -90,7 +167,7 @@ export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }
         {/* Actions */}
         <div className="flex gap-3">
           <button
-            onClick={onCancel}
+            onClick={handleCancel}
             disabled={isLoading}
             className="flex-1 px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-lg transition-colors disabled:opacity-50"
           >
@@ -110,14 +187,16 @@ export function LinkAppModal({ isOpen, appName, userEmail, onConfirm, onCancel }
                 Vinculando...
               </>
             ) : (
-              'Confirmar'
+              'Vincular conta'
             )}
           </button>
         </div>
 
         {/* Footer note */}
         <p className="mt-4 text-xs text-zinc-500 text-center">
-          Seus dados e configurações serão separados por app.
+          Seus dados e configurações serão isolados por app.
+          <br />
+          Você pode desvincular a qualquer momento.
         </p>
       </div>
     </div>

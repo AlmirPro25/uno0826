@@ -544,7 +544,7 @@ func TestScenario9_MidCycleUpgrade(t *testing.T) {
 		"status":               "active",
 		"current_period_start": time.Now().Unix(),
 		"current_period_end":   time.Now().AddDate(0, 1, 0).Unix(),
-		"metadata": map[string]string{
+		"metadata": map[string]interface{}{
 			"kernel_app_id": appID,
 			"kernel_plan":   "plan_pro",
 		},

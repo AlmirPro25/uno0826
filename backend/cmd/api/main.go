@@ -27,6 +27,7 @@ import (
 	"prost-qs/backend/internal/autonomy"
 	"prost-qs/backend/internal/billing"
 	"prost-qs/backend/internal/command"
+	"prost-qs/backend/internal/decision"
 	"prost-qs/backend/internal/event"
 	"prost-qs/backend/internal/explainability"
 	"prost-qs/backend/internal/federation"
@@ -50,10 +51,16 @@ import (
 	"prost-qs/backend/internal/notification"
 	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/internal/rules"
+	"prost-qs/backend/docs"
+	"prost-qs/backend/pkg/alerting"
+	"prost-qs/backend/pkg/apigate"
 	"prost-qs/backend/pkg/capabilities"
 	"prost-qs/backend/pkg/db"
+	"prost-qs/backend/pkg/immunity"
+	"prost-qs/backend/pkg/invariants"
 	"prost-qs/backend/pkg/middleware"
 	"prost-qs/backend/pkg/utils"
+	"prost-qs/backend/pkg/warobs"
 )
 
 func main() {
@@ -128,6 +135,13 @@ func main() {
 	r.GET("/", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok", "service": "prost-qs"})
 	})
+
+	// ========================================
+	// SWAGGER / OPENAPI - Contrato Soberano
+	// "O Kernel sabe se explicar para qualquer IA"
+	// ========================================
+	docs.RegisterSwaggerRoutes(r)
+	log.Println("✅ Swagger UI disponível em /swagger/index.html")
 
 	// Configuração CORS - Permite todas as portas dos frontends + Vercel
 	r.Use(cors.New(cors.Config{
@@ -205,10 +219,31 @@ func main() {
 	go jobService.Start(ctx, 2*time.Second) // Poll a cada 2 segundos
 
 	// ========================================
+	// INVARIANTS RUNNER - Guardião que nunca dorme
+	// "Testes ativos que vivem em produção"
+	// ========================================
+	invariantsRunner := invariants.NewRunner(gormDB, invariants.RunnerConfig{
+		Interval: 5 * time.Minute,
+		OnViolation: func(result invariants.InvariantResult) {
+			log.Printf("🚨 [INVARIANT VIOLATION] %s: %s (violations: %d)", 
+				result.Name, result.Category, result.Violations)
+		},
+	})
+	invariantsRunner.Start()
+	log.Println("✅ Invariants Runner iniciado (intervalo: 5min)")
+
+	// ========================================
 	// ADS MODULE - Economic Extension
 	// ========================================
 	adsService := ads.NewAdsService(gormDB, billingService, jobService)
 	ads.RegisterAdsJobHandlers(jobService, adsService)
+
+	// ========================================
+	// AD DECISION ENGINE - Motor de Decisão em Tempo Real
+	// "Quem pode ver anúncio, qual anúncio, quanto vale"
+	// ========================================
+	adDecisionEngine := ads.NewDecisionEngine(gormDB, adsService)
+	log.Println("✅ Ad Decision Engine inicializado")
 
 	// ========================================
 	// AGENT GOVERNANCE LAYER
@@ -379,8 +414,57 @@ func main() {
 	}
 	log.Println("✅ Kernel Billing Service inicializado")
 
+	// ========================================
+	// IMMUNITY SYSTEM - Sistema Imunológico
+	// "O sistema se defende sozinho"
+	// ========================================
+	immunitySystem := immunity.GetImmunitySystem()
+	_ = immunitySystem // Usado abaixo nas rotas
+	log.Println("✅ Immunity System inicializado")
+
+	// ========================================
+	// API GATE - FASE 2: Pedágio Armado
+	// "Toda requisição passa por validação estrutural"
+	// ========================================
+	gateConfig := apigate.DefaultConfig()
+	apiGate := apigate.NewAPIGate(gateConfig)
+	apigate.SetGlobalGate(apiGate)
+	log.Println("✅ API Gate inicializado (FASE 2)")
+
+	// ========================================
+	// WAR OBSERVABILITY - FASE 3: Observabilidade de Guerra
+	// "Ver o sistema respirar, medir pressão"
+	// ========================================
+	warObservability := warobs.GetWarObservability()
+	log.Println("✅ War Observability inicializado (FASE 3)")
+
+	// ========================================
+	// ALERTING SYSTEM - FASE 4: Alertas Reais
+	// "Alertas inteligentes, não spam"
+	// ========================================
+	alertEngine := alerting.GetAlertEngine()
+	alerting.SetupDefaultChannels(alertEngine)
+	
+	// Configure from environment
+	alertConfig := alerting.GetConfig()
+	alertConfig.ApplyToEngine(alertEngine)
+	
+	// Setup persistence (optional, requires DB)
+	alertPersistence := alerting.NewAlertPersistence(gormDB)
+	alertEngine.SetPersistence(alertPersistence)
+	
+	// Connect API Gate to Alerting (attack detection)
+	apigate.SetBlockNotifier(alerting.RecordAPIGateBlock)
+	
+	// Start monitor
+	alerting.StartGlobalMonitor(ctx)
+	log.Println("✅ Alerting System inicializado (FASE 4)")
+
 	// Middlewares globais
-	r.Use(middleware.RateLimitMiddleware(100, 1*time.Minute)) // 100 requisições por minuto
+	r.Use(apiGate.GateMiddleware())                                // API Gate (FASE 2) - PRIMEIRO
+	r.Use(warobs.WarObsMiddleware(warObservability))               // War Observability (FASE 3)
+	r.Use(immunity.ProtectionMiddleware())                         // Proteção do sistema imunológico
+	r.Use(middleware.RateLimitMiddleware(100, 1*time.Minute))      // 100 requisições por minuto
 
 	// ========================================
 	// OBSERVABILITY - Fase 22
@@ -500,6 +584,20 @@ func main() {
 		// ADS MODULE - Economic Extension
 		// ========================================
 		ads.RegisterAdsRoutes(v1, adsService, middleware.AuthMiddleware())
+
+		// ========================================
+		// AD DECISION ENGINE - Gateway de Anúncios de Borda
+		// "Motor Econômico de Decisão em Tempo Real"
+		// ========================================
+		ads.RegisterDecisionRoutes(v1, adDecisionEngine, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Ad Decision Engine routes registradas (/ads/decide, /ads/track/*, /ads/slots/*, /ads/creatives/*)")
+
+		// ========================================
+		// AD INVENTORY - CRUD Completo de Campanhas
+		// "O Cofre precisa de ouro para não ser vazio"
+		// ========================================
+		ads.RegisterInventoryRoutes(v1, adsService, adDecisionEngine, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Ad Inventory routes registradas (/ads/accounts, /ads/budgets, /ads/campaigns, /ads/targeting)")
 
 		// ========================================
 		// AGENT GOVERNANCE LAYER (com Governança)
@@ -704,6 +802,14 @@ func main() {
 		log.Println("✅ Notification routes registradas (/notifications/*)")
 
 		// ========================================
+		// DECISION SERVICE - Registro de Decisões
+		// "O que o sistema DECIDIU, não só o que aconteceu"
+		// ========================================
+		decisionService := decision.NewService(gormDB)
+		decision.RegisterDecisionRoutes(v1, decisionService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Decision routes registradas (/decisions/*)")
+
+		// ========================================
 		// RULES ENGINE - Camada de Decisão
 		// "Observação → Condição → Ação"
 		// ========================================
@@ -757,6 +863,61 @@ func main() {
 		// ========================================
 		identity.RegisterLoginEventRoutes(v1, loginEventService, middleware.AuthMiddleware(), middleware.AdminOnly())
 
+		// ========================================
+		// INVARIANTS - Sistema Imunológico
+		// "Testes ativos que vivem em produção"
+		// ========================================
+		adminInvariants := v1.Group("/admin/invariants")
+		adminInvariants.Use(middleware.AuthMiddleware(), middleware.RequireSuperAdmin())
+		invariants.RegisterRoutes(adminInvariants)
+		log.Println("✅ Invariants routes registradas (/admin/invariants/*)")
+
+		// TEMPORÁRIO: Rotas públicas para teste de invariants
+		v1.GET("/invariants/violations", func(c *gin.Context) {
+			violations := invariants.GetViolations()
+			c.JSON(200, gin.H{
+				"violations": violations,
+				"count":      len(violations),
+			})
+		})
+		v1.DELETE("/invariants/violations", func(c *gin.Context) {
+			invariants.ClearViolations()
+			c.JSON(200, gin.H{
+				"message": "Violations cleared",
+			})
+		})
+
+		// ========================================
+		// IMMUNITY SYSTEM - Sistema Imunológico Completo
+		// "Auto-defesa, auto-cura, circuit breakers, quarentena"
+		// ========================================
+		immunityHandler := immunity.NewHandler()
+		immunityHandler.RegisterRoutes(v1, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Immunity System routes registradas (/immunity/*)")
+
+		// ========================================
+		// API GATE - FASE 2: Monitoramento
+		// "Métricas e status do pedágio armado"
+		// ========================================
+		apiGateHandler := apigate.NewHandler(apiGate)
+		apiGateHandler.RegisterRoutes(v1, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ API Gate routes registradas (/apigate/*)")
+
+		// ========================================
+		// WAR OBSERVABILITY - FASE 3: Dashboard de Guerra
+		// "RED metrics, pressure, SLOs, tracing"
+		// ========================================
+		warObsHandler := warobs.NewHandler(warObservability)
+		warObsHandler.RegisterRoutes(v1, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ War Observability routes registradas (/warobs/*)")
+
+		// ========================================
+		// ALERTING SYSTEM - FASE 4: Alertas Reais
+		// "Alertas inteligentes, não spam"
+		// ========================================
+		alerting.RegisterAlertRoutes(v1, alertEngine, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Alerting System routes registradas (/alerts/*)")
+
 		// Rotas de Eventos (admin/auditor)
 		event.RegisterEventRoutes(v1, eventService, middleware.AuthMiddleware())
 
@@ -771,6 +932,104 @@ func main() {
 
 		// Rotas de Replicação (endpoints internos entre nós do Kernel)
 		replication.RegisterReplicationRoutes(v1, replicationService, middleware.AuthMiddleware())
+
+		// ========================================
+		// DEBUG ROUTES - PROTEGIDAS
+		// Só funcionam em desenvolvimento (GIN_MODE != release)
+		// ========================================
+		if !middleware.IsProduction() {
+			debug := v1.Group("/debug")
+			debug.Use(middleware.DevOnlyGuard()) // Dupla proteção
+			{
+				// Trigger Silence: Para telemetria por N minutos para testar AssertSystemThroughputSanity
+				debug.POST("/trigger-silence", func(c *gin.Context) {
+					var req struct {
+						Minutes int `json:"minutes"`
+					}
+					if err := c.ShouldBindJSON(&req); err != nil {
+						req.Minutes = 6 // Default: 6 minutos
+					}
+					if req.Minutes < 1 {
+						req.Minutes = 1
+					}
+					if req.Minutes > 30 {
+						req.Minutes = 30 // Max: 30 minutos
+					}
+
+					// Registrar violação de throughput manualmente
+					invariants.Assert(
+						false, // Força falha
+						"telemetry_system_silence",
+						fmt.Sprintf("DEBUG: Silêncio forçado por %d minutos para teste de estresse", req.Minutes),
+						map[string]interface{}{
+							"triggered_by":    "debug_endpoint",
+							"silence_minutes": req.Minutes,
+							"status":          "TESTE - Dashboard deve mostrar vermelho",
+						},
+					)
+
+					c.JSON(200, gin.H{
+						"status":  "silence_triggered",
+						"minutes": req.Minutes,
+						"message": fmt.Sprintf("Invariant 'telemetry_system_silence' disparada. Dashboard deve sangrar por %d minutos.", req.Minutes),
+						"action":  "Verifique /dashboard/invariants para ver o alerta",
+					})
+				})
+
+				// Trigger Fraud Alert: Simula detecção de fraude em Ads
+				debug.POST("/trigger-fraud", func(c *gin.Context) {
+					var req struct {
+						RequestID string `json:"request_id"`
+						Count     int    `json:"count"`
+					}
+					if err := c.ShouldBindJSON(&req); err != nil {
+						req.RequestID = uuid.New().String()
+						req.Count = 5
+					}
+					if req.Count < 2 {
+						req.Count = 2
+					}
+
+					// Disparar invariant de fraude
+					invariants.AssertCritical(
+						false, // Força falha
+						"ad_impression_duplicated",
+						fmt.Sprintf("DEBUG: Fraude simulada - request_id %s usado %d vezes", req.RequestID, req.Count),
+						map[string]interface{}{
+							"request_id":      req.RequestID,
+							"duplicate_count": req.Count,
+							"triggered_by":    "debug_endpoint",
+							"status":          "TESTE - Simula ataque de replay",
+						},
+					)
+
+					c.JSON(200, gin.H{
+						"status":     "fraud_triggered",
+						"request_id": req.RequestID,
+						"count":      req.Count,
+						"message":    "Invariant 'ad_impression_duplicated' disparada. Dashboard deve mostrar CRITICAL.",
+					})
+				})
+
+				// Health Check do Debug
+				debug.GET("/status", func(c *gin.Context) {
+					violations := invariants.GetViolations()
+					c.JSON(200, gin.H{
+						"debug_enabled":    true,
+						"environment":      "development",
+						"total_violations": len(violations),
+						"endpoints": []string{
+							"POST /debug/trigger-silence - Simula silêncio de telemetria",
+							"POST /debug/trigger-fraud - Simula ataque de fraude em Ads",
+							"GET /debug/status - Este endpoint",
+						},
+					})
+				})
+			}
+			log.Println("⚠️  Debug routes registradas (APENAS DEV)")
+		} else {
+			log.Println("🔒 Debug routes DESABILITADAS em produção")
+		}
 	}
 
 	// Rotas de Health Check (legacy - agora em /health via observability)

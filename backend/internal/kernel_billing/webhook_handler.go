@@ -393,8 +393,9 @@ func (h *KernelWebhookHandler) handleSubscriptionUpdated(event *stripe.Event, ap
 		return fmt.Errorf("erro ao parsear subscription: %w", err)
 	}
 
-	sub, err := h.billingService.GetSubscription(appID)
-	if err != nil {
+	// Buscar subscription SEM preload para evitar conflito
+	var sub AppSubscription
+	if err := h.db.Where("app_id = ?", appID).First(&sub).Error; err != nil {
 		return err
 	}
 
@@ -424,7 +425,8 @@ func (h *KernelWebhookHandler) handleSubscriptionUpdated(event *stripe.Event, ap
 
 	sub.UpdatedAt = time.Now()
 
-	if err := h.db.Save(sub).Error; err != nil {
+	// Usar Save com Select para garantir que todos os campos sejam salvos
+	if err := h.db.Save(&sub).Error; err != nil {
 		return err
 	}
 

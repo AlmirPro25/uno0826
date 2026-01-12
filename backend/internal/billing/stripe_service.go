@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/stripe/stripe-go/v76"
+	portalsession "github.com/stripe/stripe-go/v76/billingportal/session"
 	"github.com/stripe/stripe-go/v76/checkout/session"
 	"prost-qs/backend/pkg/resilience"
 )
@@ -262,6 +263,30 @@ func (s *StripeService) CreateCheckoutSession(ctx context.Context, customerID, a
 		sess.ID, accountID, customerID)
 
 	return sess.URL, sess.ID, nil
+}
+
+// CreatePortalSession cria uma sessão do Stripe Customer Portal
+func (s *StripeService) CreatePortalSession(ctx context.Context, customerID, returnURL string) (string, error) {
+	if !s.IsConfigured() {
+		// Mock mode
+		return "https://billing.stripe.com/mock_portal", nil
+	}
+
+	stripe.Key = s.secretKey
+
+	params := &stripe.BillingPortalSessionParams{
+		Customer:  stripe.String(customerID),
+		ReturnURL: stripe.String(returnURL),
+	}
+
+	sess, err := portalsession.New(params)
+	if err != nil {
+		return "", fmt.Errorf("erro ao criar portal session: %w", err)
+	}
+
+	log.Printf("🔗 [STRIPE] Portal session criada: customer=%s", customerID)
+
+	return sess.URL, nil
 }
 
 // ========================================
