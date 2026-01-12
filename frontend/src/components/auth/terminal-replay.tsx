@@ -17,10 +17,18 @@ const BOOT_SEQUENCE = [
 ];
 
 export function TerminalReplay() {
+    const [mounted, setMounted] = useState(false);
     const [lines, setLines] = useState<string[]>([]);
     const [currentIndex, setCurrentIndex] = useState(0);
 
+    // Prevent hydration mismatch
     useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!mounted) return;
+        
         if (currentIndex >= BOOT_SEQUENCE.length) {
             // Reset after a pause to loop
             const timeout = setTimeout(() => {
@@ -37,7 +45,24 @@ export function TerminalReplay() {
         }, currentStep.delay);
 
         return () => clearTimeout(timeout);
-    }, [currentIndex]);
+    }, [currentIndex, mounted]);
+
+    // Render placeholder during SSR
+    if (!mounted) {
+        return (
+            <div className="font-mono text-[10px] md:text-xs leading-relaxed text-slate-400 p-6 rounded-xl bg-black/50 border border-white/5 backdrop-blur-md w-full max-w-lg shadow-2xl h-64 overflow-hidden relative">
+                <div className="absolute top-0 left-0 right-0 h-6 bg-white/5 border-b border-white/5 flex items-center px-3 gap-1.5">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500/20 border border-red-500/50" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-amber-500/20 border border-amber-500/50" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/20 border border-emerald-500/50" />
+                    <span className="ml-2 opacity-50">boot_sequence.sh</span>
+                </div>
+                <div className="mt-6 flex flex-col font-mono">
+                    <div className="w-2 h-4 bg-emerald-500/50 mt-1 animate-pulse" />
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="font-mono text-[10px] md:text-xs leading-relaxed text-slate-400 p-6 rounded-xl bg-black/50 border border-white/5 backdrop-blur-md w-full max-w-lg shadow-2xl h-64 overflow-hidden relative">

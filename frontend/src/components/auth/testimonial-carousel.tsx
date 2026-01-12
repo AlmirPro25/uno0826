@@ -26,20 +26,31 @@ const TESTIMONIALS = [
 ];
 
 export function TestimonialCarousel() {
+    const [mounted, setMounted] = useState(false);
     const [index, setIndex] = useState(0);
 
+    // Prevent hydration mismatch
     useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (!mounted) return;
+        
         const timer = setInterval(() => {
             setIndex((prev) => (prev + 1) % TESTIMONIALS.length);
         }, 6000);
         return () => clearInterval(timer);
-    }, []);
+    }, [mounted]);
+
+    // Always render first testimonial during SSR to prevent mismatch
+    const currentTestimonial = TESTIMONIALS[mounted ? index : 0];
 
     return (
         <div className="relative h-40">
             <AnimatePresence mode="wait">
                 <motion.div
-                    key={index}
+                    key={mounted ? index : 0}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -20 }}
@@ -50,16 +61,16 @@ export function TestimonialCarousel() {
                         <Quote className="absolute top-4 right-4 w-8 h-8 text-indigo-500/20 rotate-12" />
 
                         <p className="text-slate-300 text-sm italic mb-6 leading-relaxed">
-                            "{TESTIMONIALS[index].text}"
+                            &quot;{currentTestimonial.text}&quot;
                         </p>
 
                         <div className="flex items-center gap-3">
                             <div className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white shadow-lg shadow-indigo-500/20">
-                                {TESTIMONIALS[index].avatar}
+                                {currentTestimonial.avatar}
                             </div>
                             <div>
-                                <p className="font-bold text-sm text-white">{TESTIMONIALS[index].author}</p>
-                                <p className="text-[10px] text-indigo-300 font-medium uppercase tracking-wide">{TESTIMONIALS[index].role}</p>
+                                <p className="font-bold text-sm text-white">{currentTestimonial.author}</p>
+                                <p className="text-[10px] text-indigo-300 font-medium uppercase tracking-wide">{currentTestimonial.role}</p>
                             </div>
                         </div>
                     </div>
