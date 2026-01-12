@@ -1,0 +1,8 @@
+# Ignore other apps in monorepo
+apps/
+frontend-old/
+backend/
+sdk/
+scripts/
+docs/
+*.md
