@@ -19,12 +19,13 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full">
+    <html lang="en" className="h-full" suppressHydrationWarning>
       <body
         className={cn(
           "min-h-full bg-background font-sans text-foreground antialiased",
           inter.variable
         )}
+        suppressHydrationWarning
       >
         <AuthProvider>
           <AppProvider>
