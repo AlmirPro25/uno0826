@@ -17,6 +17,18 @@ const endpoints: Record<string, Endpoint[]> = {
         { method: "GET", path: "/api/v1/identity/me", description: "Obter perfil do usuário", auth: true },
         { method: "PUT", path: "/api/v1/identity/me", description: "Atualizar perfil", auth: true },
         { method: "POST", path: "/api/v1/identity/link-app", description: "Vincular usuário a um app", auth: true },
+        { method: "POST", path: "/api/v1/identity/logout", description: "Logout e invalidar token", auth: true },
+    ],
+    "MFA (Multi-Factor Auth)": [
+        { method: "POST", path: "/api/v1/auth/mfa/setup", description: "Iniciar setup de MFA (TOTP)", auth: true },
+        { method: "POST", path: "/api/v1/auth/mfa/verify", description: "Verificar código TOTP", auth: true },
+        { method: "POST", path: "/api/v1/auth/mfa/disable", description: "Desabilitar MFA", auth: true },
+        { method: "GET", path: "/api/v1/auth/mfa/status", description: "Status do MFA do usuário", auth: true },
+    ],
+    "Sessions": [
+        { method: "GET", path: "/api/v1/auth/sessions", description: "Listar sessões ativas", auth: true },
+        { method: "DELETE", path: "/api/v1/auth/sessions/:id", description: "Revogar sessão específica", auth: true },
+        { method: "DELETE", path: "/api/v1/auth/sessions", description: "Revogar todas as sessões", auth: true },
     ],
     "Applications": [
         { method: "GET", path: "/api/v1/apps", description: "Listar aplicações", auth: true },
@@ -26,10 +38,29 @@ const endpoints: Record<string, Endpoint[]> = {
         { method: "DELETE", path: "/api/v1/apps/:id", description: "Deletar aplicação", auth: true },
         { method: "POST", path: "/api/v1/apps/:id/rotate-secret", description: "Rotacionar secret key", auth: true },
     ],
+    "API Keys": [
+        { method: "GET", path: "/api/v1/apikeys", description: "Listar API Keys", auth: true },
+        { method: "POST", path: "/api/v1/apikeys", description: "Criar nova API Key", auth: true },
+        { method: "GET", path: "/api/v1/apikeys/:id", description: "Obter detalhes da API Key", auth: true },
+        { method: "DELETE", path: "/api/v1/apikeys/:id", description: "Revogar API Key", auth: true },
+        { method: "GET", path: "/api/v1/apikeys/:id/stats", description: "Estatísticas de uso", auth: true },
+    ],
     "Events": [
         { method: "POST", path: "/api/v1/events", description: "Emitir evento", auth: true },
         { method: "GET", path: "/api/v1/events", description: "Listar eventos", auth: true },
         { method: "GET", path: "/api/v1/events/:id", description: "Obter evento específico", auth: true },
+        { method: "GET", path: "/api/v1/events/system/stats", description: "Estatísticas de eventos", auth: true },
+        { method: "GET", path: "/api/v1/events/system/realtime", description: "Métricas em tempo real", auth: true },
+    ],
+    "Webhooks": [
+        { method: "GET", path: "/api/v1/webhooks", description: "Listar webhooks configurados", auth: true },
+        { method: "POST", path: "/api/v1/webhooks", description: "Criar novo webhook", auth: true },
+        { method: "GET", path: "/api/v1/webhooks/:id", description: "Obter detalhes do webhook", auth: true },
+        { method: "PUT", path: "/api/v1/webhooks/:id", description: "Atualizar webhook", auth: true },
+        { method: "DELETE", path: "/api/v1/webhooks/:id", description: "Deletar webhook", auth: true },
+        { method: "POST", path: "/api/v1/webhooks/:id/test", description: "Testar webhook", auth: true },
+        { method: "GET", path: "/api/v1/webhooks/:id/health", description: "Health do webhook", auth: true },
+        { method: "GET", path: "/api/v1/webhooks/system/stats", description: "Estatísticas globais", auth: true },
     ],
     "Telemetry": [
         { method: "POST", path: "/api/v1/telemetry/ingest", description: "Ingerir métricas", auth: true },
@@ -41,6 +72,16 @@ const endpoints: Record<string, Endpoint[]> = {
         { method: "GET", path: "/api/v1/billing/subscriptions/status", description: "Status da assinatura", auth: true },
         { method: "POST", path: "/api/v1/billing/checkout/pro", description: "Iniciar checkout Pro", auth: true },
         { method: "POST", path: "/api/v1/billing/portal", description: "Abrir portal Stripe", auth: true },
+        { method: "POST", path: "/api/v1/billing/webhook", description: "Webhook do Stripe", auth: false },
+    ],
+    "Activity Log": [
+        { method: "GET", path: "/api/v1/activity", description: "Listar atividades do usuário", auth: true },
+        { method: "GET", path: "/api/v1/activity/recent", description: "Atividades recentes", auth: true },
+    ],
+    "Health": [
+        { method: "GET", path: "/api/v1/health", description: "Status geral do sistema", auth: false },
+        { method: "GET", path: "/api/v1/health/live", description: "Liveness probe", auth: false },
+        { method: "GET", path: "/api/v1/health/ready", description: "Readiness probe", auth: false },
     ],
 };
 
@@ -82,13 +123,13 @@ export default function ApiReferencePage() {
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mb-1">Base URL</p>
-                        <code className="text-emerald-400 font-mono">https://api.prostqs.com</code>
+                        <code className="text-emerald-400 font-mono">https://uno0826.onrender.com</code>
                     </div>
                     <button
-                        onClick={() => copyToClipboard("https://api.prostqs.com")}
+                        onClick={() => copyToClipboard("https://uno0826.onrender.com")}
                         className="p-2 text-slate-500 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
                     >
-                        {copied === "https://api.prostqs.com" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
+                        {copied === "https://uno0826.onrender.com" ? <CheckCircle className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
                     </button>
                 </div>
             </div>
@@ -149,7 +190,7 @@ export default function ApiReferencePage() {
             <div className="space-y-4">
                 <h2 className="text-xl font-bold text-white">Exemplo de Request</h2>
                 <div className="bg-black/30 border border-white/10 rounded-xl p-4 font-mono text-sm">
-                    <pre className="text-slate-300">{`curl -X POST https://api.prostqs.com/api/v1/events \\
+                    <pre className="text-slate-300">{`curl -X POST https://uno0826.onrender.com/api/v1/events \\
   -H "Authorization: Bearer <token>" \\
   -H "Content-Type: application/json" \\
   -d '{
