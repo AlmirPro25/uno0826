@@ -254,13 +254,16 @@ Progresso:
 ✅ Testes: 6 testes de checkout passando
 ✅ Testes: 20+ testes de kernel_billing passando
 ✅ Build: Backend e Frontend compilando
+✅ GitHub: Código pushado para https://github.com/AlmirPro25/uno0826
 
-Próximos passos para primeiro $1:
-1. Verificar webhook endpoint no Stripe Dashboard
-2. Fazer login no frontend
-3. Clicar em "Upgrade para Pro"
-4. Usar cartão de teste 4242 4242 4242 4242
-5. Verificar webhook processado nos logs do Render
+PRONTO PARA TESTE MANUAL:
+1. Acessar: https://frontend-prost.vercel.app/dashboard/billing
+2. Fazer login
+3. Clicar em "Upgrade para Pro — R$99/mês"
+4. Usar cartão de teste: 4242 4242 4242 4242
+5. Validade: qualquer futura (ex: 12/30)
+6. CVC: qualquer 3 dígitos (ex: 123)
+7. Verificar toast de sucesso após redirect
 
 Observações:
 - Price ID hardcoded: price_1SnMCgInQBs0OE9Df5OVQD5i
