@@ -160,9 +160,9 @@ Arquivos modificados:
 ---
 
 ### 3. Migração SCE → Identity SSO
-**Status:** ⚠️ Parcialmente feito  
+**Status:** ⚠️ Código pronto, aguardando execução  
 **Impacto:** ALTO (valida modelo multi-app)  
-**Esforço:** 2-3 horas
+**Esforço:** 30 min (só executar scripts)
 
 ```
 Por que é crítico:
@@ -170,13 +170,21 @@ Por que é crítico:
 ├── Valida que multi-app FUNCIONA
 ├── Transforma discurso teórico em prova
 
-Tarefas:
-├── [ ] Substituir auth local do SCE por endpoints do kernel
-├── [ ] Implementar useProstQSAuth no frontend SCE
-├── [ ] Adicionar LinkAppModal para vincular contas
-├── [ ] Testar fluxo: VOX → SCE → confirmar link
-├── [ ] Remover tabela users local do SCE
-└── [ ] Atualizar documentação
+✅ CÓDIGO PRONTO:
+├── [x] kernel-auth.middleware.ts — Middleware que só aceita JWT do Kernel
+├── [x] routes/index.ts — Todas as rotas usando kernelAuthMiddleware
+├── [x] auth.service.ts — Marcado como DEPRECATED
+├── [x] migrate-users-to-kernel.ts — Script de migração
+├── [x] post-migration-cleanup.ts — Script de limpeza
+├── [x] schema.post-migration.prisma — Schema sem auth local
+
+⏳ EXECUÇÃO PENDENTE (30 min):
+├── [ ] Executar: KERNEL_ADMIN_TOKEN=xxx npx tsx scripts/migrate-users-to-kernel.ts --dry-run
+├── [ ] Executar: KERNEL_ADMIN_TOKEN=xxx npx tsx scripts/migrate-users-to-kernel.ts
+├── [ ] Executar: npx tsx scripts/post-migration-cleanup.ts
+├── [ ] Deletar auth.service.ts
+├── [ ] Remover bcrypt do package.json
+└── [ ] Aplicar schema.post-migration.prisma
 ```
 
 ---

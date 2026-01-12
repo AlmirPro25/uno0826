@@ -4,6 +4,7 @@ package middleware
 import (
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
@@ -15,6 +16,8 @@ const (
 	ContextUserIDKey        = "userID"
 	ContextUserRoleKey      = "userRole"
 	ContextAccountStatusKey = "accountStatus"
+	ContextTokenIDKey       = "tokenID"
+	ContextTokenIssuedAtKey = "tokenIssuedAt"
 	
 	// Fase 16: App Context Keys
 	ContextAppIDKey     = "appID"
@@ -25,6 +28,7 @@ const (
 // AuthMiddleware verifica o token JWT e extrai user_id, role, account_status.
 // FASE 10: Bloqueia usuários suspensos/banidos
 // FASE 16: Extrai contexto de aplicação (app_id, app_user_id, session_id)
+// SEGURANÇA: Verifica blacklist de tokens revogados
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
@@ -45,6 +49,18 @@ func AuthMiddleware() gin.HandlerFunc {
 		claims, err := utils.ParseJWT(tokenString)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token inválido ou expirado"})
+			c.Abort()
+			return
+		}
+
+		// SEGURANÇA: Verificar se token foi revogado
+		tokenID := claims.Id // jti claim
+		issuedAt := time.Unix(claims.IssuedAt, 0)
+		if utils.IsTokenRevoked(tokenID, claims.UserID, issuedAt) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error":   "Token revogado",
+				"message": "Este token foi invalidado. Faça login novamente.",
+			})
 			c.Abort()
 			return
 		}
@@ -72,6 +88,8 @@ func AuthMiddleware() gin.HandlerFunc {
 		c.Set(ContextUserIDKey, claims.UserID)
 		c.Set(ContextUserRoleKey, claims.Role)
 		c.Set(ContextAccountStatusKey, claims.AccountStatus)
+		c.Set(ContextTokenIDKey, tokenID)
+		c.Set(ContextTokenIssuedAtKey, issuedAt)
 
 		// FASE 16: Extrair contexto de aplicação dos headers
 		// Esses headers são enviados pelo SDK/cliente para identificar o app

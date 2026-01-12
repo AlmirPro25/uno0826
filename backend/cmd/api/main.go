@@ -51,6 +51,10 @@ import (
 	"prost-qs/backend/internal/notification"
 	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/internal/rules"
+	"prost-qs/backend/internal/activity"
+	"prost-qs/backend/internal/webhook"
+	"prost-qs/backend/internal/apikey"
+	"prost-qs/backend/internal/events"
 	"prost-qs/backend/docs"
 	"prost-qs/backend/pkg/alerting"
 	"prost-qs/backend/pkg/apigate"
@@ -461,10 +465,12 @@ func main() {
 	log.Println("✅ Alerting System inicializado (FASE 4)")
 
 	// Middlewares globais
-	r.Use(apiGate.GateMiddleware())                                // API Gate (FASE 2) - PRIMEIRO
+	r.Use(middleware.SecurityHeaders())                            // Security Headers - PRIMEIRO
+	r.Use(apiGate.GateMiddleware())                                // API Gate (FASE 2)
 	r.Use(warobs.WarObsMiddleware(warObservability))               // War Observability (FASE 3)
 	r.Use(immunity.ProtectionMiddleware())                         // Proteção do sistema imunológico
-	r.Use(middleware.RateLimitMiddleware(100, 1*time.Minute))      // 100 requisições por minuto
+	r.Use(middleware.AdvancedRateLimitMiddleware(100, 1*time.Minute)) // Rate limit avançado por endpoint
+	r.Use(middleware.RequestIDMiddleware())                        // Request ID para tracing
 
 	// ========================================
 	// OBSERVABILITY - Fase 22
@@ -542,6 +548,71 @@ func main() {
 		// AUTH KERNEL - Novo Fluxo de Autenticação
 		// ========================================
 		identity.RegisterAuthRoutes(v1, verificationService, userService, middleware.AuthMiddleware())
+
+		// ========================================
+		// LOGOUT & SESSION MANAGEMENT - Segurança
+		// "Sair é tão importante quanto entrar"
+		// ========================================
+		auth.RegisterLogoutRoutes(v1, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Logout routes registradas (/auth/logout, /auth/logout-all, /auth/revoke)")
+
+		// ========================================
+		// MFA - AUTENTICAÇÃO MULTI-FATOR
+		// "Dois fatores são melhor que um"
+		// ========================================
+		mfaService := auth.NewMFAService(gormDB)
+		auth.RegisterMFARoutes(v1, mfaService, middleware.AuthMiddleware())
+		log.Println("✅ MFA routes registradas (/auth/mfa/*)")
+
+		// ========================================
+		// SESSION MANAGEMENT - Gestão de Sessões
+		// "Saber onde você está logado"
+		// ========================================
+		sessionService := auth.NewSessionService(gormDB)
+		auth.RegisterSessionRoutes(v1, sessionService, middleware.AuthMiddleware())
+		log.Println("✅ Session routes registradas (/auth/sessions/*)")
+
+		// ========================================
+		// ACTIVITY LOG - Histórico de Atividades
+		// "Saber o que aconteceu é tão importante quanto fazer acontecer"
+		// ========================================
+		activityService := activity.NewActivityService(gormDB)
+		activity.RegisterActivityRoutes(v1, activityService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Activity routes registradas (/activity/*)")
+
+		// ========================================
+		// WEBHOOK SYSTEM - Notificações para Apps Externos
+		// "O Kernel avisa, o app decide o que fazer"
+		// ========================================
+		webhookService := webhook.NewWebhookService(gormDB)
+		webhook.RegisterWebhookRoutes(v1, webhookService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Webhook routes registradas (/webhooks/*)")
+
+		// Inicializar Event Dispatcher (conecta eventos → webhooks)
+		eventDispatcher := webhook.InitDispatcher(gormDB, webhookService)
+		_ = eventDispatcher // Usado pelos serviços para disparar eventos
+		log.Println("✅ Event Dispatcher inicializado")
+
+		// ========================================
+		// EVENT SYSTEM - Sistema de Eventos Centralizado
+		// "Um lugar para emitir. Muitos lugares para ouvir."
+		// ========================================
+		eventSystemService := events.InitEventService(gormDB)
+		events.RegisterEventSystemRoutes(v1, eventSystemService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ Event System routes registradas (/events/*)")
+
+		// Conectar Event Service ao Webhook Dispatcher via Bridge
+		eventBridge := events.InitBridge(eventSystemService, eventDispatcher)
+		_ = eventBridge
+		log.Println("✅ Event Bridge conectado - eventos internos → webhooks externos")
+
+		// ========================================
+		// API KEY SYSTEM - Autenticação de Apps Externos
+		// "Apps não usam senha. Apps usam chaves."
+		// ========================================
+		apiKeyService := apikey.NewAPIKeyService(gormDB)
+		apikey.RegisterAPIKeyRoutes(v1, apiKeyService, middleware.AuthMiddleware(), middleware.AdminOnly())
+		log.Println("✅ API Key routes registradas (/apikeys/*)")
 
 		// ========================================
 		// ECONOMIC KERNEL - Rotas de Billing (com Governança)

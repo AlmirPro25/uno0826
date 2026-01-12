@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
     User, Lock, Bell, Shield, Fingerprint, Loader2, CheckCircle2,
-    Brain, Ghost, Zap, AlertTriangle
+    Brain, Ghost, Zap, AlertTriangle, Key
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { AppHeader } from "@/components/dashboard/app-header";
@@ -348,6 +348,18 @@ export default function SettingsPage() {
                                     <div>
                                         <p className="font-bold text-white text-sm">Secrets</p>
                                         <p className="text-xs text-slate-500">Gerenciar credenciais</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </Link>
+                        
+                        <Link href="/dashboard/apikeys">
+                            <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer">
+                                <div className="flex items-center gap-3">
+                                    <Key className="w-5 h-5 text-emerald-400" />
+                                    <div>
+                                        <p className="font-bold text-white text-sm">API Keys</p>
+                                        <p className="text-xs text-slate-500">Chaves para integração</p>
                                     </div>
                                 </div>
                             </div>

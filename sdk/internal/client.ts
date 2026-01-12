@@ -61,6 +61,27 @@ export class ProstQSClient {
     return data as ApiResponse<T>;
   }
 
+  // Convenience methods
+  async get<T>(path: string): Promise<T> {
+    const response = await this.request<T>('GET', path);
+    return response.data;
+  }
+
+  async post<T>(path: string, body?: any): Promise<T> {
+    const response = await this.request<T>('POST', path, body);
+    return response.data;
+  }
+
+  async put<T>(path: string, body?: any): Promise<T> {
+    const response = await this.request<T>('PUT', path, body);
+    return response.data;
+  }
+
+  async delete<T>(path: string, options?: { data?: any }): Promise<T> {
+    const response = await this.request<T>('DELETE', path, options?.data);
+    return response.data;
+  }
+
   get appId() {
     return this.config.appId;
   }

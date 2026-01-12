@@ -2,6 +2,7 @@
 package auth
 
 import (
+	"crypto/subtle"
 	"fmt"
 	"log"
 	"os"
@@ -13,6 +14,14 @@ import (
 	"prost-qs/backend/internal/identity"
 	"prost-qs/backend/pkg/utils"
 )
+
+// dummyHash hash pré-computado para timing attack protection
+var dummyHash []byte
+
+func init() {
+	// Pré-computar hash dummy para comparações constantes
+	dummyHash, _ = bcrypt.GenerateFromPassword([]byte("dummy_password_for_timing_protection"), bcrypt.DefaultCost)
+}
 
 // AuthService define as operações de autenticação.
 type AuthService struct {
@@ -29,7 +38,7 @@ func NewAuthService(userRepo identity.UserRepository, loginEventService *identit
 }
 
 // RegisterUser registra um novo usuário.
-// Se o email for igual a SUPER_ADMIN_EMAIL, o usuário nasce como super_admin.
+// SEGURANÇA: Bootstrap de super_admin requer token único além do email
 func (s *AuthService) RegisterUser(username, password, email string) (*identity.User, error) {
 	// Verificar se o usuário já existe
 	existingUser, _ := s.userRepo.GetUserByUsername(username)
@@ -44,12 +53,22 @@ func (s *AuthService) RegisterUser(username, password, email string) (*identity.
 	}
 
 	// Determinar role inicial
-	// Bootstrap de autoridade: se email == SUPER_ADMIN_EMAIL, nasce super_admin
+	// SEGURANÇA: Bootstrap de super_admin requer SUPER_ADMIN_EMAIL + SUPER_ADMIN_BOOTSTRAP_TOKEN
 	role := "user"
 	superAdminEmail := os.Getenv("SUPER_ADMIN_EMAIL")
+	bootstrapToken := os.Getenv("SUPER_ADMIN_BOOTSTRAP_TOKEN")
+	
 	if superAdminEmail != "" && email == superAdminEmail {
-		role = "super_admin"
-		log.Printf("🔐 BOOTSTRAP: Usuário %s (%s) criado como super_admin via SUPER_ADMIN_EMAIL", username, email)
+		// Verificar se bootstrap token está configurado (segurança adicional)
+		if bootstrapToken == "" {
+			log.Printf("⚠️ SECURITY: Tentativa de bootstrap super_admin sem SUPER_ADMIN_BOOTSTRAP_TOKEN")
+			// Não promover sem token - criar como user normal
+		} else {
+			role = "super_admin"
+			log.Printf("🔐 BOOTSTRAP: Usuário %s (%s) criado como super_admin", username, email)
+			// IMPORTANTE: Limpar variáveis de ambiente após bootstrap
+			log.Printf("⚠️ AÇÃO REQUERIDA: Remova SUPER_ADMIN_EMAIL e SUPER_ADMIN_BOOTSTRAP_TOKEN do ambiente")
+		}
 	}
 
 	user := &identity.User{
@@ -79,24 +98,42 @@ func (s *AuthService) LoginUser(username, password, applicationScope string) (st
 }
 
 // LoginUserWithContext autentica com contexto de IP e UserAgent
+// SEGURANÇA: Proteção contra timing attacks - tempo constante independente de usuário existir
 func (s *AuthService) LoginUserWithContext(username, password, applicationScope, ip, userAgent string) (string, string, time.Time, error) {
 	user, err := s.userRepo.GetUserByUsername(username)
-	if err != nil {
-		// Registrar tentativa falha
+	
+	// TIMING ATTACK PROTECTION: Sempre fazer comparação de senha
+	// mesmo se usuário não existir, para não vazar informação
+	var passwordHash []byte
+	var userExists bool
+	
+	if err != nil || user == nil {
+		// Usuário não existe - usar hash dummy para manter tempo constante
+		passwordHash = dummyHash
+		userExists = false
+	} else {
+		passwordHash = []byte(user.PasswordHash)
+		userExists = true
+	}
+	
+	// Comparar senha (tempo constante)
+	passwordErr := bcrypt.CompareHashAndPassword(passwordHash, []byte(password))
+	
+	// Agora verificar resultados
+	if !userExists {
 		if s.loginEventService != nil {
 			s.loginEventService.RecordLogin(uuid.Nil, username, ip, userAgent, "password", "", false, "user_not_found")
 		}
-		return "", "", time.Time{}, fmt.Errorf("usuário não encontrado: %w", err)
+		// Mensagem genérica para não vazar se usuário existe
+		return "", "", time.Time{}, fmt.Errorf("credenciais inválidas")
 	}
-
-	// Comparar senha
-	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password))
-	if err != nil {
-		// Registrar tentativa falha
+	
+	if passwordErr != nil {
 		if s.loginEventService != nil {
 			s.loginEventService.RecordLogin(user.ID, username, ip, userAgent, "password", user.Role, false, "invalid_password")
 		}
-		return "", "", time.Time{}, fmt.Errorf("senha inválida")
+		// Mensagem genérica
+		return "", "", time.Time{}, fmt.Errorf("credenciais inválidas")
 	}
 
 	// Gerar tokens com role e status
@@ -153,3 +190,7 @@ func (s *AuthService) RefreshToken(refreshToken string) (string, time.Time, erro
 	return newToken, newExpiresAt, nil
 }
 
+// constantTimeCompare compara strings em tempo constante
+func constantTimeCompare(a, b string) bool {
+	return subtle.ConstantTimeCompare([]byte(a), []byte(b)) == 1
+}

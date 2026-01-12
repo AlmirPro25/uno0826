@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
     Webhook, Loader2, CheckCircle2, XCircle, Clock,
     ExternalLink, RefreshCw, Globe, Zap, RotateCcw,
-    AlertTriangle, Ghost
+    AlertTriangle, Ghost, Settings
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useApp } from "@/contexts/app-context";
@@ -14,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import Link from "next/link";
+import { WebhookManager } from "@/components/webhooks/webhook-manager";
 
 interface WebhookExecution {
     id: string;
@@ -228,19 +230,39 @@ export default function WebhooksPage() {
                         Webhooks {activeApp ? `de ${activeApp.name}` : ""}
                     </h1>
                     <p className="text-slate-500 mt-1 font-medium">
-                        Ações externas executadas pelo motor de regras
+                        Gerencie endpoints e veja execuções de webhooks
                     </p>
                 </div>
-                <Button
-                    variant="outline"
-                    onClick={fetchWebhookExecutions}
-                    disabled={loading}
-                    className="h-10 px-4 rounded-xl border-white/10 text-white hover:bg-white/5"
-                >
-                    <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
-                    Atualizar
-                </Button>
             </div>
+
+            <Tabs defaultValue="endpoints" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 max-w-md">
+                    <TabsTrigger value="endpoints" className="flex items-center gap-2">
+                        <Settings className="w-4 h-4" />
+                        Endpoints
+                    </TabsTrigger>
+                    <TabsTrigger value="executions" className="flex items-center gap-2">
+                        <Zap className="w-4 h-4" />
+                        Execuções
+                    </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="endpoints" className="mt-6">
+                    <WebhookManager />
+                </TabsContent>
+
+                <TabsContent value="executions" className="mt-6">
+                    <div className="flex justify-end mb-4">
+                        <Button
+                            variant="outline"
+                            onClick={fetchWebhookExecutions}
+                            disabled={loading}
+                            className="h-10 px-4 rounded-xl border-white/10 text-white hover:bg-white/5"
+                        >
+                            <RefreshCw className={cn("w-4 h-4 mr-2", loading && "animate-spin")} />
+                            Atualizar
+                        </Button>
+                    </div>
 
             {/* Stats */}
             {stats && stats.total > 0 && (
@@ -478,6 +500,8 @@ export default function WebhooksPage() {
                     })}
                 </div>
             )}
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

@@ -73,7 +73,7 @@ func (h *AuthHandler) RequestOTP(c *gin.Context) {
 
 	clientIP := c.ClientIP()
 
-	pending, otp, err := h.verificationService.RequestVerification(req.PhoneNumber, req.Channel, clientIP)
+	pending, _, err := h.verificationService.RequestVerification(req.PhoneNumber, req.Channel, clientIP)
 	if err != nil {
 		if err == ErrRateLimited {
 			c.JSON(http.StatusTooManyRequests, gin.H{"error": "Muitas tentativas. Aguarde alguns minutos."})
@@ -83,21 +83,14 @@ func (h *AuthHandler) RequestOTP(c *gin.Context) {
 		return
 	}
 
-	// Log para dev
-	println("[DEV] OTP para", req.PhoneNumber, ":", otp)
+	// SEGURANÇA: OTP NUNCA é logado ou retornado na resposta
+	// O código é enviado via WhatsApp/SMS pelo serviço de verificação
 
-	response := gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"verification_id":    pending.VerificationID.String(),
 		"expires_in_seconds": OTPExpirationMinutes * 60,
 		"channel":            req.Channel,
-	}
-
-	// Em dev mode, retornar OTP
-	if gin.Mode() != gin.ReleaseMode {
-		response["dev_otp"] = otp
-	}
-
-	c.JSON(http.StatusOK, response)
+	})
 }
 
 // VerifyOTP verifica código OTP

@@ -14,6 +14,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"prost-qs/backend/internal/events"
 	"prost-qs/backend/internal/jobs"
 	"prost-qs/backend/pkg/resilience"
 )
@@ -849,6 +850,21 @@ func (h *BillingHandler) handleCheckoutSessionCompleted(event *WebhookEvent) err
 		if err != nil {
 			log.Printf("❌ [CHECKOUT] Erro ao criar subscription: %v", err)
 			return err
+		}
+		
+		// Emitir evento de subscription criada
+		if account.UserID != uuid.Nil {
+			// Buscar app_id do usuário (origin app)
+			var originAppID uuid.UUID
+			h.service.db.Table("user_origins").Select("app_id").Where("user_id = ?", account.UserID).Scan(&originAppID)
+			if originAppID != uuid.Nil {
+				events.Emit(originAppID, events.EventSubscriptionCreated, map[string]interface{}{
+					"user_id":         account.UserID.String(),
+					"subscription_id": subscriptionID,
+					"plan":            "pro",
+					"status":          paymentStatus,
+				}, "billing", &account.UserID)
+			}
 		}
 		
 		log.Printf("🎉 [CHECKOUT] Subscription criada: account=%s user=%s subscription=%s", 

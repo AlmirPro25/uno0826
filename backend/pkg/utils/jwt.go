@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/google/uuid"
 )
 
 var jwtSecret []byte
@@ -18,6 +19,7 @@ func SetJWTSecret(secret string) {
 // JWTClaims define as claims personalizadas para o JWT.
 // FASE 10: Agora carrega role e account_status
 // FASE INTEGRAÇÃO: Adicionado aud (audience) para validação de destino
+// SEGURANÇA: Adicionado jti (JWT ID) para suporte a revogação
 type JWTClaims struct {
 	UserID        string   `json:"user_id"`
 	Role          string   `json:"role"`           // user, admin, super_admin
@@ -29,6 +31,7 @@ type JWTClaims struct {
 // GenerateJWT gera um novo token JWT com role e status.
 // FASE 10: Assinatura atualizada para incluir role e status
 // FASE INTEGRAÇÃO: Adicionado audience padrão ["ospedagem"]
+// SEGURANÇA: Inclui jti único para suporte a revogação
 func GenerateJWT(userID, role, accountStatus string) (string, time.Time, error) {
 	return GenerateJWTWithAudience(userID, role, accountStatus, []string{"ospedagem"})
 }
@@ -50,16 +53,23 @@ func GenerateJWTWithAudience(userID, role, accountStatus string, audience []stri
 		audience = []string{"ospedagem"}
 	}
 
-	expirationTime := time.Now().Add(24 * time.Hour) // Token expira em 24 horas
+	now := time.Now()
+	expirationTime := now.Add(24 * time.Hour) // Token expira em 24 horas
+	
+	// SEGURANÇA: Gerar ID único para o token (jti) para suporte a revogação
+	tokenID := uuid.New().String()
+	
 	claims := &JWTClaims{
 		UserID:        userID,
 		Role:          role,
 		AccountStatus: accountStatus,
 		Audience:      audience,
 		StandardClaims: jwt.StandardClaims{
+			Id:        tokenID, // jti - JWT ID para revogação
 			ExpiresAt: expirationTime.Unix(),
-			IssuedAt:  time.Now().Unix(),
+			IssuedAt:  now.Unix(),
 			Issuer:    "prost-qs-kernel",
+			Subject:   userID,
 		},
 	}
 
@@ -86,6 +96,10 @@ func ParseJWT(tokenString string) (*JWTClaims, error) {
 
 	claims := &JWTClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		// Verificar algoritmo
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("algoritmo de assinatura inesperado: %v", token.Header["alg"])
+		}
 		return jwtSecret, nil
 	})
 
@@ -108,6 +122,7 @@ type RefreshClaims struct {
 }
 
 // GenerateRefreshToken gera um refresh token com um tempo de expiração maior (7 dias).
+// SEGURANÇA: Inclui jti único para suporte a revogação
 func GenerateRefreshToken(userID, role, accountStatus string) (string, error) {
 	if jwtSecret == nil {
 		return "", fmt.Errorf("jwt secret não definido")
@@ -120,15 +135,20 @@ func GenerateRefreshToken(userID, role, accountStatus string) (string, error) {
 		accountStatus = "active"
 	}
 
-	expirationTime := time.Now().Add(7 * 24 * time.Hour)
+	now := time.Now()
+	expirationTime := now.Add(7 * 24 * time.Hour)
+	tokenID := uuid.New().String()
+	
 	claims := &RefreshClaims{
 		UserID:        userID,
 		Role:          role,
 		AccountStatus: accountStatus,
 		StandardClaims: jwt.StandardClaims{
+			Id:        tokenID, // jti - JWT ID para revogação
 			ExpiresAt: expirationTime.Unix(),
-			IssuedAt:  time.Now().Unix(),
+			IssuedAt:  now.Unix(),
 			Issuer:    "prost-qs-kernel-refresh",
+			Subject:   userID,
 		},
 	}
 
@@ -149,6 +169,10 @@ func ParseRefreshToken(tokenString string) (*RefreshClaims, error) {
 
 	claims := &RefreshClaims{}
 	token, err := jwt.ParseWithClaims(tokenString, claims, func(token *jwt.Token) (interface{}, error) {
+		// Verificar algoritmo
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("algoritmo de assinatura inesperado: %v", token.Header["alg"])
+		}
 		return jwtSecret, nil
 	})
 

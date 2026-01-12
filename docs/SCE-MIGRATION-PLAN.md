@@ -103,12 +103,31 @@
 - [ ] **5.3** Criar AppMembership no Kernel para usuários existentes
 - [ ] **5.4** Remover `passwordHash` da tabela User do SCE (após validação)
 
+**Comandos para executar migração:**
+```bash
+cd apps/SCE/backend
+
+# 1. Simular migração (dry-run)
+KERNEL_ADMIN_TOKEN=xxx npx tsx scripts/migrate-users-to-kernel.ts --dry-run
+
+# 2. Executar migração real
+KERNEL_ADMIN_TOKEN=xxx npx tsx scripts/migrate-users-to-kernel.ts
+
+# 3. Limpar senhas após migração
+npx tsx scripts/post-migration-cleanup.ts --dry-run
+npx tsx scripts/post-migration-cleanup.ts
+```
+
 ### FASE 6: Limpeza Final
 
 - [ ] **6.1** Deletar `auth.service.ts`
 - [ ] **6.2** Remover dependências de bcrypt do SCE
-- [ ] **6.3** Atualizar Prisma schema (remover campos de auth)
+- [ ] **6.3** Atualizar Prisma schema (usar `schema.post-migration.prisma`)
 - [ ] **6.4** Documentar nova arquitetura
+
+**Arquivos criados para limpeza:**
+- `scripts/post-migration-cleanup.ts` — Limpa passwordHash após migração
+- `prisma/schema.post-migration.prisma` — Schema sem campos de auth local
 
 ---
 
@@ -360,6 +379,11 @@ Após migração bem-sucedida:
 *Baseado no contrato de Identity congelado em `multiapp_test.go`*
 
 ## 📝 CHANGELOG
+
+### 12/01/2026 (tarde) — Scripts de Limpeza Pós-Migração
+- ✅ `scripts/post-migration-cleanup.ts` — Script para limpar passwordHash após migração
+- ✅ `prisma/schema.post-migration.prisma` — Schema Prisma sem campos de auth local
+- ✅ Documentação atualizada com comandos de execução
 
 ### 12/01/2026 — Testes de Integração + Endpoints Admin
 - ✅ `sce_integration_test.go` — 5 testes de integração SCE passando

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"prost-qs/backend/internal/events"
 	"prost-qs/backend/pkg/invariants"
 )
 
@@ -185,6 +186,12 @@ func (h *MultiAppIdentityHandler) Register(c *gin.Context) {
 	}
 
 	token, expiresAt := h.generateJWT(userID, req.Email, req.Name, "user", originAppID, memberships)
+
+	// Emitir evento de usuário criado
+	if originAppID != uuid.Nil {
+		events.EmitUserCreated(originAppID, userID, req.Email, req.Name)
+	}
+
 	c.JSON(http.StatusCreated, MultiAppAuthResponse{
 		UserID: userID.String(), Email: req.Email, Name: req.Name,
 		Token: token, ExpiresAt: expiresAt.Unix(), IsNewUser: true,
@@ -248,6 +255,13 @@ func (h *MultiAppIdentityHandler) Login(c *gin.Context) {
 
 	plan := h.getUserPlan(user.ID)
 	token, expiresAt := h.generateJWT(user.ID, user.Email, user.Username, user.Role, originAppID, memberships)
+
+	// Emitir evento de login
+	if requestingAppID != uuid.Nil {
+		events.EmitUserLogin(requestingAppID, user.ID, user.Email, c.ClientIP(), c.GetHeader("User-Agent"))
+	} else if originAppID != uuid.Nil {
+		events.EmitUserLogin(originAppID, user.ID, user.Email, c.ClientIP(), c.GetHeader("User-Agent"))
+	}
 
 	c.JSON(http.StatusOK, MultiAppAuthResponse{
 		UserID: user.ID.String(), Email: user.Email, Name: user.Username,

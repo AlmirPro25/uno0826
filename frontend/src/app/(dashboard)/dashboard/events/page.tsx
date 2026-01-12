@@ -18,11 +18,11 @@ import { motion, AnimatePresence } from "framer-motion";
 interface Event {
     id: string;
     type: string;
-    timestamp: number;
-    payload: Record<string, unknown>;
+    created_at: string;
+    payload: string; // JSON string
     source?: string;
     app_id?: string;
-    status?: string;
+    user_id?: string;
 }
 
 interface App {
@@ -62,12 +62,12 @@ export default function EventsPage() {
     const fetchEvents = async () => {
         if (!user?.id) return;
         try {
-            // API: GET /api/v1/events/:user_id
+            // Usar novo endpoint do Event System
             const endpoint = selectedApp === "all" 
-                ? `/events/${user.id}?limit=100`
-                : `/events/${user.id}?app_id=${selectedApp}&limit=100`;
+                ? `/events/user/${user.id}?limit=100`
+                : `/events/app/${selectedApp}?limit=100`;
             const res = await api.get(endpoint);
-            const data = res.data || [];
+            const data = res.data?.events || res.data || [];
             setEvents(Array.isArray(data) ? data : []);
         } catch (error) {
             console.error("Failed to fetch events", error);
@@ -93,7 +93,7 @@ export default function EventsPage() {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user, isLive, selectedApp]);
 
-    const formatTimestamp = (ts: number) => {
+    const formatTimestamp = (ts: string) => {
         const date = new Date(ts);
         const now = new Date();
         const diff = now.getTime() - date.getTime();
@@ -104,29 +104,39 @@ export default function EventsPage() {
         return date.toLocaleDateString('pt-BR');
     };
 
-    const getEventIcon = (type: string, status?: string) => {
-        if (status === "warning") return <AlertCircle className="w-4 h-4 text-amber-500" />;
-        if (status === "error") return <AlertCircle className="w-4 h-4 text-rose-500" />;
-        if (type.includes("auth") || type.includes("identity")) return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
-        if (type.includes("billing")) return <CheckCircle2 className="w-4 h-4 text-indigo-500" />;
-        if (type.includes("app")) return <Box className="w-4 h-4 text-blue-500" />;
+    const parsePayload = (payload: string): Record<string, unknown> => {
+        try {
+            return JSON.parse(payload);
+        } catch {
+            return {};
+        }
+    };
+
+    const getEventIcon = (type: string) => {
+        if (type.includes("mfa") || type.includes("session")) return <AlertCircle className="w-4 h-4 text-amber-500" />;
+        if (type.includes("failed") || type.includes("error")) return <AlertCircle className="w-4 h-4 text-rose-500" />;
+        if (type.includes("user") || type.includes("login") || type.includes("logout")) return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+        if (type.includes("payment") || type.includes("subscription") || type.includes("billing")) return <CheckCircle2 className="w-4 h-4 text-indigo-500" />;
+        if (type.includes("app") || type.includes("membership")) return <Box className="w-4 h-4 text-blue-500" />;
+        if (type.includes("alert") || type.includes("incident")) return <AlertCircle className="w-4 h-4 text-rose-500" />;
         return <Activity className="w-4 h-4 text-slate-500" />;
     };
 
     const getEventColor = (type: string) => {
-        if (type.includes("auth") || type.includes("identity")) return "text-emerald-400";
-        if (type.includes("billing")) return "text-indigo-400";
-        if (type.includes("app")) return "text-blue-400";
-        if (type.includes("governance")) return "text-amber-400";
-        if (type.includes("api")) return "text-purple-400";
+        if (type.includes("user") || type.includes("login") || type.includes("logout")) return "text-emerald-400";
+        if (type.includes("payment") || type.includes("subscription") || type.includes("billing")) return "text-indigo-400";
+        if (type.includes("app") || type.includes("membership")) return "text-blue-400";
+        if (type.includes("mfa") || type.includes("session")) return "text-amber-400";
+        if (type.includes("alert") || type.includes("incident")) return "text-rose-400";
         return "text-slate-400";
     };
 
     const filteredEvents = events.filter(evt => {
         if (!searchQuery) return true;
+        const payloadStr = typeof evt.payload === 'string' ? evt.payload : JSON.stringify(evt.payload);
         return evt.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
                evt.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               JSON.stringify(evt.payload).toLowerCase().includes(searchQuery.toLowerCase());
+               payloadStr.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
     const selectedAppName = selectedApp === "all" 
@@ -297,20 +307,25 @@ export default function EventsPage() {
                                             : "hover:bg-white/[0.02] border-transparent hover:border-white/5"
                                     )}
                                 >
-                                    {getEventIcon(evt.type, evt.status)}
+                                    {getEventIcon(evt.type)}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2">
                                             <span className={cn("font-bold text-sm", getEventColor(evt.type))}>
                                                 {evt.type}
                                             </span>
+                                            {evt.source && (
+                                                <span className="text-[10px] px-2 py-0.5 rounded bg-white/5 text-slate-500">
+                                                    {evt.source}
+                                                </span>
+                                            )}
                                         </div>
                                         <p className="text-xs text-slate-600 truncate font-mono">
-                                            {JSON.stringify(evt.payload).substring(0, 60)}...
+                                            {evt.payload.substring(0, 60)}...
                                         </p>
                                     </div>
                                     <div className="flex items-center gap-2 text-slate-600">
                                         <Clock className="w-3 h-3" />
-                                        <span className="text-xs">{formatTimestamp(evt.timestamp)}</span>
+                                        <span className="text-xs">{formatTimestamp(evt.created_at)}</span>
                                     </div>
                                 </motion.div>
                             ))
@@ -350,13 +365,19 @@ export default function EventsPage() {
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Timestamp</label>
                                     <p className="text-slate-300 text-sm mt-1">
-                                        {new Date(selectedEvent.timestamp).toLocaleString('pt-BR')}
+                                        {new Date(selectedEvent.created_at).toLocaleString('pt-BR')}
                                     </p>
                                 </div>
+                                {selectedEvent.source && (
+                                    <div>
+                                        <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Source</label>
+                                        <p className="text-slate-300 text-sm mt-1">{selectedEvent.source}</p>
+                                    </div>
+                                )}
                                 <div>
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Payload</label>
                                     <pre className="mt-2 p-4 bg-black/30 rounded-xl text-xs font-mono text-slate-300 overflow-auto">
-                                        {JSON.stringify(selectedEvent.payload, null, 2)}
+                                        {JSON.stringify(parsePayload(selectedEvent.payload), null, 2)}
                                     </pre>
                                 </div>
                             </div>

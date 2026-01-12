@@ -1,0 +1,86 @@
+/**
+ * ================================================================================
+ * PRISMA SCHEMA — PÓS-MIGRAÇÃO
+ * ================================================================================
+ * 
+ * Este schema deve substituir schema.prisma APÓS a migração completa.
+ * 
+ * MUDANÇAS:
+ * - passwordHash REMOVIDO (auth é via Kernel)
+ * - kernelUserId agora é OBRIGATÓRIO
+ * - kernelAppId, kernelAppKey, kernelAppSecret removidos (não são mais necessários)
+ * 
+ * COMO APLICAR:
+ * 1. Renomear este arquivo para schema.prisma
+ * 2. Executar: npx prisma migrate dev --name remove-local-auth
+ * 3. Executar: npx prisma generate
+ * 
+ * ================================================================================
+ */
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  role         String   @default("ADMIN")
+  
+  // UNO.KERNEL Integration — Fonte de verdade
+  // kernelUserId é OBRIGATÓRIO após migração
+  kernelUserId String   @unique
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Project {
+  id          String       @id @default(uuid())
+  name        String       @unique
+  type        String       @default("BACKEND") // FRONTEND | BACKEND
+  repoUrl     String
+  branch      String       @default("main")
+  buildCmd    String?
+  startCmd    String?
+  port        Int          @default(3000)
+  subdomain   String       @unique
+  ownerId     String       // ID do usuário dono (kernelUserId)
+  envVars     EnvVar[]
+  deployments Deployment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([ownerId])
+}
+
+model Deployment {
+  id        String   @id @default(uuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  status    String   @default("QUEUED") // QUEUED | BUILDING | DEPLOYING | HEALTHY | FAILED | STOPPED
+  imageTag  String
+  logs      String?
+  cpuUsage  Float    @default(0)
+  memUsage  Float    @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId])
+}
+
+model EnvVar {
+  id        String  @id @default(uuid())
+  key       String
+  value     String  // Criptografado em AES-256
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([key, projectId])
+  @@index([projectId])
+}

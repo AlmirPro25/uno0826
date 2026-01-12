@@ -16,8 +16,11 @@ Regra: Se chegou aqui, já passou pela borda. Mas ainda assim protegemos.
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"net"
 	"net/http"
 	"strconv"
+	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -154,38 +157,75 @@ func IPWhitelist(allowedIPs []string) gin.HandlerFunc {
 	}
 }
 
-// CloudflareOnly aceita apenas requests vindos do Cloudflare
-func CloudflareOnly() gin.HandlerFunc {
-	// IPs do Cloudflare (atualizar periodicamente)
-	// https://www.cloudflare.com/ips/
-	cloudflareIPs := []string{
-		"173.245.48.0/20",
-		"103.21.244.0/22",
-		"103.22.200.0/22",
-		"103.31.4.0/22",
-		"141.101.64.0/18",
-		"108.162.192.0/18",
-		"190.93.240.0/20",
-		"188.114.96.0/20",
-		"197.234.240.0/22",
-		"198.41.128.0/17",
-		"162.158.0.0/15",
-		"104.16.0.0/13",
-		"104.24.0.0/14",
-		"172.64.0.0/13",
-		"131.0.72.0/22",
+// CloudflareIPRanges IPs do Cloudflare (atualizar periodicamente)
+// https://www.cloudflare.com/ips/
+var CloudflareIPRanges = []string{
+	"173.245.48.0/20",
+	"103.21.244.0/22",
+	"103.22.200.0/22",
+	"103.31.4.0/22",
+	"141.101.64.0/18",
+	"108.162.192.0/18",
+	"190.93.240.0/20",
+	"188.114.96.0/20",
+	"197.234.240.0/22",
+	"198.41.128.0/17",
+	"162.158.0.0/15",
+	"104.16.0.0/13",
+	"104.24.0.0/14",
+	"172.64.0.0/13",
+	"131.0.72.0/22",
+}
+
+// parsedCFRanges cache de CIDRs parseados
+var parsedCFRanges []*net.IPNet
+var cfRangesOnce sync.Once
+
+// initCloudflareRanges inicializa os ranges de IP do Cloudflare
+func initCloudflareRanges() {
+	cfRangesOnce.Do(func() {
+		for _, cidr := range CloudflareIPRanges {
+			_, ipNet, err := net.ParseCIDR(cidr)
+			if err == nil {
+				parsedCFRanges = append(parsedCFRanges, ipNet)
+			}
+		}
+	})
+}
+
+// isCloudflareIP verifica se IP está na lista do Cloudflare
+func isCloudflareIP(ipStr string) bool {
+	initCloudflareRanges()
+	
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
 	}
 	
+	for _, ipNet := range parsedCFRanges {
+		if ipNet.Contains(ip) {
+			return true
+		}
+	}
+	
+	return false
+}
+
+// CloudflareOnly aceita apenas requests vindos do Cloudflare
+// SEGURANÇA: Valida que o request veio realmente do Cloudflare
+func CloudflareOnly() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		clientIP := c.ClientIP()
+		
+		// Em desenvolvimento local, permitir
+		if clientIP == "127.0.0.1" || clientIP == "::1" || strings.HasPrefix(clientIP, "192.168.") || strings.HasPrefix(clientIP, "10.") {
+			c.Next()
+			return
+		}
+		
 		// Verificar header CF-Connecting-IP (prova que veio do Cloudflare)
 		cfIP := c.GetHeader("CF-Connecting-IP")
 		if cfIP == "" {
-			// Em desenvolvimento, permitir
-			if c.ClientIP() == "127.0.0.1" || c.ClientIP() == "::1" {
-				c.Next()
-				return
-			}
-			
 			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
 				"error": "Direct access not allowed",
 				"code":  "CLOUDFLARE_REQUIRED",
@@ -193,11 +233,18 @@ func CloudflareOnly() gin.HandlerFunc {
 			return
 		}
 		
-		// Guardar IP real do cliente
-		c.Set("real_ip", cfIP)
+		// VALIDAR que o IP do request está na lista do Cloudflare
+		if !isCloudflareIP(clientIP) {
+			// Possível spoofing de header CF-Connecting-IP
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "Invalid request origin",
+				"code":  "INVALID_ORIGIN",
+			})
+			return
+		}
 		
-		// Log para debug
-		_ = cloudflareIPs // TODO: validar se IP está na lista do CF
+		// Guardar IP real do cliente (do header CF)
+		c.Set("real_ip", cfIP)
 		
 		c.Next()
 	}

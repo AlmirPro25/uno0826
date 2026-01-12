@@ -221,6 +221,20 @@ export function Sidebar() {
                     Configurações
                 </Link>
 
+                {/* Security - Todos */}
+                <Link
+                    href="/dashboard/security"
+                    className={cn(
+                        "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all",
+                        pathname === "/dashboard/security"
+                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
+                            : "text-slate-400 hover:bg-white/5 hover:text-white"
+                    )}
+                >
+                    <Key className="w-4 h-4" />
+                    Segurança
+                </Link>
+
                 {/* Governance - Admin global */}
                 {isGlobalAdmin && (
                     <>

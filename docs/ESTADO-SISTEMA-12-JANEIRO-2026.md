@@ -183,6 +183,280 @@ GET /api/v1/invariants/status   → Status dos invariantes
 | **UserOrigin** | "Certidão de nascimento" (imutável) | ✅ Congelado |
 | **AppMembership** | Vínculo explícito por app | ✅ Congelado |
 
+---
+
+## 🔒 Security Hardening — IMPLEMENTADO
+
+### Status: ✅ PRODUÇÃO
+
+O sistema passou por hardening de segurança completo.
+
+### Componentes de Segurança
+
+| Componente | Status | Descrição |
+|------------|--------|-----------|
+| **MFA (TOTP)** | ✅ | Autenticação de dois fatores |
+| **Rate Limiting** | ✅ | Por endpoint e IP |
+| **CORS Strict** | ✅ | Whitelist de origens |
+| **Token Blacklist** | ✅ | Revogação de sessões |
+| **Secure Logger** | ✅ | Sanitização de PII |
+| **Security Headers** | ✅ | CSP, HSTS, X-Frame-Options |
+| **Cloudflare IP Validation** | ✅ | Validação de IPs reais |
+
+### Endpoints de MFA
+
+```
+POST /api/v1/auth/mfa/setup        → Iniciar setup (retorna QR code)
+POST /api/v1/auth/mfa/verify       → Verificar e habilitar
+POST /api/v1/auth/mfa/validate     → Validar código no login
+DELETE /api/v1/auth/mfa            → Desabilitar MFA
+POST /api/v1/auth/mfa/backup-codes → Regenerar backup codes
+GET  /api/v1/auth/mfa/status       → Status do MFA
+```
+
+### Endpoints de Sessão
+
+```
+GET    /api/v1/auth/sessions       → Listar sessões ativas
+GET    /api/v1/auth/sessions/stats → Estatísticas de sessões
+DELETE /api/v1/auth/sessions/:id   → Revogar sessão específica
+DELETE /api/v1/auth/sessions       → Revogar todas (exceto atual)
+POST   /api/v1/auth/logout         → Logout da sessão atual
+POST   /api/v1/auth/logout-all     → Logout de todas as sessões
+POST   /api/v1/auth/revoke/:user_id → Revogar tokens de usuário (admin)
+```
+
+### Endpoints de Atividade
+
+```
+GET /api/v1/activity           → Listar atividades do usuário
+GET /api/v1/activity/stats     → Estatísticas de atividades
+GET /api/v1/activity/security  → Atividades de segurança (admin)
+GET /api/v1/apps/:id/activity  → Atividades de um app
+```
+
+---
+
+## 🔔 Webhook System — NOVO
+
+### Status: ✅ IMPLEMENTADO
+
+Sistema de webhooks para notificações em tempo real para apps externos.
+
+### Filosofia
+> "O Kernel avisa, o app decide o que fazer"
+
+### Tipos de Eventos
+
+| Categoria | Eventos |
+|-----------|---------|
+| **User** | user.created, user.updated, user.deleted, user.login, user.logout |
+| **Billing** | subscription.created, subscription.updated, subscription.canceled, payment.succeeded, payment.failed |
+| **App** | app.membership.created, app.membership.removed |
+| **System** | alert.triggered, incident.created |
+
+### Endpoints
+
+```
+GET    /api/v1/webhooks/events     → Tipos de eventos disponíveis
+POST   /api/v1/webhooks            → Criar endpoint
+GET    /api/v1/webhooks            → Listar endpoints
+GET    /api/v1/webhooks/:id        → Buscar endpoint
+PUT    /api/v1/webhooks/:id        → Atualizar endpoint
+DELETE /api/v1/webhooks/:id        → Remover endpoint
+POST   /api/v1/webhooks/:id/test   → Testar endpoint
+POST   /api/v1/webhooks/:id/rotate → Rotacionar secret
+POST   /api/v1/webhooks/:id/enable → Habilitar endpoint
+POST   /api/v1/webhooks/:id/disable → Desabilitar endpoint
+GET    /api/v1/webhooks/:id/deliveries → Histórico de entregas
+GET    /api/v1/webhooks/:id/stats  → Estatísticas
+```
+
+### Segurança
+
+- **HMAC-SHA256**: Cada webhook é assinado com secret único
+- **Retry automático**: 3 tentativas com backoff exponencial
+- **Auto-disable**: Endpoint desabilitado após 5 falhas consecutivas
+- **Secret rotation**: Rotação de secrets sem downtime
+
+### Headers do Webhook
+
+```
+X-Webhook-ID: uuid
+X-Webhook-Event: user.created
+X-Webhook-Timestamp: 1736697600
+X-Webhook-Signature: hmac-sha256-signature
+```
+
+### Payload
+
+```json
+{
+  "id": "uuid",
+  "type": "user.created",
+  "created_at": "2026-01-12T15:00:00Z",
+  "data": {
+    "user_id": "uuid",
+    "email": "user@example.com"
+  }
+}
+```
+
+---
+
+## 🔑 API Key System — NOVO
+
+### Status: ✅ IMPLEMENTADO
+
+Sistema de API keys para autenticação de apps externos.
+
+### Filosofia
+> "Apps não usam senha. Apps usam chaves."
+
+### Scopes Disponíveis
+
+| Scope | Descrição |
+|-------|-----------|
+| `read` | Apenas leitura de dados |
+| `write` | Leitura e escrita de dados |
+| `admin` | Acesso administrativo completo |
+| `telemetry` | Envio de telemetria |
+| `identity` | Operações de identidade |
+| `billing` | Operações de billing |
+
+### Endpoints
+
+```
+GET    /api/v1/apikeys/scopes  → Scopes disponíveis
+POST   /api/v1/apikeys         → Criar API key
+GET    /api/v1/apikeys         → Listar API keys
+GET    /api/v1/apikeys/:id     → Buscar API key
+DELETE /api/v1/apikeys/:id     → Revogar API key
+GET    /api/v1/apikeys/:id/stats → Estatísticas de uso
+```
+
+### Formato da Key
+
+```
+pqs_<64 caracteres hex>
+```
+
+### Uso em Requisições
+
+```bash
+# Via header X-API-Key
+curl -H "X-API-Key: pqs_xxx" https://api.example.com/endpoint
+
+# Via Bearer token
+curl -H "Authorization: Bearer pqs_xxx" https://api.example.com/endpoint
+```
+
+### Segurança
+
+- Keys são hasheadas com SHA256 antes de armazenar
+- Apenas o prefixo (8 chars) é visível após criação
+- Keys podem ter data de expiração
+- Revogação imediata disponível
+- Uso é registrado para auditoria
+
+---
+
+## 📡 Event System — NOVO
+
+### Status: ✅ IMPLEMENTADO
+
+Sistema centralizado de eventos que conecta serviços internos aos webhooks externos.
+
+### Filosofia
+> "Um lugar para emitir. Muitos lugares para ouvir."
+
+### Arquitetura
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│  Auth Service   │────▶│  Event Service  │────▶│  Event Bridge   │
+│  MFA Service    │     │  (Persistência) │     │  (Listeners)    │
+│  Session Svc    │     └─────────────────┘     └────────┬────────┘
+│  Billing Svc    │                                      │
+└─────────────────┘                                      ▼
+                                                ┌─────────────────┐
+                                                │ Webhook Dispatch│
+                                                │ (HTTP Delivery) │
+                                                └─────────────────┘
+```
+
+### Tipos de Eventos
+
+| Categoria | Eventos |
+|-----------|---------|
+| **User** | user.created, user.updated, user.deleted, user.login, user.logout, user.mfa.enabled, user.mfa.disabled |
+| **Session** | session.created, session.revoked, session.expired |
+| **Billing** | subscription.created, subscription.updated, subscription.canceled, payment.succeeded, payment.failed |
+| **App** | app.membership.created, app.membership.removed |
+| **System** | alert.triggered, incident.created |
+
+### Endpoints
+
+```
+GET  /api/v1/events/types          → Tipos de eventos disponíveis
+GET  /api/v1/events/app/:app_id    → Eventos de um app (admin)
+GET  /api/v1/events/user/:user_id  → Eventos de um usuário (admin)
+GET  /api/v1/events/stats/:app_id  → Estatísticas de eventos (admin)
+```
+
+### Uso Interno (Go)
+
+```go
+// Emitir evento diretamente
+eventService.UserCreated(appID, userID, email, name)
+eventService.UserLogin(appID, userID, email, ip, userAgent)
+eventService.MFAEnabled(appID, userID)
+eventService.PaymentSucceeded(appID, userID, amount, currency)
+
+// Emitir evento genérico
+eventService.Emit(appID, events.EventUserCreated, payload, "identity", &userID)
+```
+
+### Fluxo de Eventos
+
+1. Serviço interno chama `EventService.UserCreated()`
+2. EventService persiste o evento no banco
+3. EventService notifica listeners registrados
+4. EventBridge (listener) recebe o evento
+5. EventBridge chama `WebhookDispatcher.DispatchUserCreated()`
+6. Dispatcher encontra webhooks interessados e envia HTTP POST
+
+### SDK TypeScript
+
+```typescript
+import { EventsModule, EventTypes } from '@prost-qs/sdk';
+
+// Listar tipos de eventos
+const types = await events.getEventTypes();
+
+// Buscar eventos de um app
+const appEvents = await events.getAppEvents(appId, 100);
+
+// Buscar eventos de um usuário
+const userEvents = await events.getUserEvents(userId, 50);
+
+// Estatísticas
+const stats = await events.getEventStats(appId);
+```
+
+---
+
+### Rate Limits por Endpoint
+
+| Endpoint | Limite | Janela |
+|----------|--------|--------|
+| `/auth/login` | 5 | 1 min |
+| `/auth/mfa/*` | 10 | 1 min |
+| `/billing/*` | 20 | 1 min |
+| `/*` (default) | 100 | 1 min |
+
+---
+
 ### Princípio Fundamental
 > "Login unificado sem consentimento explícito é só um bug elegante."
 
@@ -439,6 +713,62 @@ git push origin main
 5. **UI Components** — tabs.tsx, card.tsx, badge.tsx
 6. **GitHub Push** — Código atualizado em https://github.com/AlmirPro25/uno0826
 7. **Documentação** — Este documento
+
+### Security Hardening (Sessão 2)
+
+8. **MFA (Multi-Factor Authentication)** — TOTP completo
+   - `auth/mfa_service.go` — Geração de secret, backup codes, validação
+   - `auth/mfa_handler.go` — Endpoints REST completos
+   - `auth/mfa_service_test.go` — 20+ testes
+   - Frontend: `/dashboard/security` com setup visual
+
+9. **Rate Limiting Avançado** — Por endpoint e IP
+   - `middleware/ratelimit_advanced.go` — Limites diferenciados por rota
+
+10. **CORS Strict** — Validação rigorosa de origens
+    - `middleware/cors_strict.go` — Whitelist explícita
+
+11. **Token Blacklist** — Revogação de sessões
+    - `utils/token_blacklist.go` — Logout real com invalidação
+
+12. **Secure Logger** — Sanitização automática
+    - `utils/secure_logger.go` — Remove PII dos logs
+
+13. **Logout Handler** — Gestão de sessões
+    - `auth/logout_handler.go` — Logout individual e global
+
+14. **CI/CD Melhorado** — Security scan + coverage
+    - `.github/workflows/ci.yml` — Gosec, coverage report, SDK check
+
+15. **SDK Auth Module** — Suporte completo a MFA
+    - `sdk/internal/auth.ts` — Login, logout, MFA, sessions
+    - `sdk/internal/client.ts` — Métodos HTTP convenientes
+
+### Session Management (Sessão 3)
+
+16. **Session Service** — Gestão completa de sessões
+    - `auth/session_service.go` — CRUD de sessões, stats, cleanup
+    - `auth/session_handler.go` — Endpoints REST
+    - `auth/session_service_test.go` — 10+ testes
+
+17. **Frontend Session Manager** — UI para gerenciar sessões
+    - `components/auth/session-manager.tsx` — Lista, revoga, stats
+    - `/dashboard/security` — Tabs: Sessões, MFA, Conta
+
+### Activity Log (Sessão 4)
+
+18. **Activity Service** — Log de atividades do usuário
+    - `activity/service.go` — Registro, consulta, estatísticas
+    - `activity/handler.go` — Endpoints REST
+    - `activity/service_test.go` — 10+ testes
+    - Tipos: login, logout, mfa, billing, app, admin
+
+19. **Frontend Activity Log** — UI para visualizar atividades
+    - `components/auth/activity-log.tsx` — Lista com ícones e stats
+    - `/dashboard/security` — Nova tab "Atividades"
+
+20. **SDK Activity Module** — Suporte no SDK
+    - `sdk/internal/activity.ts` — listActivities, getStats, etc.
 
 ---
 

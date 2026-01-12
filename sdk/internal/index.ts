@@ -11,6 +11,10 @@ export * from './identity';
 export * from './telemetry';
 export * from './billing';
 export * from './decisions';
+export * from './activity';
+export * from './webhooks';
+export * from './apikeys';
+export * from './events';
 export * from './types';
 
 // Re-export para conveniência

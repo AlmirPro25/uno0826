@@ -45,6 +45,9 @@ jobs:
       - name: 📦 Download Dependencies
         run: go mod download
 
+      - name: 🔍 Vet (Static Analysis)
+        run: go vet ./...
+
       - name: 🔨 Build
         run: CGO_ENABLED=0 go build -ldflags "-s -w" -o prost-qs ./cmd/api/main.go
 
@@ -54,11 +57,53 @@ jobs:
           AES_SECRET_KEY: "ci_test_aes_key_32bytes_minimum!"
           SECRETS_MASTER_KEY: "ci_test_master_key_32bytes_min!"
           SQLITE_DB_PATH: ":memory:"
-        run: go test -v -race -coverprofile=coverage.out ./...
+          GIN_MODE: "test"
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: 📊 Coverage Report
-        if: github.event_name == 'pull_request'
-        run: go tool cover -func=coverage.out
+        run: |
+          go tool cover -func=coverage.out
+          COVERAGE=$(go tool cover -func=coverage.out | grep total | awk '{print $3}' | sed 's/%//')
+          echo "Total Coverage: ${COVERAGE}%"
+          echo "coverage=${COVERAGE}" >> $GITHUB_OUTPUT
+
+      - name: 📤 Upload Coverage
+        uses: codecov/codecov-action@v4
+        if: github.event_name == 'push'
+        with:
+          files: ./backend/coverage.out
+          flags: backend
+          fail_ci_if_error: false
+
+  # ========================================
+  # SECURITY SCAN - Backend
+  # ========================================
+  security-backend:
+    name: 🔒 Security Scan (Backend)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 🐹 Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: 🔒 Run Gosec Security Scanner
+        uses: securego/gosec@master
+        with:
+          args: '-no-fail -fmt sarif -out results.sarif ./backend/...'
+
+      - name: 📤 Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
 
   # ========================================
   # FRONTEND - Next.js
@@ -84,13 +129,38 @@ jobs:
       - name: 📦 Install Dependencies
         run: npm ci
 
-      - name: 🔍 Type Check
+      - name: 🔍 Lint
         run: npm run lint || true
+
+      - name: 🔍 Type Check
+        run: npx tsc --noEmit || true
 
       - name: 🔨 Build
         env:
           NEXT_PUBLIC_API_URL: https://uno0826.onrender.com/api/v1
         run: npm run build
+
+  # ========================================
+  # SDK - TypeScript
+  # ========================================
+  sdk:
+    name: 📦 SDK (TypeScript)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./sdk
+    
+    steps:
+      - name: 📥 Checkout
+        uses: actions/checkout@v4
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: 🔍 Type Check
+        run: npx tsc --noEmit --skipLibCheck || true
 
   # ========================================
   # DEPLOY STATUS (informativo)
