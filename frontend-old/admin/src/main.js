@@ -64,7 +64,7 @@ function isSuperAdmin() {
 // API HELPERS
 // ========================================
 
-async function api(endpoint, options = {}) {
+async function api(endpoint, options = {}, retries = 2) {
     const token = localStorage.getItem(STORAGE.TOKEN);
     const headers = {
         'Content-Type': 'application/json',
@@ -78,6 +78,12 @@ async function api(endpoint, options = {}) {
         const data = text ? JSON.parse(text) : {};
         
         if (!res.ok) {
+            // Retry on 502 Bad Gateway (Render cold start)
+            if (res.status === 502 && retries > 0) {
+                console.log(`[API] 502 Bad Gateway, retrying in 2s... (${retries} retries left)`);
+                await new Promise(r => setTimeout(r, 2000));
+                return api(endpoint, options, retries - 1);
+            }
             if (res.status === 401) {
                 logout();
                 throw new Error('Sessão expirada');
@@ -86,11 +92,17 @@ async function api(endpoint, options = {}) {
                 toast('Acesso negado', 'error');
                 throw new Error('Acesso negado');
             }
-            throw new Error(data.error || data.message || 'Erro');
+            throw new Error(data.error || data.message || `Erro ${res.status}`);
         }
         
         return data;
     } catch (err) {
+        // Retry on network errors (CORS errors from 502 appear as network errors)
+        if (err.name === 'TypeError' && err.message.includes('Failed to fetch') && retries > 0) {
+            console.log(`[API] Network error, retrying in 2s... (${retries} retries left)`);
+            await new Promise(r => setTimeout(r, 2000));
+            return api(endpoint, options, retries - 1);
+        }
         if (err.message !== 'Sessão expirada') {
             console.error('API Error:', err);
         }
@@ -159,7 +171,19 @@ function showSection(sectionId) {
         // Governance
         'governance': '🛡️ Governance',
         // Onboarding
-        'onboarding': '🚀 Onboarding'
+        'onboarding': '🚀 Onboarding',
+        // New Modules - Fase 29
+        'ads': '📢 Ads Manager',
+        'webhooks': '🔔 Webhooks',
+        'events': '📡 Events',
+        'apikeys': '🔑 API Keys',
+        'security': '🔒 Security',
+        'immunity': '🛡️ Immunity System',
+        'telemetry': '📊 Telemetry',
+        'invariants': '✅ Invariants',
+        'secrets': '🔐 Secrets',
+        'risk': '⚠️ Risk Analysis',
+        'capabilities': '🧩 Capabilities'
     };
     document.getElementById('section-title').textContent = titles[sectionId] || sectionId;
     
@@ -187,6 +211,19 @@ function formatCurrency(cents) {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format((cents || 0) / 100);
 }
 
+function renderError(title, message) {
+    return `
+        <div class="card rounded-2xl p-8 text-center">
+            <i class="fas fa-exclamation-triangle text-4xl text-amber-400 mb-4"></i>
+            <h3 class="text-xl font-bold mb-2">${title}</h3>
+            <p class="text-gray-400">${message}</p>
+            <button onclick="refreshData()" class="mt-4 bg-primary hover:bg-primary/80 px-4 py-2 rounded-xl">
+                <i class="fas fa-sync-alt mr-2"></i> Tentar Novamente
+            </button>
+        </div>
+    `;
+}
+
 function formatDate(date) {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' });
@@ -195,6 +232,23 @@ function formatDate(date) {
 function formatDateShort(date) {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
+function formatTimeAgo(date) {
+    if (!date) return '-';
+    const now = new Date();
+    const then = new Date(date);
+    const diff = now - then;
+    
+    const seconds = Math.floor(diff / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const hours = Math.floor(minutes / 60);
+    const days = Math.floor(hours / 24);
+    
+    if (days > 0) return `${days}d atrás`;
+    if (hours > 0) return `${hours}h atrás`;
+    if (minutes > 0) return `${minutes}m atrás`;
+    return 'agora';
 }
 
 // ========================================
@@ -295,11 +349,15 @@ function initMainLayout() {
 
 async function checkKillSwitchStatus() {
     try {
-        const status = await api('/killswitch/status');
-        if (status.active_switches?.length > 0) {
+        // Endpoint correto: /admin/kill-switch (requer super_admin)
+        const status = await api('/admin/kill-switch');
+        const switches = status.switches || [];
+        const activeSwitches = switches.filter(s => s.active);
+        
+        if (activeSwitches.length > 0) {
             document.getElementById('killswitch-banner').classList.remove('hidden');
             document.getElementById('killswitch-banner-text').textContent = 
-                `KILL SWITCH ATIVO: ${status.active_switches.map(s => s.scope).join(', ')}`;
+                `KILL SWITCH ATIVO: ${activeSwitches.map(s => s.scope).join(', ')}`;
             document.getElementById('ks-badge').classList.remove('hidden');
             document.body.style.paddingTop = '40px';
         } else {
@@ -308,7 +366,9 @@ async function checkKillSwitchStatus() {
             document.body.style.paddingTop = '0';
         }
     } catch (err) {
-        // Silently fail - user might not have permission
+        // Silently fail - user might not have permission (requires super_admin)
+        document.getElementById('killswitch-banner').classList.add('hidden');
+        document.getElementById('ks-badge').classList.add('hidden');
     }
 }
 
@@ -359,6 +419,18 @@ async function loadSection(sectionId) {
             case 'governance': await renderGovernance(content); break;
             // Onboarding - Primeira experiência
             case 'onboarding': renderOnboarding(content); break;
+            // New Modules - Fase 29
+            case 'ads': await renderAdsSection(content); break;
+            case 'webhooks': await renderWebhooksSection(content); break;
+            case 'events': await renderEventsSection(content); break;
+            case 'apikeys': await renderApiKeysSection(content); break;
+            case 'security': await renderSecuritySection(content); break;
+            case 'immunity': await renderImmunitySection(content); break;
+            case 'telemetry': await renderTelemetrySection(content); break;
+            case 'invariants': await renderInvariantsSection(content); break;
+            case 'secrets': await renderSecretsSection(content); break;
+            case 'risk': await renderRiskSection(content); break;
+            case 'capabilities': await renderCapabilitiesSection(content); break;
             default: content.innerHTML = '<p class="text-gray-500">Seção não encontrada</p>';
         }
         document.getElementById('last-update').textContent = `Atualizado ${new Date().toLocaleTimeString('pt-BR')}`;
@@ -2469,12 +2541,9 @@ window.loadJobs = loadJobs;
 window.retryJob = retryJob;
 window.showExplainPanel = showExplainPanel;
 window.closeExplainPanel = closeExplainPanel;
-// Alerts
-window.acknowledgeAlert = acknowledgeAlert;
-window.acknowledgeAllAlerts = acknowledgeAllAlerts;
-window.filterAlerts = filterAlerts;
-window.toggleAlertsPolling = toggleAlertsPolling;
-window.showAlertDetails = showAlertDetails;
+// Note: Alert functions (acknowledgeAlert, acknowledgeAllAlerts, filterAlerts, etc.)
+// are defined in alerts.js and telemetry.js which load after main.js
+// They are globally accessible without explicit window assignment
 
 // ========================================
 // EXPLAIN PANEL - Causalidade

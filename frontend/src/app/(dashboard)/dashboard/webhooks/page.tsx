@@ -191,29 +191,22 @@ export default function WebhooksPage() {
     }, [activeApp?.id]);
 
     // Retry intencional - executar novamente com mesmo payload
+    // NOTA: Backend não tem endpoint de retry ainda - mostrando mensagem informativa
     const retryWebhook = async (execution: WebhookExecution) => {
         setRetrying(execution.id);
         try {
-            // Buscar a regra original para re-executar
             const result = parseActionResult(execution.action_result);
             
-            // Por enquanto, mostrar confirmação e simular retry
-            // TODO: Implementar endpoint de retry no backend
-            toast.info("Retry solicitado", {
-                description: `Webhook para ${result.url} será re-executado com o mesmo payload.`
+            // Mostrar mensagem informativa - retry manual não implementado no backend
+            toast.warning("Retry manual não disponível", {
+                description: `Para re-executar o webhook para ${result.url}, edite a regra e force uma nova avaliação.`,
+                duration: 5000
             });
             
-            // Simular delay de retry
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            
-            toast.success("Retry executado", {
-                description: "Verifique o resultado na lista abaixo."
-            });
-            
-            // Recarregar execuções
-            fetchWebhookExecutions();
+            // Pequeno delay para UX
+            await new Promise(resolve => setTimeout(resolve, 500));
         } catch {
-            toast.error("Falha no retry");
+            toast.error("Erro ao processar retry");
         } finally {
             setRetrying(null);
         }

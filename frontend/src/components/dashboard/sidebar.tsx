@@ -34,7 +34,11 @@ import {
     Scale,
     Bell,
     ShieldCheck,
-    Megaphone
+    Megaphone,
+    Gauge,
+    Cog,
+    PiggyBank,
+    Wallet
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
@@ -48,7 +52,9 @@ const coreItems = [
     { href: "/dashboard/incidents", label: "Incidentes", icon: AlertTriangle },
     { href: "/dashboard/notifications", label: "Notificações", icon: Bell },
     { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
+    { href: "/dashboard/apikeys", label: "API Keys", icon: Key },
     { href: "/dashboard/telemetry", label: "Telemetria", icon: BarChart3 },
+    { href: "/dashboard/activity", label: "Atividade", icon: Activity },
     { href: "/dashboard/status", label: "Status", icon: Activity },
 ];
 
@@ -72,24 +78,32 @@ const billingItems = [
 const governanceItems = [
     { href: "/dashboard/authority", label: "Autoridade", icon: Crown },
     { href: "/dashboard/agents", label: "Agentes", icon: Bot },
+    { href: "/dashboard/autonomy", label: "Autonomia", icon: Gauge },
     { href: "/dashboard/approvals", label: "Aprovações", icon: UserCheck },
     { href: "/dashboard/decisions", label: "Decisões", icon: Scale },
     { href: "/dashboard/memory", label: "Memória", icon: Database },
+    { href: "/dashboard/narrative", label: "Narrativa", icon: BookOpen },
     { href: "/dashboard/observer", label: "Observer", icon: Eye },
     { href: "/dashboard/timeline", label: "Timeline", icon: GitBranch },
     { href: "/dashboard/secrets", label: "Secrets", icon: Key },
     { href: "/dashboard/killswitch", label: "Kill Switch", icon: Power },
     { href: "/dashboard/invariants", label: "Invariants", icon: ShieldCheck },
     { href: "/dashboard/immunity", label: "Imunidade", icon: Shield },
+    { href: "/dashboard/alerting", label: "Alertas", icon: Bell },
     { href: "/dashboard/ads", label: "Ad Gateway", icon: Megaphone },
 ];
 
 // Items de super admin global
 const superAdminItems = [
-    { href: "/dashboard/admin/financial", label: "Financial", icon: DollarSign },
+    { href: "/dashboard/financial", label: "Financeiro", icon: PiggyBank },
+    { href: "/dashboard/payments", label: "Pagamentos", icon: Wallet },
+    { href: "/dashboard/explainability", label: "Explicabilidade", icon: Brain },
+    { href: "/dashboard/admin/financial", label: "Admin Financial", icon: DollarSign },
     { href: "/dashboard/admin/cognitive", label: "Cognitive", icon: Brain },
     { href: "/dashboard/admin/intelligence", label: "Intelligence", icon: BarChart3 },
     { href: "/dashboard/admin/reconciliation", label: "Reconciliação", icon: Scale },
+    { href: "/dashboard/jobs", label: "Jobs", icon: Cog },
+    { href: "/dashboard/kernel-billing", label: "Kernel Billing", icon: CreditCard },
 ];
 
 export function Sidebar() {

@@ -54,6 +54,8 @@ export default function AdsInventoryPage() {
     const [loading, setLoading] = useState(true);
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [showCreativeModal, setShowCreativeModal] = useState(false);
+    const [adAccountId, setAdAccountId] = useState<string | null>(null);
+    const [adAccountError, setAdAccountError] = useState<string | null>(null);
 
     // Form states
     const [newCampaign, setNewCampaign] = useState({
@@ -77,17 +79,39 @@ export default function AdsInventoryPage() {
     const [creatingCampaign, setCreatingCampaign] = useState(false);
     const [creatingCreative, setCreatingCreative] = useState(false);
 
-    const fetchCampaigns = useCallback(async () => {
+    // Fetch user's ad account on mount
+    const fetchAdAccount = useCallback(async () => {
         try {
-            // TODO: Get ad_account_id from user context
-            const res = await api.get("/ads/campaigns?ad_account_id=test");
+            const res = await api.get("/ads/accounts/me");
+            if (res.data?.id) {
+                setAdAccountId(res.data.id);
+                setAdAccountError(null);
+                return res.data.id;
+            }
+            setAdAccountError("Conta de anúncios não encontrada");
+            return null;
+        } catch (error) {
+            console.error("Failed to fetch ad account", error);
+            setAdAccountError("Crie uma conta de anúncios primeiro");
+            return null;
+        }
+    }, []);
+
+    const fetchCampaigns = useCallback(async (accountId?: string) => {
+        const id = accountId || adAccountId;
+        if (!id) {
+            setLoading(false);
+            return;
+        }
+        try {
+            const res = await api.get(`/ads/campaigns?ad_account_id=${id}`);
             setCampaigns(res.data.campaigns || []);
         } catch (error) {
             console.error("Failed to fetch campaigns", error);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [adAccountId]);
 
     const fetchCampaignStats = async (campaignId: string) => {
         try {
@@ -108,8 +132,16 @@ export default function AdsInventoryPage() {
     };
 
     useEffect(() => {
-        fetchCampaigns();
-    }, [fetchCampaigns]);
+        const init = async () => {
+            const accountId = await fetchAdAccount();
+            if (accountId) {
+                fetchCampaigns(accountId);
+            } else {
+                setLoading(false);
+            }
+        };
+        init();
+    }, [fetchAdAccount, fetchCampaigns]);
 
     useEffect(() => {
         if (selectedCampaign) {
@@ -148,11 +180,15 @@ export default function AdsInventoryPage() {
     };
 
     const handleCreateCampaign = async () => {
+        if (!adAccountId) {
+            console.error("No ad account ID available");
+            return;
+        }
         setCreatingCampaign(true);
         try {
             await api.post("/ads/campaigns", {
                 ...newCampaign,
-                ad_account_id: "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa", // TODO: from context
+                ad_account_id: adAccountId,
             });
             setShowCreateModal(false);
             setNewCampaign({
@@ -214,6 +250,19 @@ export default function AdsInventoryPage() {
         <div className="space-y-6 pb-12">
             <AppHeader />
 
+            {/* Ad Account Error Banner */}
+            {adAccountError && (
+                <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center gap-3">
+                    <Megaphone className="w-5 h-5 text-amber-400" />
+                    <div>
+                        <p className="text-sm font-bold text-amber-400">{adAccountError}</p>
+                        <p className="text-xs text-amber-400/70 mt-1">
+                            Acesse /ads/accounts para criar sua conta de anúncios
+                        </p>
+                    </div>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -227,14 +276,15 @@ export default function AdsInventoryPage() {
                 <div className="flex items-center gap-3">
                     <Button 
                         variant="outline"
-                        onClick={fetchCampaigns}
-                        disabled={loading}
+                        onClick={() => adAccountId && fetchCampaigns(adAccountId)}
+                        disabled={loading || !adAccountId}
                         className="h-11 px-4 rounded-xl border-white/10 text-white hover:bg-white/5"
                     >
                         <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
                     </Button>
                     <Button 
                         onClick={() => setShowCreateModal(true)}
+                        disabled={!adAccountId}
                         className="h-11 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
                     >
                         <Plus className="w-4 h-4 mr-2" /> Nova Campanha

@@ -550,14 +550,22 @@ async function showAppDetail(appId) {
 // REAL-TIME METRICS POLLING
 // ========================================
 
+let metricsErrorCount = 0;
+const MAX_METRICS_ERRORS = 3;
+
 function startMetricsPolling(appId) {
+    metricsErrorCount = 0;
     // Atualizar imediatamente
     updateMetrics(appId);
     
-    // Polling a cada 3 segundos
+    // Polling a cada 10 segundos (reduzido de 3s para evitar spam)
     metricsPollingInterval = setInterval(() => {
-        updateMetrics(appId);
-    }, 3000);
+        if (metricsErrorCount < MAX_METRICS_ERRORS) {
+            updateMetrics(appId);
+        } else {
+            console.log('[Metrics] Polling paused due to errors');
+        }
+    }, 10000);
 }
 
 function stopMetricsPolling() {
@@ -565,6 +573,7 @@ function stopMetricsPolling() {
         clearInterval(metricsPollingInterval);
         metricsPollingInterval = null;
     }
+    metricsErrorCount = 0;
     // Também parar live events se estiver rodando
     if (typeof stopLiveEvents === 'function') {
         stopLiveEvents();
@@ -575,9 +584,12 @@ async function updateMetrics(appId) {
     try {
         // Buscar métricas do endpoint padrão E do endpoint de telemetria
         const [metrics, telemetryMetrics] = await Promise.all([
-            api(`/apps/${appId}/metrics`),
+            api(`/apps/${appId}/metrics`).catch(() => ({})),
             api(`/admin/telemetry/apps/${appId}/metrics`).catch(() => null)
         ]);
+        
+        // Reset error count on success
+        metricsErrorCount = 0;
         
         // Usar métricas de telemetria se disponíveis, senão usar métricas padrão
         const finalMetrics = telemetryMetrics || metrics;
@@ -630,7 +642,8 @@ async function updateMetrics(appId) {
             updateAlerts(appId);
         }
     } catch (err) {
-        console.error('Erro ao atualizar métricas:', err);
+        metricsErrorCount++;
+        console.error('Erro ao atualizar métricas:', err, `(${metricsErrorCount}/${MAX_METRICS_ERRORS})`);
     }
 }
 
