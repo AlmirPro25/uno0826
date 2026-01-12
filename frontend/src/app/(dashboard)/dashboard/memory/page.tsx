@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { 
+import {
     Brain, Search, Clock, CheckCircle2, XCircle, AlertTriangle,
     Loader2, RefreshCw, Info, Database, TrendingUp, History,
     Lightbulb, Target, Zap
@@ -57,7 +57,7 @@ export default function MemoryPage() {
             const params = activeApp ? `?app_id=${activeApp.id}&limit=100` : "?limit=100";
             const res = await api.get(`/memory/entries${params}`);
             const data = res.data.entries || res.data || [];
-            
+
             setEntries(data.map((e: Record<string, unknown>) => ({
                 id: e.id,
                 decision_id: e.decision_id,
@@ -86,23 +86,36 @@ export default function MemoryPage() {
                 avg_confidence: avgConf * 100
             });
 
-            // Gerar padrões (mock por enquanto)
-            setPatterns([
-                {
-                    domain: "billing",
-                    pattern: "Pagamentos falham mais às segundas",
-                    frequency: 12,
-                    success_rate: 65,
-                    recommendation: "Considere retry automático para pagamentos às segundas"
-                },
-                {
-                    domain: "notification",
-                    pattern: "Notificações têm 98% de sucesso",
-                    frequency: 45,
-                    success_rate: 98,
-                    recommendation: "Sistema de notificações está saudável"
+            // Gerar padrões dinâmicos baseados nos dados reais
+            const generatedPatterns: Pattern[] = [];
+
+            Object.entries(domainCounts).forEach(([domain, count]) => {
+                const domainEntries = data.filter((e: any) => (e.action_domain || e.domain) === domain);
+                const domainSuccess = domainEntries.filter((e: any) => e.outcome === "success").length;
+                const rate = (domainSuccess / domainEntries.length) * 100;
+
+                if (count > 5) { // Só analisar se tiver amostra suficiente
+                    if (rate < 80) {
+                        generatedPatterns.push({
+                            domain,
+                            pattern: `Taxa de sucesso abaixo do esperado (${rate.toFixed(1)}%)`,
+                            frequency: count,
+                            success_rate: rate,
+                            recommendation: "Investigar falhas recorrentes neste domínio"
+                        });
+                    } else if (rate > 95) {
+                        generatedPatterns.push({
+                            domain,
+                            pattern: `Alta confiabilidade detectada`,
+                            frequency: count,
+                            success_rate: rate,
+                            recommendation: "Qualidade mantida, nenhuma ação necessária"
+                        });
+                    }
                 }
-            ]);
+            });
+
+            setPatterns(generatedPatterns);
         } catch (error) {
             console.error("Failed to fetch memory", error);
             setEntries([]);
@@ -118,7 +131,7 @@ export default function MemoryPage() {
     }, [activeApp?.id]);
 
     const filteredEntries = entries.filter(e => {
-        const matchesSearch = !search || 
+        const matchesSearch = !search ||
             e.action_domain.toLowerCase().includes(search.toLowerCase()) ||
             e.action_type.toLowerCase().includes(search.toLowerCase()) ||
             e.decision_id.toLowerCase().includes(search.toLowerCase());
@@ -136,7 +149,7 @@ export default function MemoryPage() {
         const diffMin = Math.floor(diffMs / 60000);
         const diffHour = Math.floor(diffMin / 60);
         const diffDay = Math.floor(diffHour / 24);
-        
+
         if (diffMin < 60) return `${diffMin}min atrás`;
         if (diffHour < 24) return `${diffHour}h atrás`;
         if (diffDay < 7) return `${diffDay}d atrás`;
@@ -155,7 +168,7 @@ export default function MemoryPage() {
     return (
         <div className="space-y-6 pb-12">
             <AppHeader />
-            
+
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
@@ -255,7 +268,7 @@ export default function MemoryPage() {
                                     <div className={cn(
                                         "text-lg font-black",
                                         pattern.success_rate >= 80 ? "text-emerald-400" :
-                                        pattern.success_rate >= 50 ? "text-amber-400" : "text-rose-400"
+                                            pattern.success_rate >= 50 ? "text-amber-400" : "text-rose-400"
                                     )}>
                                         {pattern.success_rate}%
                                     </div>
@@ -308,7 +321,7 @@ export default function MemoryPage() {
                     {filteredEntries.map((entry, i) => {
                         const outcomeConfig = getOutcomeConfig(entry.outcome);
                         const OutcomeIcon = outcomeConfig.icon;
-                        
+
                         return (
                             <motion.div
                                 key={entry.id}
@@ -328,7 +341,7 @@ export default function MemoryPage() {
                                     )}>
                                         <OutcomeIcon className={cn("w-5 h-5", `text-${outcomeConfig.color}-400`)} />
                                     </div>
-                                    
+
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-center gap-2 mb-1">
                                             <span className="px-2 py-0.5 text-[10px] font-bold rounded bg-purple-500/20 text-purple-400 uppercase">
@@ -394,8 +407,8 @@ export default function MemoryPage() {
                                         <span className="text-sm text-slate-500">{selectedEntry.action_domain}</span>
                                     </div>
                                 </div>
-                                <button 
-                                    onClick={() => setSelectedEntry(null)} 
+                                <button
+                                    onClick={() => setSelectedEntry(null)}
                                     className="text-slate-500 hover:text-white p-2 hover:bg-white/5 rounded-lg"
                                 >
                                     <XCircle className="w-5 h-5" />

@@ -1,7 +1,10 @@
 "use client";
 
-import { Shield, Zap, Lock, Globe, CheckCircle2 } from "lucide-react";
+import { Shield, CheckCircle2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { TerminalReplay } from "@/components/auth/terminal-replay";
+import { TestimonialCarousel } from "@/components/auth/testimonial-carousel";
+import Link from "next/link";
 
 export default function AuthLayout({
     children,
@@ -9,81 +12,86 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen flex bg-[#020617] text-white">
+        <div className="min-h-screen flex bg-background text-foreground overflow-hidden">
             {/* Left Side: Marketing/Propaganda */}
-            <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden border-r border-white/5 bg-[#020617]">
+            <div className="hidden lg:flex lg:w-1/2 relative border-r border-border bg-black/40 flex-col relative overflow-hidden">
+                {/* Dynamic Background */}
                 <div className="absolute inset-0 bg-grid-white/[0.02]" />
-                <div className="absolute top-0 left-0 right-0 h-64 bg-gradient-to-b from-indigo-500/10 to-transparent" />
+                <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl" />
 
-                <div className="relative z-10 p-12 flex flex-col justify-between h-full">
+                {/* Content Container */}
+                <div className="relative z-10 p-12 flex flex-col justify-between h-full max-w-2xl mx-auto w-full">
+                    {/* Header */}
                     <div>
-                        <div className="flex items-center gap-3 mb-12">
-                            <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center">
-                                <Shield className="text-white w-6 h-6" />
+                        <Link href="/" className="flex items-center gap-3 mb-16 group w-fit">
+                            <div className="h-10 w-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/10 group-hover:bg-indigo-500/20 transition-all">
+                                <Shield className="text-indigo-400 w-5 h-5" />
                             </div>
-                            <span className="font-bold text-2xl tracking-tighter">UNO.KERNEL</span>
-                        </div>
+                            <span className="font-black text-2xl tracking-tighter text-white">UNO<span className="text-indigo-500">.KERNEL</span></span>
+                        </Link>
 
                         <motion.div
                             initial={{ opacity: 0, x: -20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ duration: 0.8 }}
                         >
-                            <h2 className="text-5xl font-black mb-6 leading-tight">
-                                O Sistema Operacional <br />
-                                para <span className="text-indigo-500">Sistemas Inteligentes.</span>
+                            <h2 className="text-5xl font-black mb-8 leading-[0.9] tracking-tighter">
+                                DEPLOY <br />
+                                <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">INTELLIGENCE.</span>
                             </h2>
-                            <p className="text-xl text-slate-400 mb-12 max-w-lg">
-                                Una identidade, economia e governança em uma única API soberana.
-                                Domine a complexidade dos gigantes.
+
+                            {/* Terminal Replay Component - replacing video */}
+                            <div className="mb-12">
+                                <TerminalReplay />
+                            </div>
+
+                            <p className="text-lg text-slate-400 mb-10 max-w-lg leading-relaxed font-medium">
+                                Identidade, billing e governança em uma única API soberana.
+                                Construa o futuro sem reinventar a roda.
                             </p>
 
-                            <div className="space-y-6">
+                            <div className="space-y-4">
                                 {[
                                     "Identidade Federada e Soberana",
                                     "Billing de Eventos com Ledger Imutável",
-                                    "Governança de Agentes IA em Tempo Real",
-                                    "Observabilidade Total do Kernel"
+                                    "Orquestração de Agentes IA",
                                 ].map((item, i) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <div className="h-6 w-6 rounded-full bg-indigo-500/20 flex items-center justify-center">
-                                            <CheckCircle2 className="w-4 h-4 text-indigo-400" />
+                                    <motion.div
+                                        key={i}
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.5 + (i * 0.1) }}
+                                        className="flex items-center gap-3"
+                                    >
+                                        <div className="h-5 w-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
+                                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                                         </div>
-                                        <span className="font-medium text-slate-300">{item}</span>
-                                    </div>
+                                        <span className="font-medium text-slate-300 text-sm tracking-wide">{item}</span>
+                                    </motion.div>
                                 ))}
                             </div>
                         </motion.div>
                     </div>
 
-                    <div className="p-8 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-sm">
-                        <p className="text-slate-400 text-sm italic mb-4">
-                            "O UNO transformou nossa infraestrutura de billing e auth em algo invisível.
-                            Ganhamos meses de produtividade focando no que importa."
-                        </p>
-                        <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-slate-800 border border-white/10" />
-                            <div>
-                                <p className="font-bold text-sm">Almir Miranda</p>
-                                <p className="text-xs text-slate-500">Lead Developer, Intelligent Systems Inc.</p>
-                            </div>
-                        </div>
+                    {/* Social Proof */}
+                    <div className="pt-8 w-full">
+                        <TestimonialCarousel />
                     </div>
                 </div>
 
-                {/* Decorative Elements */}
-                <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-600/20 blur-[100px] rounded-full" />
+                {/* Decorative Blobs */}
+                <div className="absolute -bottom-40 -left-20 w-80 h-80 bg-indigo-600/20 blur-[120px] rounded-full pointer-events-none" />
+                <div className="absolute top-40 -right-20 w-80 h-80 bg-purple-600/10 blur-[120px] rounded-full pointer-events-none" />
             </div>
 
             {/* Right Side: Auth Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 bg-slate-950/20 relative">
-                <div className="absolute inset-0 bg-grid-white/[0.01] lg:hidden" />
-                <div className="w-full max-w-md relative z-10">
-                    <div className="lg:hidden flex items-center gap-3 mb-8 justify-center">
-                        <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                            <Shield className="text-white w-5 h-5" />
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-6 lg:p-12 relative bg-background">
+                <div className="relative w-full max-w-[420px] z-10">
+                    <div className="lg:hidden flex items-center gap-3 mb-12 justify-center">
+                        <div className="h-10 w-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
+                            <Shield className="text-indigo-400 w-5 h-5" />
                         </div>
-                        <span className="font-bold text-xl tracking-tighter">UNO.KERNEL</span>
+                        <span className="font-black text-2xl tracking-tighter">UNO<span className="text-indigo-500">.KERNEL</span></span>
                     </div>
                     {children}
                 </div>

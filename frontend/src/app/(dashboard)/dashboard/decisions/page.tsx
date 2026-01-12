@@ -1,20 +1,24 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  AlertTriangle, 
-  CheckCircle, 
-  XCircle, 
-  Clock, 
+import {
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Clock,
   Shield,
   Zap,
   Filter,
-  RefreshCw
+  RefreshCw,
+  Loader2,
+  ServerCrash
 } from 'lucide-react';
+import { api } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface Decision {
   id: string;
@@ -53,83 +57,59 @@ export default function DecisionsPage() {
   const [criticalDecisions, setCriticalDecisions] = useState<Decision[]>([]);
   const [stats, setStats] = useState<DecisionStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('all');
-
-  useEffect(() => {
-    fetchData();
-  }, []);
 
   const fetchData = async () => {
     setLoading(true);
+    setError(null);
     try {
-      // Simulated data - replace with actual API calls
-      const mockDecisions: Decision[] = [
-        {
-          id: '1',
-          type: 'access.allowed',
-          outcome: 'allowed',
-          reason: 'Usuário autenticado com sucesso',
-          severity: 'low',
-          trigger_type: 'automatic',
-          decided_at: new Date().toISOString(),
-        },
-        {
-          id: '2',
-          type: 'payment.blocked',
-          outcome: 'blocked',
-          reason: 'Kill switch de billing ativo',
-          reason_code: 'KILLSWITCH_ACTIVE',
-          severity: 'high',
-          trigger_type: 'killswitch',
-          decided_at: new Date(Date.now() - 3600000).toISOString(),
-        },
-        {
-          id: '3',
-          type: 'rule.triggered',
-          outcome: 'blocked',
-          reason: 'Regra de rate limit acionada',
-          severity: 'medium',
-          trigger_type: 'rule',
-          decided_at: new Date(Date.now() - 7200000).toISOString(),
-        },
-        {
-          id: '4',
-          type: 'security.block',
-          outcome: 'blocked',
-          reason: 'Tentativa de acesso suspeita detectada',
-          reason_code: 'SUSPICIOUS_ACCESS',
-          severity: 'critical',
-          trigger_type: 'automatic',
-          decided_at: new Date(Date.now() - 1800000).toISOString(),
-        },
-      ];
+      const res = await api.get('/decisions');
+      // Adaptação robusta para diferentes formatos de resposta
+      const data = res.data.decisions || res.data || [];
+      const decisionsList: Decision[] = Array.isArray(data) ? data : [];
 
-      setDecisions(mockDecisions);
-      setCriticalDecisions(mockDecisions.filter(d => d.severity === 'critical'));
-      setStats({
-        by_outcome: {
-          allowed: 150,
-          blocked: 23,
-          deferred: 5,
-          escalated: 2,
-        },
-        total: 180,
+      setDecisions(decisionsList);
+
+      // Filtrar decisões críticas
+      setCriticalDecisions(decisionsList.filter(d => d.severity === 'critical'));
+
+      // Calcular estatísticas
+      const outcomes: Record<string, number> = {};
+      decisionsList.forEach(d => {
+        outcomes[d.outcome] = (outcomes[d.outcome] || 0) + 1;
       });
+
+      setStats({
+        by_outcome: outcomes,
+        total: decisionsList.length,
+      });
+
     } catch (error) {
       console.error('Error fetching decisions:', error);
+      setError("Falha ao carregar decisões do sistema.");
+      toast.error("Erro ao conectar com o servidor.");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    fetchData();
+  }, []);
+
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -148,6 +128,28 @@ export default function DecisionsPage() {
     return labels[type] || type;
   };
 
+  if (loading && decisions.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-indigo-500" />
+        <p className="text-slate-400 animate-pulse">Consultando oráculo de decisões...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <ServerCrash className="w-12 h-12 text-rose-500" />
+        <h3 className="text-xl font-bold text-white">Sistema Indisponível</h3>
+        <p className="text-slate-400">{error}</p>
+        <Button onClick={fetchData} variant="outline" className="mt-4">
+          <RefreshCw className="mr-2 h-4 w-4" /> Tentar Novamente
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -155,10 +157,10 @@ export default function DecisionsPage() {
         <div>
           <h1 className="text-2xl font-bold">Decisões do Sistema</h1>
           <p className="text-muted-foreground">
-            O que o sistema decidiu, não só o que aconteceu
+            Registro imutável de todas as ações tomadas pelo Kernel
           </p>
         </div>
-        <Button onClick={fetchData} variant="outline" size="sm">
+        <Button onClick={fetchData} variant="outline" size="sm" className="bg-white/5 hover:bg-white/10 border-white/10">
           <RefreshCw className="h-4 w-4 mr-2" />
           Atualizar
         </Button>
@@ -166,14 +168,14 @@ export default function DecisionsPage() {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card>
+        <Card className="bg-white/[0.02] border-white/5">
           <CardHeader className="pb-2">
             <CardDescription>Total (24h)</CardDescription>
-            <CardTitle className="text-3xl">{stats?.total || 0}</CardTitle>
+            <CardTitle className="text-3xl text-white">{stats?.total || 0}</CardTitle>
           </CardHeader>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-white/[0.02] border-white/5">
           <CardHeader className="pb-2">
             <CardDescription>Permitidas</CardDescription>
             <CardTitle className="text-3xl text-green-500">
@@ -181,8 +183,8 @@ export default function DecisionsPage() {
             </CardTitle>
           </CardHeader>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-white/[0.02] border-white/5">
           <CardHeader className="pb-2">
             <CardDescription>Bloqueadas</CardDescription>
             <CardTitle className="text-3xl text-red-500">
@@ -190,8 +192,8 @@ export default function DecisionsPage() {
             </CardTitle>
           </CardHeader>
         </Card>
-        
-        <Card>
+
+        <Card className="bg-white/[0.02] border-white/5">
           <CardHeader className="pb-2">
             <CardDescription>Escaladas</CardDescription>
             <CardTitle className="text-3xl text-orange-500">
@@ -209,8 +211,8 @@ export default function DecisionsPage() {
               <AlertTriangle className="h-5 w-5" />
               Decisões Críticas Recentes
             </CardTitle>
-            <CardDescription>
-              {criticalDecisions.length} decisão(ões) crítica(s) nas últimas 24h
+            <CardDescription className="text-red-400/80">
+              {criticalDecisions.length} decisão(ões) crítica(s) requerem atenção
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -218,16 +220,16 @@ export default function DecisionsPage() {
               {criticalDecisions.map((decision) => (
                 <div
                   key={decision.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-background"
+                  className="flex items-center justify-between p-3 rounded-lg bg-black/40 border border-red-500/20"
                 >
                   <div className="flex items-center gap-3">
                     <Shield className="h-5 w-5 text-red-500" />
                     <div>
-                      <p className="font-medium">{getTypeLabel(decision.type)}</p>
-                      <p className="text-sm text-muted-foreground">{decision.reason}</p>
+                      <p className="font-medium text-white">{getTypeLabel(decision.type)}</p>
+                      <p className="text-sm text-red-300/80">{decision.reason}</p>
                     </div>
                   </div>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-sm text-red-300/60">
                     {formatDate(decision.decided_at)}
                   </span>
                 </div>
@@ -238,16 +240,16 @@ export default function DecisionsPage() {
       )}
 
       {/* Decisions List */}
-      <Card>
+      <Card className="bg-white/[0.02] border-white/5">
         <CardHeader>
           <CardTitle>Histórico de Decisões</CardTitle>
           <CardDescription>
-            Todas as decisões tomadas pelo sistema
+            Log completo de auditoria
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList>
+            <TabsList className="bg-black/40 border border-white/5">
               <TabsTrigger value="all">Todas</TabsTrigger>
               <TabsTrigger value="blocked">Bloqueadas</TabsTrigger>
               <TabsTrigger value="security">Segurança</TabsTrigger>
@@ -259,20 +261,20 @@ export default function DecisionsPage() {
             </TabsContent>
 
             <TabsContent value="blocked" className="mt-4">
-              <DecisionsList 
-                decisions={decisions.filter(d => d.outcome === 'blocked')} 
+              <DecisionsList
+                decisions={decisions.filter(d => d.outcome === 'blocked')}
               />
             </TabsContent>
 
             <TabsContent value="security" className="mt-4">
-              <DecisionsList 
-                decisions={decisions.filter(d => d.type.startsWith('security.'))} 
+              <DecisionsList
+                decisions={decisions.filter(d => d.type.startsWith('security') || d.type.startsWith('access'))}
               />
             </TabsContent>
 
             <TabsContent value="rules" className="mt-4">
-              <DecisionsList 
-                decisions={decisions.filter(d => d.type.startsWith('rule.'))} 
+              <DecisionsList
+                decisions={decisions.filter(d => d.type.startsWith('rule'))}
               />
             </TabsContent>
           </Tabs>
@@ -285,20 +287,26 @@ export default function DecisionsPage() {
 function DecisionsList({ decisions }: { decisions: Decision[] }) {
   if (decisions.length === 0) {
     return (
-      <div className="text-center py-8 text-muted-foreground">
-        Nenhuma decisão encontrada
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground bg-white/[0.01] rounded-xl border border-dashed border-white/10">
+        <Zap className="w-8 h-8 opacity-20 mb-3" />
+        <p>Nenhuma decisão encontrada neste filtro</p>
       </div>
     );
   }
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit'
+      });
+    } catch {
+      return dateString;
+    }
   };
 
   const getTypeLabel = (type: string) => {
@@ -320,44 +328,44 @@ function DecisionsList({ decisions }: { decisions: Decision[] }) {
   return (
     <div className="space-y-3">
       {decisions.map((decision) => {
-        const outcomeInfo = outcomeConfig[decision.outcome];
-        const severityInfo = severityConfig[decision.severity];
+        const outcomeInfo = outcomeConfig[decision.outcome] || outcomeConfig['allowed'];
+        const severityInfo = severityConfig[decision.severity] || severityConfig['low'];
         const OutcomeIcon = outcomeInfo.icon;
 
         return (
           <div
             key={decision.id}
-            className={`flex items-center justify-between p-4 rounded-lg border ${outcomeInfo.bg}`}
+            className={`flex items-center justify-between p-4 rounded-xl border transition-all hover:bg-white/[0.02] ${outcomeInfo.bg.replace('bg-', 'border-').replace('/10', '/20')} bg-white/[0.01]`}
           >
             <div className="flex items-center gap-4">
-              <div className={`p-2 rounded-full ${outcomeInfo.bg}`}>
+              <div className={`p-2.5 rounded-xl ${outcomeInfo.bg}`}>
                 <OutcomeIcon className={`h-5 w-5 ${outcomeInfo.color}`} />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{getTypeLabel(decision.type)}</span>
-                  <Badge variant="outline" className={severityInfo.color + ' text-white text-xs'}>
-                    {severityInfo.label}
+                  <span className="font-bold text-sm text-white">{getTypeLabel(decision.type)}</span>
+                  <Badge variant="outline" className={severityInfo.color + ' text-white text-[10px] border-none px-1.5'}>
+                    {severityInfo.label.toUpperCase()}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-sm text-slate-400 mt-1">
                   {decision.reason}
                 </p>
                 {decision.reason_code && (
-                  <code className="text-xs bg-muted px-1 py-0.5 rounded mt-1 inline-block">
+                  <code className="text-[10px] bg-white/5 border border-white/10 px-1.5 py-0.5 rounded text-slate-500 mt-1.5 inline-block font-mono">
                     {decision.reason_code}
                   </code>
                 )}
               </div>
             </div>
             <div className="text-right">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-xs text-slate-500 font-mono block">
                 {formatDate(decision.decided_at)}
               </span>
               {decision.trigger_type && (
-                <p className="text-xs text-muted-foreground mt-1">
+                <span className="text-[10px] text-slate-600 mt-1 inline-block uppercase tracking-wider">
                   via {decision.trigger_type}
-                </p>
+                </span>
               )}
             </div>
           </div>

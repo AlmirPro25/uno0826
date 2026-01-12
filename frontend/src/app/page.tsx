@@ -55,37 +55,37 @@ const giants = ["Google", "Stripe", "Mercado Pago", "GitHub", "AWS", "OpenAI", "
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#020617] text-slate-200 selection:bg-indigo-500/30 font-sans">
+    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-indigo-500/30 font-sans">
 
       {/* Dynamic Background */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden text-white">
-        <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/15 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] bg-purple-600/15 blur-[120px] rounded-full" />
+        <div className="absolute top-[-15%] left-[-10%] w-[50%] h-[50%] bg-indigo-600/15 blur-[120px] rounded-full animate-pulse opacity-50" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-[45%] h-[45%] bg-purple-600/15 blur-[120px] rounded-full opacity-50" />
         <div className="absolute inset-0 bg-grid-white/[0.02]" />
       </div>
 
       {/* Header */}
-      <header className="px-6 h-20 flex items-center justify-between border-b border-white/5 bg-[#020617]/50 backdrop-blur-xl sticky top-0 z-50">
+      <header className="px-6 h-20 flex items-center justify-between border-b border-border bg-background/50 backdrop-blur-xl sticky top-0 z-50">
         <div className="flex items-center gap-3 group cursor-pointer">
-          <div className="h-10 w-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20 group-hover:rotate-12 transition-transform duration-300">
-            <Shield className="text-white w-6 h-6" />
+          <div className="h-10 w-10 bg-indigo-600/10 border border-indigo-500/20 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/10 group-hover:rotate-12 transition-transform duration-300">
+            <Shield className="text-indigo-400 w-5 h-5" />
           </div>
-          <span className="font-black text-2xl tracking-tighter text-white">
+          <span className="font-black text-2xl tracking-tighter text-foreground">
             UNO<span className="text-indigo-500">.KERNEL</span>
           </span>
         </div>
 
         <nav className="hidden md:flex items-center gap-8 text-xs font-black uppercase tracking-widest leading-none">
-          <Link href="/docs/quickstart" className="text-slate-400 hover:text-white transition-colors">Docs</Link>
-          <Link href="/dashboard" className="text-slate-400 hover:text-white transition-colors">Dashboard</Link>
-          <Link href="#features" className="text-slate-400 hover:text-white transition-colors">Features</Link>
+          <Link href="/docs/quickstart" className="text-muted-foreground hover:text-foreground transition-colors">Docs</Link>
+          <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Dashboard</Link>
+          <Link href="#features" className="text-muted-foreground hover:text-foreground transition-colors">Features</Link>
         </nav>
 
         <div className="flex items-center gap-4">
-          <Link href="/login" className="hidden sm:block text-xs font-black uppercase tracking-widest text-slate-400 hover:text-white transition-colors">
+          <Link href="/login" className="hidden sm:block text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
             Login
           </Link>
-          <Button asChild className="rounded-xl px-6 bg-indigo-600 hover:bg-indigo-500 text-white border-none font-bold uppercase tracking-widest text-xs h-10 shadow-lg shadow-indigo-600/20">
+          <Button asChild className="rounded-xl px-6 bg-indigo-600 hover:bg-indigo-500 text-white border-none font-bold uppercase tracking-widest text-xs h-10 shadow-lg shadow-indigo-600/20 transition-all hover:scale-105">
             <Link href="/register">Deploy Kernel</Link>
           </Button>
         </div>
@@ -104,23 +104,23 @@ export default function Home() {
               <Zap className="w-3 h-3 fill-indigo-400" /> Kernel Sovereign — v2.8.4
             </div>
 
-            <h1 className="text-6xl md:text-[120px] font-black tracking-tighter mb-8 leading-[0.85] text-white">
+            <h1 className="text-5xl md:text-[100px] font-black tracking-tighter mb-8 leading-[0.9] text-foreground">
               ORQUESTRE OS <br />
               <span className="bg-gradient-to-r from-indigo-500 via-purple-500 to-indigo-500 bg-[length:200%_auto] animate-gradient bg-clip-text text-transparent italic">GIGANTES.</span>
             </h1>
 
-            <p className="text-xl md:text-2xl text-slate-400 max-w-3xl mx-auto mb-16 leading-relaxed font-medium">
-              Transforme Stripe, Google e GitHub em componentes de um <span className="text-white border-b-2 border-indigo-500/50">ecossistema soberano.</span>
+            <p className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto mb-16 leading-relaxed font-medium">
+              Transforme Stripe, Google e GitHub em componentes de um <span className="text-foreground border-b-2 border-indigo-500/50">ecossistema soberano.</span>
               Uma única API. Controle absoluto.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6">
-              <Button asChild size="lg" className="h-16 px-12 rounded-2xl bg-white text-black hover:bg-slate-200 text-lg font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 shadow-2xl">
+              <Button asChild size="lg" className="h-16 px-12 rounded-2xl bg-foreground text-background hover:bg-foreground/90 text-lg font-black uppercase tracking-tighter transition-all hover:scale-105 active:scale-95 shadow-2xl">
                 <Link href="/register">
                   Criar Identidade <ArrowRight className="ml-2 w-6 h-6" />
                 </Link>
               </Button>
-              <Button asChild variant="outline" size="lg" className="h-16 px-12 rounded-2xl border-white/10 hover:bg-white/5 text-lg font-black uppercase tracking-tighter text-white transition-all">
+              <Button asChild variant="outline" size="lg" className="h-16 px-12 rounded-2xl border-white/10 hover:bg-white/5 text-lg font-black uppercase tracking-tighter text-foreground transition-all">
                 <Link href="/docs/quickstart">Explorar Guia</Link>
               </Button>
             </div>
@@ -130,10 +130,10 @@ export default function Home() {
         {/* Giant Tamers Section */}
         <section className="py-20 border-y border-white/5 bg-white/[0.01]">
           <div className="max-w-7xl mx-auto px-6">
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.2em] mb-12 text-center">DOMESTICANDO O CAOS DOS PROVEDORES</p>
-            <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-12 opacity-30 grayscale hover:grayscale-0 transition-all duration-700">
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em] mb-12 text-center">DOMESTICANDO O CAOS DOS PROVEDORES</p>
+            <div className="flex flex-wrap items-center justify-center gap-x-16 gap-y-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
               {giants.map(g => (
-                <span key={g} className="text-2xl font-black tracking-tighter text-slate-200">{g}</span>
+                <span key={g} className="text-2xl font-black tracking-tighter text-foreground">{g}</span>
               ))}
             </div>
           </div>
@@ -142,8 +142,8 @@ export default function Home() {
         {/* Features Grid */}
         <section id="features" className="py-40 px-6 max-w-7xl mx-auto">
           <div className="text-center mb-24 space-y-4">
-            <h2 className="text-4xl md:text-6xl font-black text-white uppercase tracking-tighter">Capacidades do <span className="text-indigo-500">Kernel</span></h2>
-            <p className="text-slate-500 text-lg max-w-2xl mx-auto font-medium">Tudo o que você precisa para escalar sem lidar com a complexidade da infraestrutura.</p>
+            <h2 className="text-4xl md:text-6xl font-black text-foreground uppercase tracking-tighter">Capacidades do <span className="text-indigo-500">Kernel</span></h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto font-medium">Tudo o que você precisa para escalar sem lidar com a complexidade da infraestrutura.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, idx) => (
@@ -153,13 +153,13 @@ export default function Home() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: idx * 0.1, duration: 0.5 }}
-                className="group p-10 rounded-3xl border border-white/5 bg-white/[0.02] hover:bg-indigo-600/5 hover:border-indigo-500/20 transition-all duration-500 relative"
+                className="group p-10 rounded-3xl border border-white/5 bg-card/40 backdrop-blur-sm hover:bg-indigo-500/5 hover:border-indigo-500/20 transition-all duration-500 relative"
               >
                 <div className={cn("w-16 h-16 rounded-2xl flex items-center justify-center mb-8 shadow-inner group-hover:scale-110 transition-transform duration-500", feature.bg)}>
                   <feature.icon className={cn("w-8 h-8", feature.color)} />
                 </div>
-                <h3 className="text-2xl font-black mb-4 text-white uppercase tracking-tight">{feature.title}</h3>
-                <p className="text-slate-400 leading-relaxed font-medium">
+                <h3 className="text-2xl font-black mb-4 text-foreground uppercase tracking-tight">{feature.title}</h3>
+                <p className="text-muted-foreground leading-relaxed font-medium">
                   {feature.description}
                 </p>
                 <div className="absolute top-8 right-8 text-[10px] font-black text-white/5 uppercase tracking-tighter group-hover:text-indigo-500/20 transition-colors">
@@ -172,7 +172,7 @@ export default function Home() {
 
         {/* CTA Section */}
         <section className="py-40 px-6">
-          <div className="max-w-5xl mx-auto p-12 md:p-24 rounded-[40px] bg-gradient-to-br from-indigo-600 to-purple-700 relative overflow-hidden text-center space-y-8 shadow-2xl">
+          <div className="max-w-5xl mx-auto p-12 md:p-24 rounded-[40px] bg-gradient-to-br from-indigo-600 to-purple-700 relative overflow-hidden text-center space-y-8 shadow-2xl ring-1 ring-white/10">
             <div className="absolute inset-0 bg-grid-white/10" />
             <div className="relative z-10 space-y-6">
               <h2 className="text-5xl md:text-7xl font-black text-white uppercase tracking-tighter leading-none">
@@ -196,41 +196,41 @@ export default function Home() {
       </main>
 
       {/* Footer */}
-      <footer className="py-32 px-6 border-t border-white/5 bg-[#01030d] text-[10px] font-black uppercase tracking-widest text-slate-500">
+      <footer className="py-32 px-6 border-t border-border bg-background/50 backdrop-blur-xl text-[10px] font-black uppercase tracking-widest text-muted-foreground">
         <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2 space-y-6">
             <div className="flex items-center gap-3">
-              <div className="h-8 w-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                <Shield className="text-white w-5 h-5" />
+              <div className="h-8 w-8 bg-indigo-600/10 border border-indigo-500/20 rounded-lg flex items-center justify-center">
+                <Shield className="text-indigo-500 w-5 h-5" />
               </div>
-              <span className="font-extrabold text-xl text-white tracking-tighter">UNO.KERNEL</span>
+              <span className="font-extrabold text-xl text-foreground tracking-tighter">UNO.KERNEL</span>
             </div>
-            <p className="text-xs normal-case text-slate-400 font-medium max-w-xs leading-relaxed">
+            <p className="text-xs normal-case text-muted-foreground font-medium max-w-xs leading-relaxed">
               Elevando o padrão de infraestrutura para aplicações resilientes,
               soberanas e inteligentes.
             </p>
           </div>
           <div className="space-y-4">
-            <p className="text-white">Explorar</p>
-            <ul className="space-y-2 font-bold text-slate-600">
+            <p className="text-foreground">Explorar</p>
+            <ul className="space-y-2 font-bold text-muted-foreground">
               <li className="hover:text-indigo-400 transition-colors"><Link href="/docs/quickstart">Quickstart</Link></li>
               <li className="hover:text-indigo-400 transition-colors"><Link href="/docs/api/v1">API Reference</Link></li>
               <li className="hover:text-indigo-400 transition-colors"><Link href="/docs/sdks">SDK Downloads</Link></li>
             </ul>
           </div>
           <div className="space-y-4">
-            <p className="text-white">Kernel Status</p>
+            <p className="text-foreground">Kernel Status</p>
             <div className="flex items-center gap-2 text-emerald-500 font-bold">
               <div className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               99.9% Uptime
             </div>
           </div>
         </div>
-        <div className="max-w-7xl mx-auto mt-24 pt-12 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-4">
+        <div className="max-w-7xl mx-auto mt-24 pt-12 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4">
           <p>&copy; 2026 UNO Sovereign Kernels Inc. All rights reserved.</p>
           <div className="flex gap-8">
-            <Link href="#" className="hover:text-white">Privacy Policy</Link>
-            <Link href="#" className="hover:text-white">Terms of Registry</Link>
+            <Link href="#" className="hover:text-foreground">Privacy Policy</Link>
+            <Link href="#" className="hover:text-foreground">Terms of Registry</Link>
           </div>
         </div>
       </footer>

@@ -2,115 +2,183 @@
 
 @theme {
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
-  
+
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  
+
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
-  
+
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
-  
+
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  
+
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
-  
+
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
-  
+
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
+
+  /* New Semantic Colors */
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 }
 
 :root {
-  /* Clean Light Mode (Apple-esque) */
-  --background: #ffffff;
-  --foreground: #09090b; /* Zinc 950 */
-  
-  --card: #ffffff;
-  --card-foreground: #09090b;
-  
-  --popover: #ffffff;
-  --popover-foreground: #09090b;
-  
-  --primary: #18181b; /* Zinc 900 */
-  --primary-foreground: #fafafa; /* Zinc 50 */
-  
-  --secondary: #f4f4f5; /* Zinc 100 */
-  --secondary-foreground: #18181b;
-  
-  --muted: #f4f4f5;
-  --muted-foreground: #71717a; /* Zinc 500 */
-  
-  --accent: #f4f4f5;
-  --accent-foreground: #18181b;
-  
-  --destructive: #ef4444;
-  --destructive-foreground: #fafafa;
-  
-  --border: #e4e4e7; /* Zinc 200 */
-  --input: #e4e4e7;
-  --ring: #18181b;
-  
+  /* HSL Values for Clean Alpha Composition */
+
+  /* LIGHT MODE (Clean, airy, technical) */
+  --background: oklch(1 1 0);
+  --foreground: oklch(0.145 0 0);
+  /* Zinc 950 */
+
+  --card: oklch(1 1 0);
+  --card-foreground: oklch(0.145 0 0);
+
+  --popover: oklch(1 1 0);
+  --popover-foreground: oklch(0.145 0 0);
+
+  --primary: oklch(0.145 0 0);
+  /* Zinc 950 */
+  --primary-foreground: oklch(0.985 0 0);
+  /* Zinc 50 */
+
+  --secondary: oklch(0.97 0 0);
+  /* Zinc 100 */
+  --secondary-foreground: oklch(0.145 0 0);
+
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  /* Zinc 500 */
+
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.145 0 0);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  /* Red 600 */
+  --destructive-foreground: oklch(0.985 0 0);
+
+  --success: oklch(0.627 0.194 149.214);
+  /* Emerald 600 */
+  --success-foreground: oklch(0.985 0 0);
+
+  --warning: oklch(0.692 0.163 70.339);
+  /* Amber 600 */
+  --warning-foreground: oklch(1 1 0);
+
+  --border: oklch(0.922 0 0);
+  /* Zinc 200 */
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.145 0 0);
+
   --radius: 0.5rem;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    /* Premium Dark Mode (Stripe/Vercel-esque) */
-    --background: #09090b; /* Zinc 950 */
-    --foreground: #fafafa; /* Zinc 50 */
-    
-    --card: #09090b;
-    --card-foreground: #fafafa;
-    
-    --popover: #09090b;
-    --popover-foreground: #fafafa;
-    
-    --primary: #fafafa;
-    --primary-foreground: #18181b;
-    
-    --secondary: #27272a; /* Zinc 800 */
-    --secondary-foreground: #fafafa;
-    
-    --muted: #27272a;
-    --muted-foreground: #a1a1aa; /* Zinc 400 */
-    
-    --accent: #27272a;
-    --accent-foreground: #fafafa;
-    
-    --destructive: #7f1d1d;
-    --destructive-foreground: #fafafa;
-    
-    --border: #27272a;
-    --input: #27272a;
-    --ring: #d4d4d8;
+    /* DARK MODE (Void, deep, premium) */
+    /* Background is pure void for max contrast */
+    --background: oklch(0.11 0.01 240);
+    --foreground: oklch(0.985 0 0);
+
+    --card: oklch(0.13 0.01 240);
+    --card-foreground: oklch(0.985 0 0);
+
+    --popover: oklch(0.13 0.01 240);
+    --popover-foreground: oklch(0.985 0 0);
+
+    --primary: oklch(0.985 0 0);
+    --primary-foreground: oklch(0.145 0 0);
+
+    --secondary: oklch(0.19 0.01 240);
+    --secondary-foreground: oklch(0.985 0 0);
+
+    --muted: oklch(0.19 0.01 240);
+    --muted-foreground: oklch(0.65 0.01 240);
+
+    --accent: oklch(0.19 0.01 240);
+    --accent-foreground: oklch(0.985 0 0);
+
+    --destructive: oklch(0.39 0.15 25);
+    --destructive-foreground: oklch(0.985 0 0);
+
+    --success: oklch(0.40 0.12 150);
+    --success-foreground: oklch(0.985 0 0);
+
+    --warning: oklch(0.45 0.10 70);
+    --warning-foreground: oklch(0.985 0 0);
+
+    /* Borders are extremely subtle in dark mode */
+    --border: oklch(0.25 0.01 240);
+    --input: oklch(0.25 0.01 240);
+    --ring: oklch(0.8 0 0);
   }
 }
 
 body {
-  @apply bg-background text-foreground;
-  font-feature-settings: "rlig" 1, "calt" 1;
+  @apply bg-background text-foreground antialiased;
+  font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+  /* Smart ligatures + geometric alt */
 }
 
-/* Glassmorphism Utilities */
-.glass {
-  @apply bg-white/5 backdrop-blur-lg border border-white/10 shadow-xl;
+/* 
+  PRECISION UTILITIES 
+  "The details are not the details. They make the design." - Charles Eames
+*/
+
+.glass-panel {
+  @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08];
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
 }
 
 .glass-card {
-  @apply bg-card/60 backdrop-blur-md border border-border/50 shadow-sm transition-all duration-300 hover:shadow-md;
+  @apply bg-white/[0.02] backdrop-blur-md border border-white/[0.06] transition-all duration-300 hover:bg-white/[0.04] hover:border-white/[0.1];
 }
 
-.heading-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-br from-foreground to-muted-foreground;
+.subtle-border {
+  @apply border border-white/[0.06];
+}
+
+/* Custom Scrollbar for executive feel */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-white/[0.05] rounded-full border-[3px] border-transparent bg-clip-content hover:bg-white/[0.1];
+}
+
+/* Animations */
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-enter {
+  animation: enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }

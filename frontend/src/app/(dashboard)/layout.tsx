@@ -7,11 +7,11 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     return (
-        <div className="min-h-screen bg-muted/20 flex">
+        <div className="min-h-screen bg-background flex">
             <Sidebar />
-            <main className="flex-1 overflow-y-auto h-screen">
+            <main className="flex-1 overflow-y-auto h-screen bg-background/50">
                 {/* Top Bar */}
-                <div className="sticky top-0 z-30 h-14 bg-[#030712]/80 backdrop-blur-xl border-b border-white/5 flex items-center justify-end px-6">
+                <div className="sticky top-0 z-30 h-14 bg-background/80 backdrop-blur-xl border-b border-border flex items-center justify-end px-6">
                     <NotificationsDropdown />
                 </div>
                 <div className="max-w-6xl mx-auto p-8">

@@ -5,316 +5,155 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-    LayoutGrid,
-    AppWindow,
-    CreditCard,
-    Settings,
-    LogOut,
-    Shield,
-    BookOpen,
-    Activity,
-    Zap,
-    BarChart3,
-    Package,
-    FileText,
-    AlertTriangle,
-    Key,
-    Brain,
-    DollarSign,
-    Lock,
-    Bot,
-    UserCheck,
-    Power,
-    GitBranch,
-    Webhook,
-    Ghost,
-    Crown,
-    Database,
-    Eye,
-    Scale,
-    Bell,
-    ShieldCheck,
-    Megaphone,
-    Gauge,
-    Cog,
-    PiggyBank,
-    Wallet
+    LayoutGrid, AppWindow, Activity, AlertTriangle, Bell, Webhook, Key, BarChart3,
+    Zap, Ghost, Lock, Package, FileText, CreditCard, Crown, Bot, Gauge, UserCheck,
+    Scale, Database, BookOpen, Eye, GitBranch, Power, ShieldCheck, Megaphone,
+    PiggyBank, Wallet, Brain, DollarSign, Cog, LogOut, Shield, ChevronDown
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
 import { AppSwitcher } from "./app-switcher";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Items visíveis para todos os operadores de app
-const coreItems = [
-    { href: "/dashboard", label: "Visão Geral", icon: LayoutGrid },
-    { href: "/dashboard/apps", label: "Aplicações", icon: AppWindow },
-    { href: "/dashboard/events", label: "Eventos", icon: Activity },
-    { href: "/dashboard/incidents", label: "Incidentes", icon: AlertTriangle },
-    { href: "/dashboard/notifications", label: "Notificações", icon: Bell },
-    { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
-    { href: "/dashboard/apikeys", label: "API Keys", icon: Key },
-    { href: "/dashboard/telemetry", label: "Telemetria", icon: BarChart3 },
-    { href: "/dashboard/activity", label: "Atividade", icon: Activity },
-    { href: "/dashboard/status", label: "Status", icon: Activity },
-];
-
-// Items para quem pode gerenciar (owner/admin do app)
-const manageItems = [
-    { href: "/dashboard/rules", label: "Regras", icon: Zap },
-    { href: "/dashboard/shadow", label: "Shadow Mode", icon: Ghost },
-    { href: "/dashboard/policies", label: "Políticas", icon: Lock },
-    { href: "/dashboard/risk", label: "Risk Score", icon: AlertTriangle },
-    { href: "/dashboard/capabilities", label: "Capacidades", icon: Package },
-    { href: "/dashboard/audit", label: "Audit Log", icon: FileText },
-];
-
-// Items de billing (owner do app)
-const billingItems = [
-    { href: "/dashboard/billing", label: "Economia", icon: CreditCard },
-    { href: "/dashboard/usage", label: "Consumo", icon: BarChart3 },
-];
-
-// Items de governança (admin/super_admin global)
-const governanceItems = [
-    { href: "/dashboard/authority", label: "Autoridade", icon: Crown },
-    { href: "/dashboard/agents", label: "Agentes", icon: Bot },
-    { href: "/dashboard/autonomy", label: "Autonomia", icon: Gauge },
-    { href: "/dashboard/approvals", label: "Aprovações", icon: UserCheck },
-    { href: "/dashboard/decisions", label: "Decisões", icon: Scale },
-    { href: "/dashboard/memory", label: "Memória", icon: Database },
-    { href: "/dashboard/narrative", label: "Narrativa", icon: BookOpen },
-    { href: "/dashboard/observer", label: "Observer", icon: Eye },
-    { href: "/dashboard/timeline", label: "Timeline", icon: GitBranch },
-    { href: "/dashboard/secrets", label: "Secrets", icon: Key },
-    { href: "/dashboard/killswitch", label: "Kill Switch", icon: Power },
-    { href: "/dashboard/invariants", label: "Invariants", icon: ShieldCheck },
-    { href: "/dashboard/immunity", label: "Imunidade", icon: Shield },
-    { href: "/dashboard/alerting", label: "Alertas", icon: Bell },
-    { href: "/dashboard/ads", label: "Ad Gateway", icon: Megaphone },
-];
-
-// Items de super admin global
-const superAdminItems = [
-    { href: "/dashboard/financial", label: "Financeiro", icon: PiggyBank },
-    { href: "/dashboard/payments", label: "Pagamentos", icon: Wallet },
-    { href: "/dashboard/explainability", label: "Explicabilidade", icon: Brain },
-    { href: "/dashboard/admin/financial", label: "Admin Financial", icon: DollarSign },
-    { href: "/dashboard/admin/cognitive", label: "Cognitive", icon: Brain },
-    { href: "/dashboard/admin/intelligence", label: "Intelligence", icon: BarChart3 },
-    { href: "/dashboard/admin/reconciliation", label: "Reconciliação", icon: Scale },
-    { href: "/dashboard/jobs", label: "Jobs", icon: Cog },
-    { href: "/dashboard/kernel-billing", label: "Kernel Billing", icon: CreditCard },
-];
+// --- Configuration ---
+const SECTIONS = {
+    core: [
+        { href: "/dashboard", label: "Visão Geral", icon: LayoutGrid },
+        { href: "/dashboard/apps", label: "Aplicações", icon: AppWindow },
+        { href: "/dashboard/events", label: "Eventos", icon: Activity },
+    ],
+    monitor: [
+        { href: "/dashboard/incidents", label: "Incidentes", icon: AlertTriangle },
+        { href: "/dashboard/telemetry", label: "Telemetria", icon: BarChart3 },
+        { href: "/dashboard/status", label: "Status", icon: Activity },
+    ],
+    connect: [
+        { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
+        { href: "/dashboard/apikeys", label: "API Keys", icon: Key },
+    ],
+    manage: [
+        { href: "/dashboard/rules", label: "Regras", icon: Zap },
+        { href: "/dashboard/shadow", label: "Shadow Mode", icon: Ghost },
+        { href: "/dashboard/policies", label: "Políticas", icon: Lock },
+    ],
+    governance: [
+        { href: "/dashboard/authority", label: "Autoridade", icon: Crown },
+        { href: "/dashboard/decisions", label: "Decisões", icon: Scale },
+        { href: "/dashboard/memory", label: "Memória", icon: Database },
+    ]
+};
 
 export function Sidebar() {
     const pathname = usePathname();
     const { logout, user } = useAuth();
     const { canManage, isOwner } = useApp();
-
-    // DEV MODE: Permite testar como super_admin sem backend
-    // Ativar com ?dev=true na URL
-    const getDevMode = () => {
+    const [devMode, setDevMode] = useState(() => {
         if (typeof window === 'undefined') return false;
-        const urlParams = new URLSearchParams(window.location.search);
-        const devParam = urlParams.get('dev');
-        if (devParam === 'true') {
-            localStorage.setItem('devMode', 'true');
-            return true;
-        }
-        if (devParam === 'false') {
-            localStorage.removeItem('devMode');
-            return false;
-        }
         return localStorage.getItem('devMode') === 'true';
-    };
-    
-    const [devMode, setDevMode] = useState(getDevMode);
+    });
 
-    // Em dev mode, simula super_admin com acesso total
     const isSuperAdmin = devMode || user?.role === "super_admin";
     const isGlobalAdmin = devMode || user?.role === "admin" || isSuperAdmin;
     const effectiveCanManage = devMode || canManage;
-    const effectiveIsOwner = devMode || isOwner;
 
-    const renderNavItem = (item: typeof coreItems[0], activeColor = "indigo") => {
-        const isActive = pathname === item.href || 
-            (item.href !== "/dashboard" && pathname.startsWith(item.href));
-        
-        const colorClasses = {
-            indigo: "bg-indigo-600 shadow-indigo-600/20",
-            purple: "bg-purple-600 shadow-purple-600/20",
-            rose: "bg-rose-600 shadow-rose-600/20",
-            amber: "bg-amber-600 shadow-amber-600/20",
-        };
+    const NavItem = ({ item, isActive }: { item: any, isActive: boolean }) => (
+        <Link
+            href={item.href}
+            className={cn(
+                "group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200",
+                isActive
+                    ? "bg-white/[0.08] text-white shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset]"
+                    : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"
+            )}
+        >
+            <item.icon className={cn(
+                "w-4 h-4 transition-colors",
+                isActive ? "text-indigo-400" : "text-slate-600 group-hover:text-slate-400"
+            )} />
+            {item.label}
+        </Link>
+    );
 
-        return (
-            <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                    "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all",
-                    isActive
-                        ? `${colorClasses[activeColor as keyof typeof colorClasses]} text-white shadow-lg`
-                        : "text-slate-400 hover:bg-white/5 hover:text-white"
-                )}
-            >
-                <item.icon className="w-4 h-4" />
-                {item.label}
-            </Link>
-        );
-    };
+    const SectionLabel = ({ label }: { label: string }) => (
+        <div className="px-3 pt-5 pb-2">
+            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none">
+                {label}
+            </p>
+        </div>
+    );
 
     return (
-        <aside className="w-64 border-r border-white/5 bg-[#020617] h-screen sticky top-0 flex flex-col">
-            {/* Header com Logo */}
-            <div className="h-16 flex items-center px-6 border-b border-white/5">
-                <Link href="/" className="font-bold tracking-tighter flex items-center gap-2">
-                    <div className="h-6 w-6 bg-indigo-600 rounded-lg flex items-center justify-center">
-                        <Shield className="text-white w-3.5 h-3.5" />
+        <aside className="w-64 h-screen sticky top-0 flex flex-col bg-[#050505] border-r border-white/[0.08]">
+            {/* Header */}
+            <div className="h-14 flex items-center px-4 border-b border-white/[0.05]">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 bg-indigo-500/10 rounded-lg border border-indigo-500/20 flex items-center justify-center shadow-[0_0_15px_-3px_rgba(99,102,241,0.2)]">
+                        <Shield className="w-4 h-4 text-indigo-400" />
                     </div>
-                    <span className="text-lg font-black text-white uppercase tracking-tighter">
-                        UNO<span className="text-indigo-500">.KERNEL</span>
-                    </span>
-                </Link>
+                    <div>
+                        <span className="block text-sm font-bold text-white tracking-tight leading-none">
+                            UNO<span className="text-zinc-500">.KERNEL</span>
+                        </span>
+                    </div>
+                </div>
             </div>
 
-            {/* App Switcher */}
-            <div className="p-4 border-b border-white/5">
+            {/* App Switcher Area */}
+            <div className="p-3 border-b border-white/[0.05]">
                 <AppSwitcher />
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
-                {/* Core - Todos veem */}
-                {coreItems.map(item => renderNavItem(item, "indigo"))}
+            {/* Scrollable Nav */}
+            <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5 custom-scrollbar">
 
-                {/* Manage - Owner/Admin do app OU dev mode */}
+                <SectionLabel label="Plataforma" />
+                {SECTIONS.core.map(item => (
+                    <NavItem key={item.href} item={item} isActive={pathname === item.href} />
+                ))}
+
+                <SectionLabel label="Monitoramento" />
+                {SECTIONS.monitor.map(item => (
+                    <NavItem key={item.href} item={item} isActive={pathname === item.href} />
+                ))}
+
                 {effectiveCanManage && (
                     <>
-                        <div className="pt-4 pb-2">
-                            <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                Gerenciar
-                            </p>
-                        </div>
-                        {manageItems.map(item => renderNavItem(item, "amber"))}
+                        <SectionLabel label="Gerenciamento" />
+                        {SECTIONS.manage.map(item => (
+                            <NavItem key={item.href} item={item} isActive={pathname === item.href} />
+                        ))}
                     </>
                 )}
 
-                {/* Billing - Owner do app OU dev mode */}
-                {effectiveIsOwner && (
-                    <>
-                        {billingItems.map(item => renderNavItem(item, "indigo"))}
-                    </>
-                )}
-
-                {/* Docs - Todos */}
-                <Link
-                    href="/docs/quickstart"
-                    className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all",
-                        pathname.startsWith("/docs")
-                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                            : "text-slate-400 hover:bg-white/5 hover:text-white"
-                    )}
-                >
-                    <BookOpen className="w-4 h-4" />
-                    Documentação
-                </Link>
-
-                {/* Settings - Todos */}
-                <Link
-                    href="/dashboard/settings"
-                    className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all",
-                        pathname === "/dashboard/settings"
-                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                            : "text-slate-400 hover:bg-white/5 hover:text-white"
-                    )}
-                >
-                    <Settings className="w-4 h-4" />
-                    Configurações
-                </Link>
-
-                {/* Security - Todos */}
-                <Link
-                    href="/dashboard/security"
-                    className={cn(
-                        "flex items-center gap-3 px-3 py-2 rounded-xl text-sm font-semibold transition-all",
-                        pathname === "/dashboard/security"
-                            ? "bg-indigo-600 text-white shadow-lg shadow-indigo-600/20"
-                            : "text-slate-400 hover:bg-white/5 hover:text-white"
-                    )}
-                >
-                    <Key className="w-4 h-4" />
-                    Segurança
-                </Link>
-
-                {/* Governance - Admin global */}
                 {isGlobalAdmin && (
                     <>
-                        <div className="pt-4 pb-2">
-                            <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                Governança
-                            </p>
-                        </div>
-                        {governanceItems.map(item => renderNavItem(item, "purple"))}
+                        <SectionLabel label="Governança" />
+                        {SECTIONS.governance.map(item => (
+                            <NavItem key={item.href} item={item} isActive={pathname.startsWith(item.href)} />
+                        ))}
                     </>
                 )}
 
-                {/* Super Admin - Apenas super_admin */}
-                {isSuperAdmin && (
-                    <>
-                        <div className="pt-4 pb-2">
-                            <p className="px-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">
-                                Admin Global
-                            </p>
-                        </div>
-                        {superAdminItems.map(item => renderNavItem(item, "rose"))}
-                    </>
-                )}
+                {/* Extra Links */}
+                <SectionLabel label="Recursos" />
+                <NavItem
+                    item={{ href: "/docs", label: "Documentação", icon: BookOpen }}
+                    isActive={pathname.startsWith("/docs")}
+                />
+                <NavItem
+                    item={{ href: "/dashboard/settings", label: "Configurações", icon: Cog }}
+                    isActive={pathname === "/dashboard/settings"}
+                />
             </nav>
 
-            {/* User Footer */}
-            <div className="p-4 border-t border-white/5">
-                {/* Dev Mode Toggle */}
-                {devMode && (
-                    <div className="mb-3 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
-                        <div className="flex items-center justify-between">
-                            <span className="text-[10px] font-bold text-amber-400 uppercase">Dev Mode</span>
-                            <button 
-                                onClick={() => {
-                                    localStorage.removeItem('devMode');
-                                    setDevMode(false);
-                                }}
-                                className="text-[10px] text-amber-400 hover:text-amber-300"
-                            >
-                                Desativar
-                            </button>
-                        </div>
-                        <p className="text-[9px] text-amber-400/60 mt-1">Simulando super_admin</p>
-                    </div>
-                )}
-                
-                <div className="flex items-center gap-3 px-3 py-3 mb-2 bg-white/[0.02] border border-white/5 rounded-2xl">
-                    <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-[10px] font-black text-indigo-400">
-                        {user?.name?.[0]?.toUpperCase() || (devMode ? "D" : "U")}
-                    </div>
-                    <div className="overflow-hidden flex-1">
-                        <p className="text-xs font-bold text-white truncate">{user?.name || (devMode ? "Dev User" : "User")}</p>
-                        <p className="text-[10px] text-slate-500 truncate">{user?.email || (devMode ? "dev@localhost" : "")}</p>
-                    </div>
-                    {isSuperAdmin && (
-                        <span className="px-1.5 py-0.5 text-[8px] font-bold bg-rose-500/20 text-rose-400 rounded border border-rose-500/30">
-                            ROOT
-                        </span>
-                    )}
-                </div>
+            {/* Footer */}
+            <div className="p-3 border-t border-white/[0.05] bg-[#050505]">
                 <button
                     onClick={logout}
-                    className="w-full flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors uppercase tracking-widest"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors group"
                 >
-                    <LogOut className="w-4 h-4" />
-                    Sair
+                    <LogOut className="w-3.5 h-3.5 group-hover:stroke-red-400" />
+                    Encerrar Sessão
                 </button>
             </div>
         </aside>

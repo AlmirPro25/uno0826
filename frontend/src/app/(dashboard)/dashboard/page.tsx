@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { 
-    Activity, 
-    ArrowRight, 
-    Zap, 
-    Box, 
-    CheckCircle2, 
+import {
+    Activity,
+    ArrowRight,
+    Zap,
+    Box,
+    CheckCircle2,
     Rocket,
     BookOpen,
     Copy,
@@ -90,7 +90,7 @@ export default function DashboardPage() {
         const diffSec = Math.floor(diffMs / 1000);
         const diffMin = Math.floor(diffSec / 60);
         const diffHour = Math.floor(diffMin / 60);
-        
+
         if (diffSec < 60) return `${diffSec}s atrás`;
         if (diffMin < 60) return `${diffMin}min atrás`;
         if (diffHour < 24) return `${diffHour}h atrás`;
@@ -102,10 +102,10 @@ export default function DashboardPage() {
         try {
             const res = await api.get(`/admin/telemetry/apps/${appId}/metrics`);
             const data = res.data;
-            
+
             // Calcular eventos nos últimos 5 min (events_per_minute * 5)
             const events5min = Math.round((data.events_per_minute || 0) * 5);
-            
+
             // Buscar último evento para pegar o tipo
             let lastEventType = null;
             try {
@@ -116,7 +116,7 @@ export default function DashboardPage() {
             } catch {
                 // Ignorar erro ao buscar último evento
             }
-            
+
             return {
                 events_24h: data.events_24h || 0,
                 events_5min: events5min,
@@ -134,34 +134,44 @@ export default function DashboardPage() {
             if (!user?.id) return;
 
             try {
-                const appsRes = await api.get("/apps/mine?limit=5");
-                const apps = appsRes.data.apps || [];
-                
-                // Buscar status do Shadow Mode
-                let shadowStatus = null;
-                try {
-                    const shadowRes = await api.get("/admin/rules/shadow");
-                    shadowStatus = shadowRes.data;
-                } catch {
-                    // Ignorar erro ao buscar shadow status
-                }
-                
-                // Buscar aprovações pendentes (LOOP 6)
-                let pendingApprovals = 0;
-                try {
-                    const approvalsRes = await api.get("/approval/pending");
-                    const pending = approvalsRes.data.pending || approvalsRes.data || [];
-                    pendingApprovals = Array.isArray(pending) ? pending.length : 0;
-                } catch {
-                    // Ignorar erro ao buscar aprovações
-                }
-                
+                // Parallel fetching for better performance
+                const [appsRes, shadowRes, approvalsRes, eventsRes] = await Promise.allSettled([
+                    api.get("/apps/mine?limit=5"),
+                    api.get("/admin/rules/shadow"),
+                    api.get("/approval/pending"),
+                    api.get("/events?limit=10") // Fetch real recent events
+                ]);
+
+                // Helper to extract data or default
+                const getVal = (res: PromiseSettledResult<any>, def: any) =>
+                    res.status === 'fulfilled' ? res.value.data : def;
+
+                const appsData = getVal(appsRes, { apps: [] });
+                const apps = appsData.apps || [];
+
+                const shadowStatus = getVal(shadowRes, null);
+
+                const pendingData = getVal(approvalsRes, { pending: [] });
+                const pendingApprovals = Array.isArray(pendingData.pending) ? pendingData.pending.length :
+                    Array.isArray(pendingData) ? pendingData.length : 0;
+
+                // Process Recent Events
+                const eventsData = getVal(eventsRes, { events: [] });
+                const rawEvents = eventsData.events || eventsData || [];
+                const recentEvents = Array.isArray(rawEvents)
+                    ? rawEvents.slice(0, 5).map((e: any) => ({
+                        name: e.type,
+                        time: new Date(e.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                        status: e.type.includes('fail') || e.type.includes('error') ? 'error' : 'ok'
+                    }))
+                    : [];
+
                 setState({
                     loading: false,
                     apps,
                     hasApps: apps.length > 0,
                     firstApp: apps[0] || null,
-                    recentEvents: [],
+                    recentEvents,
                     pulse: null,
                     shadowStatus,
                     pendingApprovals
@@ -203,7 +213,7 @@ export default function DashboardPage() {
         return (
             <div className="space-y-8 pb-12">
                 <AppHeader />
-                
+
                 <div className="text-center pt-8">
                     <h1 className="text-4xl font-black text-white uppercase tracking-tighter">
                         Olá, <span className="text-indigo-500">{user?.name || "Operador"}</span>
@@ -222,13 +232,13 @@ export default function DashboardPage() {
                         <div className="w-20 h-20 rounded-2xl bg-indigo-600/20 flex items-center justify-center mx-auto">
                             <Rocket className="w-10 h-10 text-indigo-400" />
                         </div>
-                        
+
                         <div>
                             <h2 className="text-2xl font-black text-white mb-2">
                                 Crie seu primeiro App
                             </h2>
                             <p className="text-slate-400 text-sm">
-                                Um app é sua porta de entrada para o kernel. 
+                                Um app é sua porta de entrada para o kernel.
                                 Você receberá credenciais de API para integrar seus sistemas.
                             </p>
                         </div>
@@ -291,8 +301,8 @@ export default function DashboardPage() {
                         Visão Geral
                     </h1>
                     <p className="text-slate-500 mt-1 font-medium">
-                        {hasApp && activeApp 
-                            ? `Operando: ${activeApp.name}` 
+                        {hasApp && activeApp
+                            ? `Operando: ${activeApp.name}`
                             : "Selecione um app para começar"}
                     </p>
                 </div>
@@ -326,7 +336,7 @@ export default function DashboardPage() {
                             </h2>
                             <div className="flex items-center gap-2">
                                 <code className="text-sm text-slate-400 font-mono">{activeApp.slug}</code>
-                                <button 
+                                <button
                                     onClick={() => handleCopySlug(activeApp.slug || "")}
                                     className="p-1 hover:bg-white/10 rounded transition-colors"
                                 >
@@ -377,8 +387,8 @@ export default function DashboardPage() {
                             </div>
                             <div className={cn(
                                 "h-2 w-2 rounded-full",
-                                state.pulse?.events_5min && state.pulse.events_5min > 0 
-                                    ? "bg-emerald-500 animate-pulse" 
+                                state.pulse?.events_5min && state.pulse.events_5min > 0
+                                    ? "bg-emerald-500 animate-pulse"
                                     : "bg-slate-600"
                             )} />
                         </div>
@@ -458,7 +468,7 @@ export default function DashboardPage() {
                                             )}
                                         </div>
                                         <p className="text-xs text-slate-500 mt-0.5">
-                                            {state.shadowStatus.active 
+                                            {state.shadowStatus.active
                                                 ? `Ações simuladas • ${state.shadowStatus.reason || "Sem motivo"}`
                                                 : "Ações executadas normalmente • Clique para simular"}
                                         </p>
@@ -536,7 +546,7 @@ export default function DashboardPage() {
                             </Button>
                         </Link>
                     </div>
-                    
+
                     {state.recentEvents.length > 0 ? (
                         <div className="space-y-4">
                             {state.recentEvents.map((event, i) => (
@@ -556,8 +566,8 @@ export default function DashboardPage() {
                         <div className="text-center py-8">
                             <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2" />
                             <p className="text-sm text-slate-500">
-                                {activeApp 
-                                    ? `Este app ainda não tem eventos...` 
+                                {activeApp
+                                    ? `Este app ainda não tem eventos...`
                                     : "Aguardando eventos..."}
                             </p>
                         </div>
@@ -572,7 +582,7 @@ export default function DashboardPage() {
                     className="p-6 rounded-3xl bg-white/[0.02] border border-white/5"
                 >
                     <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-6">Próximo Passo</h3>
-                    
+
                     <div className="space-y-3">
                         <Link href="/dashboard/rules" className="block group">
                             <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/15 transition-all">

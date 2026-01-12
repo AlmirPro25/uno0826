@@ -135,19 +135,10 @@ func main() {
 	// Configurar Gin
 	r := gin.Default()
 
-	// Rota raiz para health check rápido do Render
-	r.GET("/", func(c *gin.Context) {
-		c.JSON(200, gin.H{"status": "ok", "service": "prost-qs"})
-	})
-
 	// ========================================
-	// SWAGGER / OPENAPI - Contrato Soberano
-	// "O Kernel sabe se explicar para qualquer IA"
+	// CORS - DEVE SER O PRIMEIRO MIDDLEWARE
+	// "Sem CORS, o browser bloqueia tudo"
 	// ========================================
-	docs.RegisterSwaggerRoutes(r)
-	log.Println("✅ Swagger UI disponível em /swagger/index.html")
-
-	// Configuração CORS - Permite todas as portas dos frontends + Vercel
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
 			// Permitir localhost em qualquer porta
@@ -162,6 +153,7 @@ func main() {
 			allowedOrigins := []string{
 				"https://uno0826.onrender.com",
 				"https://vox-bridge-api.onrender.com",
+				"https://frontend-prost.vercel.app",
 			}
 			for _, allowed := range allowedOrigins {
 				if origin == allowed {
@@ -176,6 +168,18 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	// Rota raiz para health check rápido do Render
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(200, gin.H{"status": "ok", "service": "prost-qs"})
+	})
+
+	// ========================================
+	// SWAGGER / OPENAPI - Contrato Soberano
+	// "O Kernel sabe se explicar para qualquer IA"
+	// ========================================
+	docs.RegisterSwaggerRoutes(r)
+	log.Println("✅ Swagger UI disponível em /swagger/index.html")
 
 	// Inicializar repositórios e serviços
 	userRepo := identity.NewGORMUserRepository(gormDB)
