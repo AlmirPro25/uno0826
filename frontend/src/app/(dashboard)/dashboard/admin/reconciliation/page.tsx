@@ -48,46 +48,8 @@ export default function ReconciliationPage() {
             setStats(res.data.stats);
         } catch (error) {
             console.error("Failed to fetch reconciliation", error);
-            // Mock data
-            setResults([
-                {
-                    id: "rec-1",
-                    app_id: "app-1",
-                    app_name: "App Demo",
-                    period_start: "2026-01-01",
-                    period_end: "2026-01-10",
-                    status: "matched",
-                    internal_total: 15000.00,
-                    stripe_total: 15000.00,
-                    difference: 0,
-                    difference_percent: 0,
-                    transactions_checked: 45,
-                    mismatches_found: 0,
-                    created_at: new Date().toISOString()
-                },
-                {
-                    id: "rec-2",
-                    app_id: "app-2",
-                    app_name: "App Prod",
-                    period_start: "2026-01-01",
-                    period_end: "2026-01-10",
-                    status: "mismatch",
-                    internal_total: 8500.00,
-                    stripe_total: 8475.50,
-                    difference: 24.50,
-                    difference_percent: 0.29,
-                    transactions_checked: 32,
-                    mismatches_found: 2,
-                    created_at: new Date().toISOString()
-                }
-            ]);
-            setStats({
-                total_reconciliations: 2,
-                matched_count: 1,
-                mismatch_count: 1,
-                pending_count: 0,
-                total_difference: 24.50
-            });
+            setResults([]);
+            setStats(null);
         } finally {
             setLoading(false);
         }

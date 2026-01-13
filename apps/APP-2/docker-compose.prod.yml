@@ -1,0 +1,67 @@
+
+version: '3.8'
+
+# This compose file is primarily for demonstrating how a "production-like"
+# setup would differentiate, although for a truly decentralized P2P
+# network, "production" is often just one instance of the `nexusd`
+# running on a host machine, potentially with reverse proxy.
+# The frontend part could be served from a CDN if desired, but here it's coupled.
+
+services:
+  nexusd:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nexusd
+    container_name: nexusd
+    restart: always # Ensure node is always running
+    ports:
+      - "8080:8080" # Local API for frontend
+      - "4001:4001/tcp" # libp2p TCP - REQUIRED for P2P connectivity
+      - "4001:4001/udp" # libp2p QUIC/WebTransport - REQUIRED for P2P connectivity
+    volumes:
+      - nexus_data:/app/data # Persistent storage for identity and database
+    environment:
+      # CRITICAL: Replace these with strong, unique passphrases in production
+      # Use Docker secrets or a secrets management system
+      NEXUS_IDENTITY_FILE: nexus_identity.key
+      NEXUS_IDENTITY_PASSPHRASE: "${NEXUS_IDENTITY_PASSPHRASE_PROD}"
+      NEXUS_DATABASE_PATH: nexus_data.db
+      NEXUS_DATABASE_PASSPHRASE: "${NEXUS_DATABASE_PASSPHRASE_PROD}"
+      NEXUS_API_PORT: 8080
+      NEXUS_P2P_PORT: 4001
+      NEXUS_ENABLE_MDNS: "false" # mDNS typically not useful across public internet
+      NEXUS_DHT_CLIENT_ONLY: "false" # This node should contribute to the DHT
+      NEXUS_ENABLE_WEBRTC: "true"
+      # Explicitly list robust bootstrap peers for stability
+      NEXUS_BOOTSTRAP_PEERS: "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bpjYzQVPdVWK8VqNRxGSb2KBCz2amWkLHPMWJ,/dnsaddr/bootstrap.libp2p.io/p2p/QmQCU2Lk59dRnySPvWs99RTTswza4P7x7N3BWa2RWc22hS"
+      NEXUS_STUN_SERVERS: "stun.l.google.com:19302,stun1.l.google.com:19302,stun2.l.google.com:19302"
+    # Add resource limits, security options, etc.
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '0.5'
+    #       memory: 256M
+
+  nexus_web_ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: nexus_web_ui_prod
+    restart: always
+    ports:
+      - "80:80" # Expose on standard HTTP port for public access
+    depends_on:
+      - nexusd
+    environment:
+      # No direct VITE_API_URL needed if Nginx proxies correctly
+      # or if the UI is built for a specific public URL of the backend
+      # For a true "local-first" deployment, this would still talk to `nexusd` over `localhost:8080` via Nginx
+      NEXUS_API_PORT: 8080
+
+volumes:
+  nexus_data:
+    driver: local # Ensure local persistence
+
+networks:
+  default:
+    name: nexus_mesh_network_prod

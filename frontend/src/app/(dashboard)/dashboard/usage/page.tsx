@@ -58,32 +58,8 @@ export default function UsagePage() {
             setPlan(limitsRes.data.plan || "free");
         } catch (error) {
             console.error("Failed to fetch usage", error);
-            // Mock data for dev
-            setUsage({
-                deploy_count: 12,
-                deploy_successful: 10,
-                deploy_failed: 2,
-                container_hours: 156.5,
-                cpu_hours: 78.2,
-                memory_gb_hours: 312.8,
-                storage_gb: 2.4,
-                bandwidth_gb: 15.7,
-                telemetry_events: 45230,
-                webhook_calls: 892,
-                api_requests: 12450,
-                crash_count: 3,
-                retry_count: 8,
-                rollback_count: 1
-            });
-            setLimits({
-                max_apps: 1,
-                max_deploys_per_day: 5,
-                max_cpu_cores: 0.5,
-                max_memory_gb: 0.5,
-                max_storage_gb: 1,
-                log_retention_days: 1,
-                telemetry_retention_days: 7
-            });
+            setUsage(null);
+            setLimits(null);
         } finally {
             setLoading(false);
         }

@@ -52,19 +52,7 @@ export default function CapabilitiesPage() {
             setEntitlements(res.data);
         } catch (error) {
             console.error("Failed to fetch entitlements", error);
-            // Mock data
-            setEntitlements({
-                plan: "free",
-                plan_name: "Free Tier",
-                capabilities: [
-                    { name: "apps", limit: 1, used: 1, unlimited: false },
-                    { name: "credentials_per_app", limit: 2, used: 1, unlimited: false },
-                    { name: "users_per_app", limit: 100, used: 45, unlimited: false },
-                    { name: "events_per_month", limit: 10000, used: 3421, unlimited: false },
-                    { name: "rules", limit: 5, used: 2, unlimited: false },
-                ],
-                add_ons: []
-            });
+            setEntitlements(null);
         }
     };
 
@@ -74,33 +62,7 @@ export default function CapabilitiesPage() {
             setAvailableAddOns(res.data.addons || res.data || []);
         } catch (error) {
             console.error("Failed to fetch add-ons", error);
-            // Mock data
-            setAvailableAddOns([
-                {
-                    id: "addon_extra_apps",
-                    name: "+5 Apps",
-                    description: "Adicione 5 aplicações extras ao seu plano",
-                    price: 2900,
-                    currency: "BRL",
-                    capabilities: { apps: 5 }
-                },
-                {
-                    id: "addon_extra_users",
-                    name: "+1000 Usuários",
-                    description: "Aumente o limite de usuários por app",
-                    price: 4900,
-                    currency: "BRL",
-                    capabilities: { users_per_app: 1000 }
-                },
-                {
-                    id: "addon_unlimited_events",
-                    name: "Eventos Ilimitados",
-                    description: "Remova o limite de eventos mensais",
-                    price: 9900,
-                    currency: "BRL",
-                    capabilities: { events_per_month: -1 }
-                }
-            ]);
+            setAvailableAddOns([]);
         } finally {
             setLoading(false);
         }

@@ -436,7 +436,7 @@ func (s *RulesService) evaluateRule(rule *Rule) {
 func (s *RulesService) getAppMetrics(appID uuid.UUID) (map[string]float64, error) {
 	metrics := make(map[string]float64)
 	
-	// Buscar snapshot de métricas
+	// Buscar snapshot de métricas - query resiliente que não quebra se colunas faltam
 	var snapshot struct {
 		OnlineNow         int64
 		ActiveSessions    int64
@@ -444,16 +444,19 @@ func (s *RulesService) getAppMetrics(appID uuid.UUID) (map[string]float64, error
 		TotalEvents       int64
 		EventsPerMinute   float64
 		TotalInteractions int64
-		ActiveUsers24h    int64
-		TotalUsers        int64
 	}
 	
+	// Query básica sem colunas que podem não existir
 	err := s.db.Table("telemetry_metrics_snapshots").
 		Where("app_id = ?", appID).
-		Select("online_now, active_sessions, total_sessions, total_events, events_per_minute, total_interactions, active_users_24h, total_users").
+		Select("online_now, active_sessions, total_sessions, total_events, events_per_minute, total_interactions").
 		Scan(&snapshot).Error
 	
 	if err != nil {
+		// Se não encontrou dados, retorna métricas zeradas (não é erro)
+		if err.Error() == "record not found" {
+			return metrics, nil
+		}
 		return nil, err
 	}
 	
@@ -463,8 +466,25 @@ func (s *RulesService) getAppMetrics(appID uuid.UUID) (map[string]float64, error
 	metrics["total_events"] = float64(snapshot.TotalEvents)
 	metrics["events_per_minute"] = snapshot.EventsPerMinute
 	metrics["total_interactions"] = float64(snapshot.TotalInteractions)
-	metrics["active_users_24h"] = float64(snapshot.ActiveUsers24h)
-	metrics["total_users"] = float64(snapshot.TotalUsers)
+	
+	// Tentar buscar colunas extras (podem não existir ainda)
+	var extraMetrics struct {
+		ActiveUsers24h int64
+		TotalUsers     int64
+	}
+	extraErr := s.db.Table("telemetry_metrics_snapshots").
+		Where("app_id = ?", appID).
+		Select("COALESCE(active_users_24h, 0) as active_users_24h, COALESCE(total_users, 0) as total_users").
+		Scan(&extraMetrics).Error
+	
+	if extraErr == nil {
+		metrics["active_users_24h"] = float64(extraMetrics.ActiveUsers24h)
+		metrics["total_users"] = float64(extraMetrics.TotalUsers)
+	} else {
+		// Colunas não existem ainda, usar zero
+		metrics["active_users_24h"] = 0
+		metrics["total_users"] = 0
+	}
 	
 	// Calcular métricas derivadas
 	if snapshot.TotalSessions > 0 {

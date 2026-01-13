@@ -73,35 +73,8 @@ export default function ActivityPage() {
                 details: a.details || a.metadata || {}
             })));
         } catch {
-            // Mock data se API não disponível
-            setActivities([
-                {
-                    id: "1",
-                    type: "auth",
-                    action: "login",
-                    ip_address: "189.40.xxx.xxx",
-                    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                    device_type: "desktop",
-                    location: "São Paulo, BR",
-                    status: "success",
-                    risk_score: 10,
-                    created_at: new Date().toISOString(),
-                    details: {}
-                },
-                {
-                    id: "2",
-                    type: "security",
-                    action: "mfa_enable",
-                    ip_address: "189.40.xxx.xxx",
-                    user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-                    device_type: "desktop",
-                    location: "São Paulo, BR",
-                    status: "success",
-                    risk_score: 0,
-                    created_at: new Date(Date.now() - 86400000).toISOString(),
-                    details: {}
-                }
-            ]);
+            console.error("Failed to fetch activities");
+            setActivities([]);
         } finally {
             setLoading(false);
         }

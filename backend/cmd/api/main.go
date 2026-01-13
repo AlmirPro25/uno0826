@@ -37,6 +37,7 @@ import (
 	"prost-qs/backend/internal/jobs"
 	kernel_billing "prost-qs/backend/internal/kernel_billing"
 	"prost-qs/backend/internal/killswitch"
+	"prost-qs/backend/internal/lighthouse"
 	"prost-qs/backend/internal/memory"
 	"prost-qs/backend/internal/observability"
 	"prost-qs/backend/internal/observer"
@@ -467,6 +468,19 @@ func main() {
 	// Start monitor
 	alerting.StartGlobalMonitor(ctx)
 	log.Println("✅ Alerting System inicializado (FASE 4)")
+
+	// ========================================
+	// LIGHTHOUSE SERVICE - Farol P2P
+	// "Faróis conectam peers, não controlam dados"
+	// ========================================
+	lighthouseStore := lighthouse.NewMemoryStore() // Em produção: NewPostgresStore(sqlDB)
+	lighthouseService := lighthouse.NewLighthouseService(
+		"lighthouse-kernel-01",
+		"sa-east",
+		"https://uno0826-pr57.vercel.app",
+		lighthouseStore,
+	)
+	log.Println("✅ Lighthouse Service inicializado (Farol P2P)")
 
 	// Middlewares globais
 	r.Use(middleware.SecurityHeaders())                            // Security Headers - PRIMEIRO
@@ -992,6 +1006,14 @@ func main() {
 		// ========================================
 		alerting.RegisterAlertRoutes(v1, alertEngine, middleware.AuthMiddleware(), middleware.AdminOnly())
 		log.Println("✅ Alerting System routes registradas (/alerts/*)")
+
+		// ========================================
+		// LIGHTHOUSE - Farol P2P Discovery
+		// "Faróis ajudam peers a se encontrar, não controlam dados"
+		// ========================================
+		lighthouseHandler := lighthouse.NewHandler(lighthouseService)
+		lighthouseHandler.RegisterRoutes(v1)
+		log.Println("✅ Lighthouse routes registradas (/lighthouse/*)")
 
 		// Rotas de Eventos (admin/auditor)
 		event.RegisterEventRoutes(v1, eventService, middleware.AuthMiddleware())

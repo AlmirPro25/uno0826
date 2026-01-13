@@ -63,50 +63,8 @@ export default function ExplainabilityPage() {
                 rule_name: d.rule_name
             })));
         } catch {
-            // Mock data
-            setDecisions([
-                {
-                    id: "dec-1",
-                    decision_type: "rule_evaluation",
-                    domain: "billing",
-                    input_summary: "Verificar se usuário pode fazer upgrade",
-                    output: "ALLOW",
-                    reasoning: [
-                        "Usuário tem conta ativa há mais de 30 dias",
-                        "Não há pagamentos pendentes",
-                        "Limite de crédito disponível"
-                    ],
-                    factors: [
-                        { name: "account_age_days", value: 45, weight: 0.3, impact: "positive" },
-                        { name: "pending_payments", value: 0, weight: 0.4, impact: "positive" },
-                        { name: "credit_available", value: 1, weight: 0.3, impact: "positive" }
-                    ],
-                    confidence: 0.95,
-                    duration_ms: 12,
-                    created_at: new Date().toISOString(),
-                    rule_name: "upgrade_eligibility"
-                },
-                {
-                    id: "dec-2",
-                    decision_type: "risk_assessment",
-                    domain: "security",
-                    input_summary: "Avaliar risco de login de novo IP",
-                    output: "MEDIUM_RISK",
-                    reasoning: [
-                        "IP não reconhecido para este usuário",
-                        "Localização consistente com histórico",
-                        "Device fingerprint parcialmente conhecido"
-                    ],
-                    factors: [
-                        { name: "ip_known", value: 0, weight: 0.4, impact: "negative" },
-                        { name: "location_match", value: 1, weight: 0.3, impact: "positive" },
-                        { name: "device_known", value: "partial", weight: 0.3, impact: "neutral" }
-                    ],
-                    confidence: 0.82,
-                    duration_ms: 8,
-                    created_at: new Date(Date.now() - 3600000).toISOString()
-                }
-            ]);
+            console.error("Failed to fetch decisions");
+            setDecisions([]);
         } finally {
             setLoading(false);
         }

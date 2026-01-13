@@ -56,49 +56,7 @@ export default function NotificationsPage() {
             setNotifications(res.data.notifications || []);
         } catch (error) {
             console.error("Failed to fetch notifications", error);
-            // Mock data
-            setNotifications([
-                {
-                    id: "1",
-                    app_id: activeApp.id,
-                    type: "rule_triggered",
-                    title: "Regra Disparada",
-                    message: "Regra 'Alerta de Bounce Alto' foi disparada e executou ação: alert",
-                    severity: "info",
-                    read: false,
-                    created_at: new Date(Date.now() - 300000).toISOString()
-                },
-                {
-                    id: "2",
-                    app_id: activeApp.id,
-                    type: "approval_required",
-                    title: "Aprovação Necessária",
-                    message: "Ação 'delete_user' requer sua aprovação: Exclusão de usuário inativo",
-                    severity: "warning",
-                    read: false,
-                    created_at: new Date(Date.now() - 600000).toISOString()
-                },
-                {
-                    id: "3",
-                    app_id: activeApp.id,
-                    type: "deploy_failed",
-                    title: "Deploy Falhou",
-                    message: "Deploy do app falhou na fase de build: npm install failed",
-                    severity: "error",
-                    read: true,
-                    created_at: new Date(Date.now() - 3600000).toISOString()
-                },
-                {
-                    id: "4",
-                    app_id: activeApp.id,
-                    type: "shadow_mode_changed",
-                    title: "Shadow Mode ativado",
-                    message: "Shadow mode foi ativado: Teste de novas regras",
-                    severity: "info",
-                    read: true,
-                    created_at: new Date(Date.now() - 7200000).toISOString()
-                }
-            ]);
+            setNotifications([]);
         } finally {
             setLoading(false);
         }

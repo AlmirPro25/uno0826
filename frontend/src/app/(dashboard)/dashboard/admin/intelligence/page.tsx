@@ -46,47 +46,7 @@ export default function IntelligencePage() {
             setData(res.data);
         } catch (error) {
             console.error("Failed to fetch intelligence", error);
-            // Mock data for demo
-            setData({
-                tension_points: [
-                    {
-                        domain: "billing",
-                        metric: "failed_payments_rate",
-                        current_value: 12.5,
-                        threshold: 10,
-                        trend: "up",
-                        severity: "medium",
-                        recommendation: "Investigar gateway de pagamento"
-                    },
-                    {
-                        domain: "rules",
-                        metric: "execution_latency_p99",
-                        current_value: 850,
-                        threshold: 500,
-                        trend: "up",
-                        severity: "high",
-                        recommendation: "Otimizar regras complexas"
-                    }
-                ],
-                insights: [
-                    {
-                        type: "pattern",
-                        title: "Pico de atividade às 14h",
-                        description: "Sistema recebe 3x mais eventos entre 14h-16h",
-                        impact: "neutral",
-                        data: { peak_hour: 14, multiplier: 3 }
-                    },
-                    {
-                        type: "anomaly",
-                        title: "Queda em aprovações automáticas",
-                        description: "Taxa de auto-approval caiu 15% esta semana",
-                        impact: "negative",
-                        data: { drop_percent: 15 }
-                    }
-                ],
-                health_score: 78,
-                last_analysis: new Date().toISOString()
-            });
+            setData(null);
         } finally {
             setLoading(false);
         }

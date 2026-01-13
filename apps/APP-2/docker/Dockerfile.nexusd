@@ -1,0 +1,56 @@
+
+# Build stage
+FROM golang:1.20-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.mod and go.sum, then download dependencies
+COPY nexus-node/go.mod nexus-node/go.sum ./nexus-node/
+RUN cd nexus-node && go mod download
+
+# Copy the rest of the source code
+COPY nexus-node/ ./nexus-node/
+
+# Build the Go application
+# CGO_ENABLED=1 is required for go-sqlite3 with SQLCipher
+RUN CGO_ENABLED=1 go build -o /usr/local/bin/nexusd ./nexus-node/cmd/nexusd/main.go
+
+# Runtime stage
+FROM alpine/git:latest AS sqlcipher_builder
+RUN apk add --no-cache openssl-dev libtool autoconf automake make gcc g++
+WORKDIR /sqlite-src
+RUN git clone https://github.com/sqlcipher/sqlcipher.git .
+RUN ./configure --enable-tempstore=yes --with-crypto-library=openssl --enable-static=yes --disable-shared
+RUN make amalgamation
+RUN make libsqlite3.la
+
+FROM alpine:latest
+
+# Install necessary libraries for CGO and SQLCipher runtime
+RUN apk add --no-cache openssl-libs libstdc++ bash
+
+WORKDIR /app
+
+# Copy the built binary from the builder stage
+COPY --from=builder /usr/local/bin/nexusd /usr/local/bin/nexusd
+
+# Copy the SQLCipher amalgamation library from the sqlcipher_builder stage
+# This is crucial for the go-sqlite3 driver to find the SQLCipher functions at runtime
+COPY --from=sqlcipher_builder /sqlite-src/sqlite3.c /usr/local/lib/
+COPY --from=sqlcipher_builder /sqlite-src/sqlite3.h /usr/local/include/
+COPY --from=sqlcipher_builder /usr/local/lib/libsqlite3.la /usr/local/lib/libsqlite3.la
+# Add libsqlite3.so to search path if using shared, but we built static.
+# If dynamic linking issues, consider copying libsqlite3.so or similar.
+# For static build, the CGO part should ideally embed it.
+# If issues persist, refer to go-sqlite3 and SQLCipher specific instructions for Alpine.
+
+# Create data directory (important for volume mounts)
+RUN mkdir -p /app/data
+
+# Expose ports
+EXPOSE 8080/tcp  # API port
+EXPOSE 4001/tcp  # libp2p TCP
+EXPOSE 4001/udp  # libp2p QUIC/WebTransport
+
+# Default command to run the application
+CMD ["nexusd"]

@@ -1,10 +1,11 @@
 # ========================================
 # PROST-QS - Render.com Configuration
+# Backend Go com PostgreSQL (Supabase/Neon)
 # ========================================
 
 services:
   - type: web
-    name: prost-qs
+    name: prost-qs-backend
     runtime: docker
     dockerfilePath: ./Dockerfile
     region: oregon
@@ -15,15 +16,17 @@ services:
         value: release
       - key: SERVER_PORT
         value: "8080"
-      - key: SQLITE_DB_PATH
-        value: /data/prostqs.db
+      # PostgreSQL - Configurar no Dashboard do Render
+      - key: DATABASE_URL
+        sync: false  # Configurar manualmente no dashboard
       - key: JWT_SECRET
         generateValue: true
       - key: AES_SECRET_KEY
-        value: "ProstQS2024SecretKey32Bytes!!"
+        sync: false  # Configurar manualmente (32 bytes)
       - key: SECRETS_MASTER_KEY
-        value: "ProstQSMasterKey32BytesSecure!"
-    disk:
-      name: prostqs-data
-      mountPath: /data
-      sizeGB: 1
+        sync: false  # Configurar manualmente (32 bytes)
+      # Lighthouse Config
+      - key: LIGHTHOUSE_ID
+        value: "lighthouse-kernel-01"
+      - key: LIGHTHOUSE_REGION
+        value: "sa-east"

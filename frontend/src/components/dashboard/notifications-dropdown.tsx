@@ -48,28 +48,8 @@ export function NotificationsDropdown() {
             setUnreadCount(countRes.data.count || 0);
         } catch (error) {
             console.error("Failed to fetch notifications", error);
-            // Mock data for dev
-            setNotifications([
-                {
-                    id: "1",
-                    type: "rule_triggered",
-                    title: "Regra Disparada",
-                    message: "Regra 'Alerta de Bounce Alto' foi disparada",
-                    severity: "info",
-                    read: false,
-                    created_at: new Date(Date.now() - 300000).toISOString()
-                },
-                {
-                    id: "2",
-                    type: "approval_required",
-                    title: "Aprovação Necessária",
-                    message: "Ação 'delete_user' requer sua aprovação",
-                    severity: "warning",
-                    read: false,
-                    created_at: new Date(Date.now() - 600000).toISOString()
-                }
-            ]);
-            setUnreadCount(2);
+            setNotifications([]);
+            setUnreadCount(0);
         } finally {
             setLoading(false);
         }

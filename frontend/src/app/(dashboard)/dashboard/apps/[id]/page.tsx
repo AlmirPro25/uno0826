@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useApp } from "@/contexts/app-context";
 
 interface AppDetails {
     id: string;
@@ -72,37 +71,54 @@ export default function AppOverviewPage() {
     const [copied, setCopied] = useState<string | null>(null);
     const [showSecret, setShowSecret] = useState(false);
     const [regenerating, setRegenerating] = useState(false);
-
-    // Mock data for demo (will be replaced by real API calls)
-    const [recentEvents] = useState<RecentEvent[]>([
-        { id: "1", type: "identity.auth.success", timestamp: Date.now() - 60000, status: "success" },
-        { id: "2", type: "billing.payment.processed", timestamp: Date.now() - 180000, status: "success" },
-        { id: "3", type: "governance.rule.triggered", timestamp: Date.now() - 300000, status: "warning" },
-        { id: "4", type: "api.request", timestamp: Date.now() - 420000, status: "success" },
-    ]);
-
-    const [recentRules] = useState<RecentRule[]>([
-        { id: "1", name: "Rate Limit Alert", enabled: true, last_triggered: "2h atrás" },
-        { id: "2", name: "High Value Transaction", enabled: true },
-        { id: "3", name: "Suspicious Login", enabled: false },
-    ]);
+    const [recentEvents, setRecentEvents] = useState<RecentEvent[]>([]);
+    const [recentRules, setRecentRules] = useState<RecentRule[]>([]);
 
     const fetchApp = async () => {
         try {
-            const [appRes, credsRes, metricsRes] = await Promise.all([
+            const [appRes, credsRes, metricsRes, eventsRes, rulesRes] = await Promise.all([
                 api.get(`/apps/${appId}`),
                 api.get(`/apps/${appId}/credentials`).catch(() => ({ data: null })),
-                api.get(`/apps/${appId}/metrics`).catch(() => ({ data: null }))
+                api.get(`/apps/${appId}/metrics`).catch(() => ({ data: null })),
+                api.get(`/events/app/${appId}?limit=4`).catch(() => ({ data: { events: [] } })),
+                api.get(`/admin/rules?app_id=${appId}&limit=3`).catch(() => ({ data: { rules: [] } }))
             ]);
             setApp(appRes.data);
             setCredentials(credsRes.data);
             setMetrics(metricsRes.data);
+            
+            // Map events
+            const events = (eventsRes.data.events || []).map((e: Record<string, unknown>) => ({
+                id: e.id || e.ID,
+                type: e.type || e.event_type || "unknown",
+                timestamp: new Date(e.created_at as string || e.timestamp as string).getTime(),
+                status: e.status || "success"
+            }));
+            setRecentEvents(events);
+            
+            // Map rules
+            const rules = (rulesRes.data.rules || []).map((r: Record<string, unknown>) => ({
+                id: r.id || r.ID,
+                name: r.name,
+                enabled: r.enabled || r.active,
+                last_triggered: r.last_triggered_at ? formatRelativeTime(r.last_triggered_at as string) : undefined
+            }));
+            setRecentRules(rules);
         } catch (error) {
             console.error("Failed to fetch app", error);
             toast.error("Falha ao carregar aplicação");
         } finally {
             setLoading(false);
         }
+    };
+    
+    const formatRelativeTime = (timestamp: string) => {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffHour = Math.floor(diffMs / 3600000);
+        if (diffHour < 24) return `${diffHour}h atrás`;
+        return `${Math.floor(diffHour / 24)}d atrás`;
     };
 
     useEffect(() => {

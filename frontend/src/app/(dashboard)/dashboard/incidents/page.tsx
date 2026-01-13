@@ -58,49 +58,8 @@ export default function IncidentsPage() {
             setStats(statsRes.data);
         } catch (error) {
             console.error("Failed to fetch narratives", error);
-            // Mock data for dev mode
-            setNarratives([
-                {
-                    id: "1",
-                    what: "Deploy falhou após timeout de build",
-                    when: "2026-01-11T10:30:00Z",
-                    where: "Pipeline de CI/CD - Stage: Build",
-                    why: "Dependência npm não encontrada: @types/node@22.0.0",
-                    context: "Projeto: api-gateway | Branch: main | Commit: abc123",
-                    action_taken: "Build cancelado. Container não foi atualizado.",
-                    next_step: "Verificar package.json e atualizar dependências",
-                    severity: "error",
-                    status: "open",
-                    created_at: "2026-01-11T10:30:00Z"
-                },
-                {
-                    id: "2",
-                    what: "Limite de memória atingido",
-                    when: "2026-01-11T09:15:00Z",
-                    where: "Container: worker-01 | Pod: prod-workers",
-                    why: "Memory leak detectado após 72h de uptime",
-                    context: "Uso: 512MB/512MB | Restarts: 3 nas últimas 24h",
-                    action_taken: "Container reiniciado automaticamente",
-                    next_step: "Investigar leak. Considerar aumentar limite.",
-                    severity: "warning",
-                    status: "acknowledged",
-                    created_at: "2026-01-11T09:15:00Z"
-                },
-                {
-                    id: "3",
-                    what: "Certificado SSL renovado com sucesso",
-                    when: "2026-01-10T03:00:00Z",
-                    where: "Domain: api.example.com",
-                    why: "Renovação automática agendada",
-                    context: "Validade anterior: 2026-01-15 | Nova: 2026-04-15",
-                    action_taken: "Certificado atualizado em todos os edge nodes",
-                    next_step: "Nenhuma ação necessária",
-                    severity: "info",
-                    status: "resolved",
-                    created_at: "2026-01-10T03:00:00Z"
-                }
-            ]);
-            setStats({ total: 3, open: 1, acknowledged: 1, resolved: 1 });
+            setNarratives([]);
+            setStats({ total: 0, open: 0, acknowledged: 0, resolved: 0 });
         } finally {
             setLoading(false);
         }

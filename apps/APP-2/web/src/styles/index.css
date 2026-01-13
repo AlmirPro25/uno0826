@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Nexus Obsidian Theme - Ultra Dark */
+  --background: 0 0% 4%;           /* #0A0A0A */
+  --background-subtle: 0 0% 5%;    /* #0D0D0D */
+  --surface: 0 0% 7%;              /* #111111 */
+  --surface-elevated: 0 0% 10%;    /* #1A1A1A */
+  
+  /* Four-level contrast hierarchy */
+  --foreground: 0 0% 98%;
+  --foreground-secondary: 0 0% 70%;
+  --foreground-muted: 0 0% 50%;
+  --foreground-faint: 0 0% 30%;
+  
+  /* Borders - subtle, functional */
+  --border: 0 0% 12%;
+  --border-subtle: 0 0% 8%;
+  --border-focus: 160 100% 45%;
+  
+  /* Accent - Emerald Green (Connection/Success) */
+  --accent: 160 100% 45%;
+  --accent-muted: 160 60% 35%;
+  --accent-subtle: 160 100% 45% / 0.15;
+  
+  /* Secondary Accent - Amber (Alerts/Warnings) */
+  --amber: 40 90% 50%;
+  --amber-subtle: 40 90% 50% / 0.15;
+  
+  /* Semantic */
+  --success: 160 70% 45%;
+  --warning: 40 90% 50%;
+  --error: 0 70% 55%;
+  
+  /* Shadcn compatibility */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface-elevated);
+  --popover-foreground: var(--foreground);
+  --primary: var(--accent);
+  --primary-foreground: 0 0% 4%;
+  --secondary: var(--surface);
+  --secondary-foreground: var(--foreground);
+  --muted: var(--surface);
+  --muted-foreground: var(--foreground-muted);
+  --destructive: var(--error);
+  --destructive-foreground: var(--foreground);
+  --input: var(--border);
+  --ring: var(--accent);
+  --radius: 6px;
+}
+
+@layer base {
+  * {
+    @apply border-[hsl(var(--border))];
+  }
+  
+  body {
+    @apply bg-[hsl(var(--background))] text-[hsl(var(--foreground))];
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  /* Monospace for data */
+  code, .mono, [data-mono] {
+    font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+    font-feature-settings: 'tnum';
+  }
+}
+
+/* Scrollbar - minimal */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--border));
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground-faint));
+}
+
+/* Focus states */
+*:focus-visible {
+  outline: 1.5px solid hsl(var(--accent));
+  outline-offset: 2px;
+}
+
+/* Transitions - 150ms micro, 200ms larger */
+.transition-micro {
+  transition: all 150ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+.transition-normal {
+  transition: all 200ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+
+/* Nexus Obsidian Custom Utilities */
+.nexus-gradient {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.nexus-glow {
+  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+}
+
+.nexus-glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+}
+
+/* Video Call Styles */
+.video-pip {
+  position: absolute;
+  bottom: 1rem;
+  right: 1rem;
+  width: 120px;
+  height: 160px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  border: 2px solid hsl(var(--border));
+}
+
+.video-fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #000;
+}
+
+/* Message Bubbles */
+.message-sent {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-radius: 18px 18px 4px 18px;
+}
+
+.message-received {
+  background: hsl(var(--surface-elevated));
+  border: 1px solid hsl(var(--border));
+  border-radius: 18px 18px 18px 4px;
+}
+
+/* Pulse Animation for Active Calls */
+@keyframes call-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.7; transform: scale(1.05); }
+}
+
+.call-active {
+  animation: call-pulse 2s ease-in-out infinite;
+}
+
+/* Smooth Panel Transitions */
+.panel-slide {
+  transition: transform 300ms cubic-bezier(0.25, 1, 0.5, 1);
+}
+

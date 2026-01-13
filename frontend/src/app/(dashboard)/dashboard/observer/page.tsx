@@ -45,36 +45,8 @@ export default function ObserverPage() {
             setObservations(obsRes.data.observations || []);
         } catch (error) {
             console.error("Failed to fetch observer", error);
-            // Mock data
-            setStatus({
-                enabled: true,
-                memory_enabled: true,
-                last_observation: new Date().toISOString(),
-                observations_today: 12,
-                suggestions_pending: 3
-            });
-            setObservations([
-                {
-                    id: "obs-1",
-                    type: "anomaly",
-                    domain: "billing",
-                    title: "Taxa de falha acima do normal",
-                    description: "Detectado aumento de 15% em falhas de pagamento nas últimas 2h",
-                    confidence: 0.87,
-                    created_at: new Date().toISOString(),
-                    status: "pending"
-                },
-                {
-                    id: "obs-2",
-                    type: "suggestion",
-                    domain: "rules",
-                    title: "Regra pode ser otimizada",
-                    description: "A regra 'check_fraud' está executando em média 3x mais que o necessário",
-                    confidence: 0.72,
-                    created_at: new Date(Date.now() - 3600000).toISOString(),
-                    status: "acknowledged"
-                }
-            ]);
+            setStatus(null);
+            setObservations([]);
         } finally {
             setLoading(false);
         }

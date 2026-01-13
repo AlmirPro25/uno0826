@@ -1,0 +1,55 @@
+
+version: '3.8'
+
+services:
+  nexusd:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.nexusd
+    container_name: nexusd
+    restart: unless-stopped
+    ports:
+      - "8080:8080" # Local API for frontend
+      - "4001:4001/tcp" # libp2p TCP
+      - "4001:4001/udp" # libp2p QUIC/WebTransport
+    volumes:
+      - nexus_data:/app/data # Persistent storage for identity and database
+    environment:
+      NEXUS_API_PORT: 8080
+      NEXUS_P2P_PORT: 4001
+      NEXUS_IDENTITY_FILE: nexus_identity.key
+      NEXUS_IDENTITY_PASSPHRASE: "SuaSenhaSeguraAqui_NaoUseDefault" # MUDAR ISSO EM PRODUÇÃO
+      NEXUS_DATABASE_PATH: nexus_data.db
+      NEXUS_DATABASE_PASSPHRASE: "SuaSenhaSeguraDoDB_NaoUseDefault" # MUDAR ISSO EM PRODUÇÃO
+      NEXUS_ENABLE_MDNS: "true" # Enable mDNS for local discovery
+      NEXUS_DHT_CLIENT_ONLY: "false" # Node contributes to DHT
+      NEXUS_ENABLE_WEBRTC: "true"
+      # NEXUS_BOOTSTRAP_PEERS: "/dnsaddr/bootstrap.libp2p.io/p2p/QmNnooDu7bpjYzQVPdVWK8VqNRxGSb2KBCz2amWkLHPMWJ"
+      # NEXUS_STUN_SERVERS: "stun.l.google.com:19302,stun1.l.google.com:19302"
+    # cap_add:
+    #   - NET_ADMIN # Needed for some advanced network capabilities, like port mapping
+    # network_mode: host # Consider for full NAT traversal, but less isolated
+
+  nexus_web_ui:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: nexus_web_ui
+    restart: unless-stopped
+    ports:
+      - "3000:80" # Frontend (Nginx) runs on port 80 inside container, exposed on 3000
+    depends_on:
+      - nexusd # Ensure backend starts first
+    environment:
+      VITE_API_URL: http://localhost:8080 # For frontend to know where its local P2P node API is
+                                         # This is handled by Nginx proxy in this setup, so not strictly needed by Vite directly
+      # Other frontend specific env vars if needed
+
+
+volumes:
+  nexus_data: # Define the named volume for persistent data
+
+networks:
+  default:
+    name: nexus_mesh_network
+    # driver: bridge # Default, or custom driver for more advanced networking
