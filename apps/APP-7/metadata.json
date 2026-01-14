@@ -1,0 +1,9 @@
+
+{
+  "name": "C6156565156opy of Currículo IA",
+  "description": "An intelligent application that automatically creates professional resumes from natural conversation, document analysis, and AI-powered image editing.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

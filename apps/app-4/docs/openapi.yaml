@@ -1,0 +1,689 @@
+openapi: 3.0.0
+info:
+  title: MediSync Telemedicine API
+  version: 2.0.0
+  description: |
+    API completa para gestão de teleconsultas, agendamentos, prontuários eletrônicos,
+    receitas, atestados, pagamentos e muito mais para clínicas e hospitais.
+    
+    ## Autenticação
+    A API usa JWT (JSON Web Token) para autenticação. Inclua o token no header:
+    `Authorization: Bearer <token>`
+    
+    ## Rate Limiting
+    - Endpoints públicos: 10 requisições/minuto
+    - Endpoints autenticados: 100 requisições/minuto
+    
+    ## Códigos de Erro
+    - 400: Dados inválidos
+    - 401: Não autenticado
+    - 403: Sem permissão
+    - 404: Recurso não encontrado
+    - 409: Conflito (ex: horário já agendado)
+    - 429: Muitas requisições
+    - 500: Erro interno
+  contact:
+    name: Suporte MediSync
+    email: suporte@medisync.com.br
+  license:
+    name: Proprietário
+    
+servers:
+  - url: http://localhost:8080
+    description: Desenvolvimento
+  - url: https://api.medisync.com.br
+    description: Produção
+
+tags:
+  - name: Health
+    description: Status do sistema
+  - name: Auth
+    description: Autenticação e autorização
+  - name: Users
+    description: Gestão de usuários
+  - name: Appointments
+    description: Agendamentos de consultas
+  - name: Prescriptions
+    description: Receitas médicas
+  - name: Certificates
+    description: Atestados médicos
+  - name: MedicalRecords
+    description: Prontuários eletrônicos
+  - name: Reviews
+    description: Avaliações de consultas
+  - name: Payments
+    description: Pagamentos
+  - name: Stats
+    description: Estatísticas e relatórios
+  - name: Notifications
+    description: Notificações
+  - name: Backup
+    description: Backup do sistema (Admin)
+  - name: Audit
+    description: Logs de auditoria (Admin)
+
+paths:
+  # Health Check
+  /health:
+    get:
+      tags: [Health]
+      summary: Status completo do sistema
+      responses:
+        '200':
+          description: Sistema saudável
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+                
+  /health/ready:
+    get:
+      tags: [Health]
+      summary: Verifica se o sistema está pronto
+      responses:
+        '200':
+          description: Sistema pronto
+        '503':
+          description: Sistema não está pronto
+
+  /health/live:
+    get:
+      tags: [Health]
+      summary: Verifica se o sistema está vivo
+      responses:
+        '200':
+          description: Sistema vivo
+
+  # Authentication
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Login de usuário
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login bem-sucedido
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '401':
+          description: Credenciais inválidas
+
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Registro de novo paciente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Usuário criado
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Renovar token de acesso
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token renovado
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Solicitar reset de senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: Email enviado
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Redefinir senha
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Senha alterada
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Alterar senha (autenticado)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                logoutAll:
+                  type: boolean
+      responses:
+        '200':
+          description: Senha alterada
+
+  /auth/logout-all:
+    post:
+      tags: [Auth]
+      summary: Logout de todos os dispositivos
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Logout realizado
+
+  # Appointments
+  /appointments/available-slots:
+    get:
+      tags: [Appointments]
+      summary: Horários disponíveis
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: doctorId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Lista de horários
+
+  /appointments/book:
+    post:
+      tags: [Appointments]
+      summary: Agendar consulta
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookAppointmentRequest'
+      responses:
+        '201':
+          description: Consulta agendada
+        '409':
+          description: Conflito de horário
+
+  /appointments/my-appointments:
+    get:
+      tags: [Appointments]
+      summary: Minhas consultas
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, booked, completed, cancelled]
+        - name: page
+          in: query
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de consultas
+
+  /appointments/{id}:
+    get:
+      tags: [Appointments]
+      summary: Detalhes da consulta
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da consulta
+
+  /appointments/{id}/cancel:
+    put:
+      tags: [Appointments]
+      summary: Cancelar consulta
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Consulta cancelada
+
+  /appointments/{id}/complete:
+    put:
+      tags: [Appointments]
+      summary: Finalizar consulta (médico)
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Consulta finalizada
+
+  # Prescriptions
+  /prescriptions:
+    post:
+      tags: [Prescriptions]
+      summary: Criar receita (médico)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrescriptionRequest'
+      responses:
+        '201':
+          description: Receita criada
+
+  /prescriptions/my-prescriptions:
+    get:
+      tags: [Prescriptions]
+      summary: Minhas receitas
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de receitas
+
+  /prescriptions/{id}:
+    get:
+      tags: [Prescriptions]
+      summary: Detalhes da receita
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Detalhes da receita
+
+  # Certificates
+  /certificates:
+    post:
+      tags: [Certificates]
+      summary: Criar atestado (médico)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CertificateRequest'
+      responses:
+        '201':
+          description: Atestado criado
+
+  /certificates/my-certificates:
+    get:
+      tags: [Certificates]
+      summary: Meus atestados
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de atestados
+
+  # Reviews
+  /reviews:
+    post:
+      tags: [Reviews]
+      summary: Criar avaliação
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+      responses:
+        '201':
+          description: Avaliação criada
+
+  /doctors/{doctorId}/reviews:
+    get:
+      tags: [Reviews]
+      summary: Avaliações do médico
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Lista de avaliações
+
+  /doctors/{doctorId}/rating:
+    get:
+      tags: [Reviews]
+      summary: Nota média do médico
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: doctorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Nota média
+
+  # Stats
+  /stats/admin:
+    get:
+      tags: [Stats]
+      summary: Estatísticas do admin
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Estatísticas
+
+  /stats/doctor:
+    get:
+      tags: [Stats]
+      summary: Estatísticas do médico
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Estatísticas
+
+  # Backup (Admin)
+  /admin/backups:
+    get:
+      tags: [Backup]
+      summary: Listar backups
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Lista de backups
+    post:
+      tags: [Backup]
+      summary: Criar backup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [full, partial]
+      responses:
+        '200':
+          description: Backup criado
+
+  /admin/backups/{filename}:
+    get:
+      tags: [Backup]
+      summary: Baixar backup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Arquivo de backup
+    delete:
+      tags: [Backup]
+      summary: Deletar backup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Backup deletado
+
+  /admin/backups/{filename}/restore:
+    post:
+      tags: [Backup]
+      summary: Restaurar backup
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: filename
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Backup restaurado
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [healthy, degraded, unhealthy]
+        timestamp:
+          type: string
+          format: date-time
+        uptime:
+          type: string
+        version:
+          type: string
+        services:
+          type: object
+          additionalProperties:
+            type: string
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+        user:
+          $ref: '#/components/schemas/User'
+
+    RegisterRequest:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        phone:
+          type: string
+        acceptTerms:
+          type: boolean
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [ADMIN, MEDICO, PACIENTE]
+        phone:
+          type: string
+        specialty:
+          type: string
+        crm:
+          type: string
+
+    BookAppointmentRequest:
+      type: object
+      required: [doctorId, startTime, endTime]
+      properties:
+        doctorId:
+          type: integer
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+
+    PrescriptionRequest:
+      type: object
+      required: [patientId, appointmentId, medications]
+      properties:
+        patientId:
+          type: integer
+        appointmentId:
+          type: integer
+        diagnosis:
+          type: string
+        medications:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              dosage:
+                type: string
+              frequency:
+                type: string
+              duration:
+                type: string
+        instructions:
+          type: string
+        validUntil:
+          type: string
+          format: date
+
+    CertificateRequest:
+      type: object
+      required: [patientId, appointmentId, type]
+      properties:
+        patientId:
+          type: integer
+        appointmentId:
+          type: integer
+        type:
+          type: string
+          enum: [COMPARECIMENTO, AFASTAMENTO, APTIDAO]
+        cid10:
+          type: string
+        daysOff:
+          type: integer
+        restrictions:
+          type: string
+
+    ReviewRequest:
+      type: object
+      required: [appointmentId, rating]
+      properties:
+        appointmentId:
+          type: integer
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Token JWT obtido no login

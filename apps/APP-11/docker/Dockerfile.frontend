@@ -1,0 +1,43 @@
+
+# Stage 1: Install dependencies and build the Next.js application
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Copy package.json and yarn.lock/package-lock.json to leverage Docker cache
+COPY frontend/package.json frontend/package-lock.json ./
+# If using yarn, use: COPY frontend/yarn.lock ./
+RUN npm install
+
+# Copy the rest of the frontend source code
+COPY frontend/ .
+
+# Build the Next.js application for standalone output
+# This reduces the final image size and optimizes for Docker
+# Ensure next.config.mjs has `output: 'standalone'`
+RUN npm run build
+
+# Stage 2: Create a minimal production image for Next.js standalone output
+FROM node:20-alpine
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the standalone output from the builder stage
+COPY --from=builder /app/frontend/.next/standalone ./
+COPY --from=builder /app/frontend/.next/static ./.next/static
+COPY --from=builder /app/frontend/public ./public
+
+# Expose the port Next.js listens on
+EXPOSE 3000
+
+# Set environment variables for Next.js
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Define the command to run the application
+# The standalone output includes a custom server.js
+CMD ["node", "server.js"]
+
+# Healthcheck for Docker Compose/Kubernetes
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:3000 || exit 1

@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  db:
+    image: postgres:14-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: medisync
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  # 2. Redis Cache (for future use with refresh tokens or sessions)
+  redis:
+    image: redis:alpine
+    restart: always
+    ports:
+      - "6379:6379"
+
+  # 3. Go Backend Application
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    environment:
+      # These variables are loaded by config.go in the Go application.
+      DATABASE_URL: postgres://user:password@db:5432/medisync?sslmode=disable
+      JWT_SECRET: "strong-secret-key-for-jwt-go"
+      ENCRYPTION_KEY: "A_very_strong_16_or_32_byte_secret_key_for_aes_encryption!"
+    depends_on:
+      - db
+      - redis
+    volumes:
+      - ./backend:/app
+
+  # 4. WhatsApp Service + Gemini AI Assistant
+  whatsapp:
+    build:
+      context: ./whatsapp-service
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      PORT: "3001"
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-your_gemini_api_key_here}
+      BACKEND_URL: http://backend:8080
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-MediSync <noreply@medisync.com>}
+      SESSION_PATH: /app/.wwebjs_auth
+    depends_on:
+      - backend
+    volumes:
+      - whatsapp-session:/app/.wwebjs_auth
+    # WhatsApp-web.js needs Chrome/Chromium
+    # The Dockerfile will install it
+
+    # 5. Frontend (Next.js) - Optional for local dev
+    # frontend:
+    #   build:
+    #     context: ./frontend
+    #     dockerfile: Dockerfile
+    #   restart: always
+    #   ports:
+    #     - "3000:3000"
+    #   environment:
+    #     NEXT_PUBLIC_API_URL: http://backend:8080
+    #     NEXT_PUBLIC_WS_URL: ws://backend:8080
+    #   depends_on:
+    #     - backend
+
+volumes:
+  postgres-data:
+  whatsapp-session:

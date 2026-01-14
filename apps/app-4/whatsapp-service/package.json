@@ -1,0 +1,29 @@
+{
+    "name": "medisync-whatsapp-service",
+    "version": "1.0.0",
+    "description": "WhatsApp Bot + Gemini AI Assistant for MediSync",
+    "main": "src/index.js",
+    "type": "module",
+    "scripts": {
+        "start": "node src/index.js",
+        "dev": "node --watch src/index.js"
+    },
+    "dependencies": {
+        "whatsapp-web.js": "^1.26.0",
+        "qrcode-terminal": "^0.12.0",
+        "@google/generative-ai": "^0.21.0",
+        "express": "^4.21.0",
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "nodemailer": "^6.9.16",
+        "axios": "^1.7.7"
+    },
+    "keywords": [
+        "whatsapp",
+        "gemini",
+        "medisync",
+        "healthcare"
+    ],
+    "author": "MediSync Team",
+    "license": "MIT"
+}

@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Sistema de Geração de Imagens IA</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="text-center mb-12">
+            <h1 class="text-4xl font-bold mb-4 bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+                🎨 Sistema de Geração de Imagens IA
+            </h1>
+            <p class="text-xl text-gray-400">Teste do Gemini 2.0 Flash Preview Image Generation</p>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Teste 1: Comida -->
+            <div class="bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-700">
+                <img 
+                    src="ai-researched-image://hambúrguer gourmet artesanal com carne angus, queijo cheddar derretido, alface fresca e tomate em pão brioche, fotografia profissional de comida com fundo escuro"
+                    alt="Hambúrguer Gourmet"
+                    class="w-full h-48 object-cover"
+                    data-aid="image-hamburger-test"
+                />
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold mb-2">Hambúrguer Artesanal</h3>
+                    <p class="text-gray-400 mb-4">Carne Angus, queijo cheddar, pão brioche</p>
+                    <p class="text-green-400 font-bold text-lg">R$ 32,90</p>
+                </div>
+            </div>
+
+            <!-- Teste 2: Tecnologia -->
+            <div class="bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-700">
+                <img 
+                    src="ai-researched-image://smartphone moderno preto com tela brilhante em fundo minimalista branco, fotografia de produto profissional, iluminação suave e sombras elegantes"
+                    alt="Smartphone Moderno"
+                    class="w-full h-48 object-cover"
+                    data-aid="image-smartphone-test"
+                />
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold mb-2">Smartphone Pro Max</h3>
+                    <p class="text-gray-400 mb-4">Tela 6.7", 256GB, câmera tripla</p>
+                    <p class="text-green-400 font-bold text-lg">R$ 4.299,00</p>
+                </div>
+            </div>
+
+            <!-- Teste 3: Natureza -->
+            <div class="bg-gray-800 rounded-lg overflow-hidden shadow-xl border border-gray-700">
+                <img 
+                    src="ai-researched-image://paisagem serena de montanhas ao amanhecer com névoa dourada, lago cristalino refletindo o céu, fotografia de natureza profissional, cores quentes"
+                    alt="Paisagem Montanhosa"
+                    class="w-full h-48 object-cover"
+                    data-aid="image-landscape-test"
+                />
+                <div class="p-6">
+                    <h3 class="text-xl font-semibold mb-2">Refúgio na Montanha</h3>
+                    <p class="text-gray-400 mb-4">Experiência única em meio à natureza</p>
+                    <p class="text-blue-400 font-semibold">Reservar Agora</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de Instruções -->
+        <div class="bg-gradient-to-r from-purple-900/20 to-blue-900/20 border border-purple-500/30 rounded-lg p-8 mb-8">
+            <h2 class="text-2xl font-bold mb-6 text-center">Como Testar o Sistema</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-lg font-semibold mb-4 text-purple-400">🚀 Passos para Teste:</h3>
+                    <ol class="space-y-2 text-gray-300">
+                        <li><strong>1.</strong> Configure GEMINI_API_KEY no .env.local</li>
+                        <li><strong>2.</strong> Inicie o backend: <code class="bg-gray-800 px-2 py-1 rounded">cd backend && npm run dev</code></li>
+                        <li><strong>3.</strong> Use o componente ImageGenerationManager</li>
+                        <li><strong>4.</strong> Clique em "Gerar Imagens"</li>
+                        <li><strong>5.</strong> Aguarde o processamento (10-15s por imagem)</li>
+                    </ol>
+                </div>
+                
+                <div>
+                    <h3 class="text-lg font-semibold mb-4 text-blue-400">📋 Checklist de Verificação:</h3>
+                    <ul class="space-y-2 text-gray-300">
+                        <li>✅ Placeholders detectados automaticamente</li>
+                        <li>✅ Imagens geradas com qualidade profissional</li>
+                        <li>✅ URLs substituídas por caminhos locais</li>
+                        <li>✅ Imagens salvas em backend/public/generated-images/</li>
+                        <li>✅ Fallback para placeholders SVG em caso de erro</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Seção de API Test -->
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h3 class="text-xl font-semibold mb-4">🔧 Teste da API</h3>
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-medium text-gray-300 mb-2">Endpoint de Processamento:</h4>
+                    <code class="bg-gray-900 text-green-400 p-2 rounded block text-sm">
+                        POST http://localhost:3001/api/images/process
+                    </code>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium text-gray-300 mb-2">Payload de Exemplo:</h4>
+                    <pre class="bg-gray-900 text-blue-400 p-3 rounded text-xs overflow-x-auto"><code>{
+  "htmlContent": "&lt;img src='ai-researched-image://descrição detalhada' /&gt;",
+  "projectId": "teste-projeto"
+}</code></pre>
+                </div>
+                
+                <div>
+                    <h4 class="font-medium text-gray-300 mb-2">Resposta Esperada:</h4>
+                    <pre class="bg-gray-900 text-yellow-400 p-3 rounded text-xs overflow-x-auto"><code>{
+  "success": true,
+  "htmlContent": "&lt;img src='/api/images/generated/uuid.png' /&gt;",
+  "imagesGenerated": 1,
+  "images": [...]
+}</code></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="text-center mt-12 pt-8 border-t border-gray-700">
+            <p class="text-gray-400">
+                Sistema desenvolvido por <strong class="text-purple-400">Almir Felix</strong> 
+                • Pronto para produção em 30 minutos! 🎯
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // Log para debug
+        console.log('🎨 Sistema de Geração de Imagens IA carregado');
+        console.log('📸 Placeholders detectados:', document.querySelectorAll('[src*="ai-researched-image://"]').length);
+        
+        // Destacar placeholders visualmente
+        document.querySelectorAll('[src*="ai-researched-image://"]').forEach((img, index) => {
+            img.style.border = '2px dashed #8b5cf6';
+            img.style.filter = 'grayscale(100%) opacity(0.7)';
+            img.title = `Placeholder ${index + 1}: Clique para gerar imagem real`;
+        });
+    </script>
+</body>
+</html>

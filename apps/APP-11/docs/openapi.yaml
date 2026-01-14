@@ -1,0 +1,512 @@
+
+openapi: 3.0.0
+info:
+  title: AI Web Weaver API
+  description: API for managing users, beta subscriptions, and AI-generated web projects.
+  version: 1.0.0
+servers:
+  - url: https://api.aiwebweaver.com/api/v1
+    description: Production server
+  - url: http://localhost:8080/api/v1
+    description: Development server
+
+tags:
+  - name: Auth
+    description: User authentication and authorization operations
+  - name: Beta
+    description: Beta program subscription management
+  - name: User
+    description: User profile and settings management
+  - name: Projects
+    description: AI-generated web project management (core AI functionality)
+  - name: Plans
+    description: Subscription plans management
+
+paths:
+  /auth/register:
+    post:
+      tags:
+        - Auth
+      summary: Register a new user
+      description: Creates a new user account with email and password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/login:
+    post:
+      tags:
+        - Auth
+      summary: Log in a user
+      description: Authenticates a user and returns access and refresh tokens.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: User logged in successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Refresh access token
+      description: Uses a refresh token to obtain a new access token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Access token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /auth/me:
+    get:
+      tags:
+        - User
+      summary: Get current user profile
+      description: Retrieves the profile details of the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    patch:
+      tags:
+        - User
+      summary: Update current user profile
+      description: Updates editable fields of the authenticated user's profile.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserProfileRequest'
+      responses:
+        '200':
+          description: User profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /beta/subscribe:
+    post:
+      tags:
+        - Beta
+      summary: Subscribe to Beta program
+      description: Allows users to subscribe to the AI Web Weaver beta program.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BetaSubscriptionRequest'
+      responses:
+        '201':
+          description: Beta subscription received successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Inscrição Beta recebida com sucesso. Verifique seu email para confirmação."
+                  subscriptionId:
+                    type: string
+                    format: uuid
+                    example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already registered for beta access
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /users/{userId}/projects:
+    get:
+      tags:
+        - Projects
+      summary: Get all projects for a user
+      description: Retrieves a list of all AI-generated projects belonging to a specific user.
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the user to retrieve projects for.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of projects retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Project'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Projects
+      summary: Create a new AI-generated project
+      description: Initiates the creation of a new web project using AI.
+      parameters:
+        - in: path
+          name: userId
+          schema:
+            type: string
+            format: uuid
+          required: true
+          description: ID of the user creating the project.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProjectRequest'
+      responses:
+        '201':
+          description: Project creation initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Project'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "Dados de entrada inválidos."
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          example: "João da Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: "SenhaSegura123!"
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "joao.silva@example.com"
+        password:
+          type: string
+          format: password
+          example: "SenhaSegura123!"
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." # Example JWT
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." # Example JWT
+        refreshToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." # Example JWT
+        expiresIn:
+          type: integer
+          description: Access token expiration time in seconds
+          example: 3600
+        user:
+          $ref: '#/components/schemas/UserProfile'
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        name:
+          type: string
+          example: "João da Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.silva@example.com"
+        role:
+          type: string
+          enum: [ "user", "admin" ]
+          example: "user"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:00:00Z"
+    UpdateUserProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "João Pedro da Silva"
+        email:
+          type: string
+          format: email
+          example: "joao.pedro@example.com"
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: Only required if changing password
+          example: "NovaSenhaSegura!"
+      # No 'required' field here, as all fields are optional for partial updates
+    BetaSubscriptionRequest:
+      type: object
+      required:
+        - name
+        - email
+      properties:
+        name:
+          type: string
+          example: "Maria Santos"
+        email:
+          type: string
+          format: email
+          example: "maria.santos@example.com"
+    BetaSubscription:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "b1c2d3e4-f5g6-7890-1234-567890abcdef"
+        name:
+          type: string
+          example: "Maria Santos"
+        email:
+          type: string
+          format: email
+          example: "maria.santos@example.com"
+        subscriptionDate:
+          type: string
+          format: date-time
+          example: "2023-10-27T10:30:00Z"
+        status:
+          type: string
+          enum: [ "pending", "approved", "rejected" ]
+          example: "pending"
+    Project:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: "c1d2e3f4-g5h6-7890-1234-567890abcdef"
+        userId:
+          type: string
+          format: uuid
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        name:
+          type: string
+          example: "Landing Page para E-commerce"
+        description:
+          type: string
+          example: "Uma landing page otimizada para conversão de produtos eletrônicos."
+        generatedCodeUrl:
+          type: string
+          format: uri
+          example: "https://cdn.aiwebweaver.com/projects/c1d2e3f4/index.html"
+        previewImageUrl:
+          type: string
+          format: uri
+          example: "https://cdn.aiwebweaver.com/projects/c1d2e3f4/preview.png"
+        createdAt:
+          type: string
+          format: date-time
+          example: "2023-10-27T11:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          example: "2023-10-27T11:00:00Z"
+        status:
+          type: string
+          enum: [ "draft", "generating", "completed", "error" ]
+          example: "completed"
+    CreateProjectRequest:
+      type: object
+      required:
+        - name
+        - description
+        - requirements
+      properties:
+        name:
+          type: string
+          example: "Landing Page para E-commerce"
+        description:
+          type: string
+          example: "Crie uma landing page moderna e responsiva para a venda de eletrônicos, com formulário de contato e integração com redes sociais."
+        requirements:
+          type: array
+          items:
+            type: string
+          example: ["Formulário de e-mail marketing", "Galeria de produtos", "Testemunhos de clientes"]
+        stylePreference:
+          type: string
+          enum: ["modern", "minimalist", "corporate", "playful"]
+          default: "modern"
+          example: "modern"
+        targetAudience:
+          type: string
+          example: "Jovens adultos interessados em tecnologia."
+
+  responses:
+    BadRequest:
+      description: Invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+    InternalServerError:
+      description: An unexpected internal server error occurred
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'

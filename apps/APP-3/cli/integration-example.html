@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Weaver CLI - Integração Frontend</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-8">
+            <h1 class="text-4xl font-bold mb-2">🚀 AI Web Weaver CLI Manager</h1>
+            <p class="text-gray-400">Gerencie seus apps via interface web</p>
+        </header>
+
+        <!-- Status do Backend -->
+        <div id="backend-status" class="mb-6 p-4 rounded-lg bg-gray-800">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-semibold mb-1">Backend Status</h2>
+                    <p id="status-text" class="text-gray-400">Verificando...</p>
+                </div>
+                <div id="status-indicator" class="w-4 h-4 rounded-full bg-yellow-500 animate-pulse"></div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="mb-6">
+            <div class="flex space-x-4 border-b border-gray-700">
+                <button onclick="showTab('apps')" class="tab-btn px-4 py-2 font-semibold border-b-2 border-blue-500">
+                    📱 Apps
+                </button>
+                <button onclick="showTab('install')" class="tab-btn px-4 py-2 font-semibold text-gray-400 hover:text-white">
+                    ➕ Instalar
+                </button>
+                <button onclick="showTab('logs')" class="tab-btn px-4 py-2 font-semibold text-gray-400 hover:text-white">
+                    📝 Logs
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: Apps -->
+        <div id="tab-apps" class="tab-content">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Apps Instalados</h2>
+                <button onclick="loadApps()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                    🔄 Atualizar
+                </button>
+            </div>
+            <div id="apps-list" class="grid gap-4">
+                <!-- Apps serão carregados aqui -->
+            </div>
+        </div>
+
+        <!-- Tab: Instalar -->
+        <div id="tab-install" class="tab-content hidden">
+            <h2 class="text-2xl font-bold mb-4">Instalar Novo App</h2>
+            <div class="bg-gray-800 p-6 rounded-lg">
+                <form id="install-form" class="space-y-4">
+                    <div>
+                        <label class="block mb-2 font-semibold">Nome do App</label>
+                        <input type="text" id="app-name" class="w-full px-4 py-2 bg-gray-700 rounded-lg" 
+                               placeholder="Meu Dashboard" required>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-semibold">Nome do Arquivo</label>
+                        <input type="text" id="app-filename" class="w-full px-4 py-2 bg-gray-700 rounded-lg" 
+                               placeholder="index.html" value="index.html" required>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-semibold">Tipo</label>
+                        <select id="app-type" class="w-full px-4 py-2 bg-gray-700 rounded-lg">
+                            <option value="single-file-html">Single-File HTML</option>
+                            <option value="node-backend">Node Backend</option>
+                            <option value="fullstack">Fullstack</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-semibold">Porta</label>
+                        <input type="number" id="app-port" class="w-full px-4 py-2 bg-gray-700 rounded-lg" 
+                               placeholder="3000" value="3000" required>
+                    </div>
+                    <div>
+                        <label class="block mb-2 font-semibold">Código HTML</label>
+                        <textarea id="app-content" class="w-full px-4 py-2 bg-gray-700 rounded-lg font-mono text-sm" 
+                                  rows="15" placeholder="<!DOCTYPE html>..." required></textarea>
+                    </div>
+                    <button type="submit" class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+                        ✅ Instalar App
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab: Logs -->
+        <div id="tab-logs" class="tab-content hidden">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">Logs</h2>
+                <div class="flex space-x-2">
+                    <select id="log-app-select" class="px-4 py-2 bg-gray-700 rounded-lg">
+                        <option value="">Selecione um app</option>
+                    </select>
+                    <button onclick="loadLogs()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                        🔄 Atualizar
+                    </button>
+                </div>
+            </div>
+            <div id="logs-container" class="bg-gray-800 p-4 rounded-lg font-mono text-sm h-96 overflow-y-auto">
+                <p class="text-gray-400">Selecione um app para ver os logs...</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:5000/api';
+        let currentApps = [];
+
+        // Verificar status do backend
+        async function checkBackendStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('status-text').textContent = 
+                        `✅ Online - v${data.version} - Uptime: ${formatUptime(data.uptime)}`;
+                    document.getElementById('status-indicator').className = 
+                        'w-4 h-4 rounded-full bg-green-500';
+                } else {
+                    throw new Error('Backend não está saudável');
+                }
+            } catch (error) {
+                document.getElementById('status-text').textContent = 
+                    '❌ Offline - Inicie o backend: .\\backend-server.ps1';
+                document.getElementById('status-indicator').className = 
+                    'w-4 h-4 rounded-full bg-red-500';
+            }
+        }
+
+        function formatUptime(uptime) {
+            if (!uptime) return '0s';
+            const match = uptime.match(/(\d+):(\d+):(\d+)/);
+            if (match) {
+                return `${match[1]}h ${match[2]}m ${match[3]}s`;
+            }
+            return uptime;
+        }
+
+        // Carregar apps
+        async function loadApps() {
+            try {
+                const response = await fetch(`${API_BASE}/apps`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentApps = data.apps;
+                    renderApps(data.apps);
+                    updateLogAppSelect(data.apps);
+                }
+            } catch (error) {
+                console.error('Erro ao carregar apps:', error);
+                document.getElementById('apps-list').innerHTML = 
+                    '<p class="text-red-500">Erro ao carregar apps. Backend está rodando?</p>';
+            }
+        }
+
+        function renderApps(apps) {
+            const container = document.getElementById('apps-list');
+            
+            if (apps.length === 0) {
+                container.innerHTML = '<p class="text-gray-400">Nenhum app instalado ainda.</p>';
+                return;
+            }
+            
+            container.innerHTML = apps.map(app => `
+                <div class="bg-gray-800 p-6 rounded-lg">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-xl font-bold mb-1">${app.name}</h3>
+                            <p class="text-gray-400 text-sm">ID: ${app.id}</p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full text-sm ${
+                            app.status === 'running' ? 'bg-green-600' : 'bg-gray-600'
+                        }">
+                            ${app.status === 'running' ? '🟢 Rodando' : '⚪ Parado'}
+                        </span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-2 mb-4 text-sm">
+                        <div>
+                            <span class="text-gray-400">Tipo:</span>
+                            <span class="ml-2">${app.type}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-400">Porta:</span>
+                            <span class="ml-2">${app.port}</span>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-gray-400">Instalado:</span>
+                            <span class="ml-2">${app.installedAt}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex space-x-2">
+                        ${app.status === 'running' ? `
+                            <button onclick="stopApp('${app.id}')" 
+                                    class="flex-1 px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg">
+                                ⏹️ Parar
+                            </button>
+                            <button onclick="openApp('${app.id}', ${app.port})" 
+                                    class="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg">
+                                🌐 Abrir
+                            </button>
+                        ` : `
+                            <button onclick="startApp('${app.id}')" 
+                                    class="flex-1 px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg">
+                                ▶️ Iniciar
+                            </button>
+                        `}
+                        <button onclick="analyzeApp('${app.id}')" 
+                                class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg">
+                            📊 Analisar
+                        </button>
+                        <button onclick="removeApp('${app.id}')" 
+                                class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg">
+                            🗑️
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Iniciar app
+        async function startApp(appId) {
+            try {
+                const response = await fetch(`${API_BASE}/apps/${appId}/start`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ App iniciado em: ${data.url}`);
+                    loadApps();
+                } else {
+                    alert(`❌ Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert('❌ Erro ao iniciar app');
+            }
+        }
+
+        // Parar app
+        async function stopApp(appId) {
+            try {
+                const response = await fetch(`${API_BASE}/apps/${appId}/stop`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ App parado com sucesso');
+                    loadApps();
+                } else {
+                    alert(`❌ Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert('❌ Erro ao parar app');
+            }
+        }
+
+        // Abrir app no navegador
+        function openApp(appId, port) {
+            window.open(`http://localhost:${port}`, '_blank');
+        }
+
+        // Analisar app
+        async function analyzeApp(appId) {
+            try {
+                const response = await fetch(`${API_BASE}/apps/${appId}/analyze`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    const analysis = data.analysis;
+                    alert(`📊 ANÁLISE DE CÓDIGO\n\n` +
+                          `Linhas: ${analysis.lines}\n` +
+                          `Funções: ${analysis.functions}\n` +
+                          `Variáveis: ${analysis.variables}\n` +
+                          `Score: ${analysis.score}/100\n\n` +
+                          `Problemas:\n${analysis.issues.join('\n') || 'Nenhum'}`);
+                } else {
+                    alert(`❌ Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert('❌ Erro ao analisar app');
+            }
+        }
+
+        // Remover app
+        async function removeApp(appId) {
+            if (!confirm('Tem certeza que deseja remover este app?')) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/apps/${appId}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ App removido com sucesso');
+                    loadApps();
+                } else {
+                    alert(`❌ Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert('❌ Erro ao remover app');
+            }
+        }
+
+        // Instalar app
+        document.getElementById('install-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const appData = {
+                name: document.getElementById('app-name').value,
+                fileName: document.getElementById('app-filename').value,
+                type: document.getElementById('app-type').value,
+                port: parseInt(document.getElementById('app-port').value),
+                content: document.getElementById('app-content').value
+            };
+            
+            try {
+                const response = await fetch(`${API_BASE}/apps`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(appData)
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(`✅ App instalado com sucesso!\nID: ${data.app.id}`);
+                    document.getElementById('install-form').reset();
+                    showTab('apps');
+                    loadApps();
+                } else {
+                    alert(`❌ Erro: ${data.error}`);
+                }
+            } catch (error) {
+                alert('❌ Erro ao instalar app');
+            }
+        });
+
+        // Carregar logs
+        async function loadLogs() {
+            const appId = document.getElementById('log-app-select').value;
+            if (!appId) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/apps/${appId}/logs?lines=100`);
+                const data = await response.json();
+                
+                const container = document.getElementById('logs-container');
+                if (data.success && data.logs.length > 0) {
+                    container.innerHTML = data.logs.map(log => 
+                        `<div class="mb-1">${log}</div>`
+                    ).join('');
+                } else {
+                    container.innerHTML = '<p class="text-gray-400">Nenhum log encontrado</p>';
+                }
+            } catch (error) {
+                document.getElementById('logs-container').innerHTML = 
+                    '<p class="text-red-500">Erro ao carregar logs</p>';
+            }
+        }
+
+        function updateLogAppSelect(apps) {
+            const select = document.getElementById('log-app-select');
+            select.innerHTML = '<option value="">Selecione um app</option>' +
+                apps.map(app => `<option value="${app.id}">${app.name}</option>`).join('');
+        }
+
+        // Trocar tabs
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('border-blue-500', 'text-white');
+                btn.classList.add('text-gray-400');
+            });
+            
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            event.target.classList.add('border-blue-500', 'text-white');
+            event.target.classList.remove('text-gray-400');
+        }
+
+        // Auto-atualizar logs
+        document.getElementById('log-app-select').addEventListener('change', loadLogs);
+
+        // Inicialização
+        checkBackendStatus();
+        loadApps();
+        setInterval(checkBackendStatus, 5000); // Verificar status a cada 5s
+        setInterval(loadApps, 10000); // Atualizar apps a cada 10s
+    </script>
+</body>
+</html>

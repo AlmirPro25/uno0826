@@ -1,0 +1,115 @@
+
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7.2-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      target: builder # Use the builder stage for development to avoid rebuilding Go binary frequently
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      API_PORT: 8080
+      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
+      REDIS_ADDR: redis:6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY}
+      REFRESH_TOKEN_ENCRYPTION_KEY: ${REFRESH_TOKEN_ENCRYPTION_KEY}
+      FRONTEND_URL: ${FRONTEND_URL} # For CORS
+      BETA_EMAIL_SERVICE_API_KEY: ${BETA_EMAIL_SERVICE_API_KEY} # For beta signup confirmation email
+      # Add other development-specific variables if needed
+    volumes:
+      - ./backend:/app/backend # Mount source for hot-reloading (if using air or similar)
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+      # Wait for DB migrations if needed
+      # /app/backend/scripts/migrate.sh && # Example for migration script
+      /app/server
+      "
+    # In a real dev setup, you might use 'air' for hot-reloading:
+    # command: air -c .air.toml
+    # For simplicity, we'll run the built binary. For real-time dev, consider
+    # running backend locally outside Docker or a dev-specific dockerfile.
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s # Give backend enough time to start and connect to DB
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      target: builder # Use the builder stage for development
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      NEXT_PUBLIC_API_BASE_URL: http://localhost:8080/api/v1 # Frontend needs to know backend URL
+      # Add other frontend development-specific variables
+    volumes:
+      - ./frontend:/app/frontend # Mount source for hot-reloading
+      - /app/frontend/node_modules # Avoid host node_modules overwriting container's
+      - /app/frontend/.next # Avoid host .next overwriting container's
+    depends_on:
+      backend:
+        condition: service_healthy
+    # In development, you'd typically run `npm run dev` for hot reloading.
+    # The current Dockerfile is optimized for `npm run build` + `node server.js`.
+    # For a true dev setup, you'd have a different `Dockerfile.dev.frontend`
+    # or run `npm run dev` directly on the host. For this compose, we assume
+    # the built version is sufficient for showcasing integrated dev.
+    command: >
+      sh -c "npm install && npm run dev" # For dev mode with hot reload
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+
+volumes:
+  db-data:
+  redis-data:

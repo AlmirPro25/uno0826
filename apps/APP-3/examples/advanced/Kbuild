@@ -1,0 +1,3 @@
+# Kbuild file for Linux Kernel Module
+obj-m += hello_driver.o
+hello_driver-objs := linux_kernel_module.o

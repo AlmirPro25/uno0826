@@ -1,0 +1,22 @@
+
+# Docker Compose to orchestrate Next.js application.
+# Uses a single container setup with a volume for the SQLite database file.
+
+version: '3.8'
+
+services:
+  # Next.js Application Service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: aurora-landing-page-app
+    ports:
+      - "3000:3000"
+    volumes:
+      # Mount a volume for persistent storage of the SQLite database file
+      - waitlist_data:/app/prisma
+
+volumes:
+  waitlist_data:
+    driver: local

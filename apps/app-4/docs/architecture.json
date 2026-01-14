@@ -1,0 +1,39 @@
+{
+  "project_name": "MediSync: Plataforma SaaS de Telemedicina Enterprise",
+  "project_context": "Plataforma white-label para gestão de teleconsultas, agendamentos e prontuários eletrônicos para redes de clínicas.",
+  "architecture_approach": {
+    "backend": {
+      "pattern": "Hexagonal Architecture (Ports and Adapters)",
+      "justification": "Garante a separação clara da lógica de negócios (core) de adaptadores externos (banco de dados, APIs)."
+    },
+    "frontend": {
+      "pattern": "Component-Based Architecture (CBA)",
+      "justification": "Utiliza Next.js e Shadcn/UI para construir a interface de usuário."
+    },
+    "deployment": {
+      "pattern": "Containerization (Docker Compose)",
+      "justification": "Empacota a aplicação Go, o banco de dados PostgreSQL e o cache Redis em contêineres Docker."
+    }
+  },
+  "technology_stack": {
+    "backend": {
+      "language": "Go (Golang)",
+      "framework": "Gin",
+      "orm": "GORM",
+      "realtime": "WebSockets"
+    },
+    "database": {
+      "type": "PostgreSQL",
+      "justification": "Ideal para aplicações enterprise."
+    },
+    "frontend": {
+      "library": "Next.js (React)",
+      "styling": "Tailwind CSS",
+      "components": "Shadcn/UI"
+    },
+    "cache_and_queue": {
+      "system": "Redis",
+      "purpose": "Gerenciamento de cache de sessão e estado dos WebSockets."
+    }
+  }
+}

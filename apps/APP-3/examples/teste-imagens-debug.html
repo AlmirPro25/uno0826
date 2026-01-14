@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Teste Debug - Geração de Imagens</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        .success { border-left: 4px solid #28a745; background: #d4edda; }
+        .warning { border-left: 4px solid #ffc107; background: #fff3cd; }
+        .error { border-left: 4px solid #dc3545; background: #f8d7da; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .log-output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .image-test {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .image-test img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        .image-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug: Sistema de Geração de Imagens</h1>
+        <p>Este teste verifica se o sistema de geração de imagens está funcionando corretamente.</p>
+
+        <div class="test-section">
+            <h3>📊 Status do Sistema</h3>
+            <div id="system-status">
+                <div class="warning">
+                    <strong>⏳ Verificando sistema...</strong>
+                    <p>Aguarde enquanto testamos os componentes.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔑 Teste API Key</h3>
+            <button onclick="testApiKey()">Verificar API Key</button>
+            <div id="api-key-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🎨 Teste Geração de Imagens</h3>
+            <p>Clique para testar a geração de imagens com diferentes descrições:</p>
+            <button onclick="testImageGeneration('pizza margherita deliciosa')">🍕 Pizza</button>
+            <button onclick="testImageGeneration('pôr do sol na praia')">🌅 Pôr do Sol</button>
+            <button onclick="testImageGeneration('gato fofo dormindo')">🐱 Gato</button>
+            <div id="image-test-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🖼️ Imagens de Teste</h3>
+            <div class="image-test" id="test-images">
+                <div>
+                    <img src="ai-researched-image://pizza margherita artesanal com mussarela de búfala, fotografia gastronômica profissional" alt="Pizza Test">
+                    <div class="image-info">Placeholder: Pizza</div>
+                </div>
+                <div>
+                    <img src="ai-researched-image://pôr do sol deslumbrante sobre o oceano, fotografia de paisagem profissional" alt="Sunset Test">
+                    <div class="image-info">Placeholder: Pôr do Sol</div>
+                </div>
+                <div>
+                    <img src="ai-researched-image://gato fofo dormindo em uma cama, fotografia de animal doméstico" alt="Cat Test">
+                    <div class="image-info">Placeholder: Gato</div>
+                </div>
+            </div>
+            <button onclick="processTestImages()">🔄 Processar Imagens de Teste</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Logs do Sistema</h3>
+            <button onclick="clearLogs()">🗑️ Limpar Logs</button>
+            <div id="log-output" class="log-output">Logs aparecerão aqui...</div>
+        </div>
+    </div>
+
+    <script>
+        // Capturar logs do console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        let logs = [];
+        
+        function addLog(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            logs.push(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+            updateLogDisplay();
+            
+            // Chamar função original
+            if (type === 'log') originalLog(...args);
+            else if (type === 'error') originalError(...args);
+            else if (type === 'warn') originalWarn(...args);
+        }
+        
+        console.log = (...args) => addLog('log', ...args);
+        console.error = (...args) => addLog('error', ...args);
+        console.warn = (...args) => addLog('warn', ...args);
+        
+        function updateLogDisplay() {
+            const logOutput = document.getElementById('log-output');
+            logOutput.textContent = logs.slice(-50).join('\n'); // Últimas 50 linhas
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logs = [];
+            updateLogDisplay();
+        }
+        
+        // Verificar status do sistema
+        function checkSystemStatus() {
+            const statusDiv = document.getElementById('system-status');
+            
+            // Verificar se as funções existem
+            const hasApiKeyManager = typeof window.ApiKeyManager !== 'undefined';
+            const hasGeminiService = typeof window.GeminiImageService !== 'undefined';
+            
+            let status = 'success';
+            let message = '✅ Sistema funcionando corretamente!';
+            
+            if (!hasApiKeyManager && !hasGeminiService) {
+                status = 'error';
+                message = '❌ Serviços não carregados. Este teste precisa ser executado no sistema principal.';
+            }
+            
+            statusDiv.innerHTML = `
+                <div class="${status}">
+                    <strong>${message}</strong>
+                    <p>• API Key Manager: ${hasApiKeyManager ? '✅' : '❌'}</p>
+                    <p>• Gemini Image Service: ${hasGeminiService ? '✅' : '❌'}</p>
+                </div>
+            `;
+        }
+        
+        // Testar API Key
+        function testApiKey() {
+            const resultDiv = document.getElementById('api-key-result');
+            
+            try {
+                const userKey = localStorage.getItem('user_api_key');
+                const hasKey = userKey && userKey.length > 0;
+                
+                resultDiv.innerHTML = `
+                    <div class="${hasKey ? 'success' : 'warning'}">
+                        <strong>${hasKey ? '✅ API Key encontrada!' : '⚠️ API Key não configurada'}</strong>
+                        <p>Status: ${hasKey ? 'Configurada' : 'Não configurada'}</p>
+                        <p>Tamanho: ${userKey ? userKey.length : 0} caracteres</p>
+                        ${!hasKey ? '<p>Configure sua API key do Gemini no sistema principal.</p>' : ''}
+                    </div>
+                `;
+                
+                console.log('🔑 Teste API Key:', { hasKey, keyLength: userKey?.length || 0 });
+                
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro ao verificar API Key</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+                console.error('Erro no teste de API Key:', error);
+            }
+        }
+        
+        // Testar geração de imagem
+        async function testImageGeneration(description) {
+            const resultDiv = document.getElementById('image-test-result');
+            
+            resultDiv.innerHTML = `
+                <div class="warning">
+                    <strong>⏳ Testando geração de imagem...</strong>
+                    <p>Descrição: ${description}</p>
+                </div>
+            `;
+            
+            console.log(`🧪 Iniciando teste de geração: ${description}`);
+            
+            try {
+                // Simular o que o sistema faria
+                console.log('🎨 Simulando geração de imagem...');
+                console.log('🔥 PROMPT ENVIADO: Hi, can you create a high-quality professional photograph of: ' + description);
+                console.log('📥 RESPOSTA RECEBIDA: 2 parts');
+                console.log('🔍 ANALISANDO 2 PARTS DA RESPOSTA');
+                console.log('📋 PART 1: { hasInlineData: false, hasText: true }');
+                console.log('📋 PART 2: { hasInlineData: true, mimeType: "image/png", dataSize: 12345 }');
+                console.log('🎉 IMAGEM ENCONTRADA! Tipo: image/png, Tamanho: 12345 chars');
+                console.log('✅ IMAGEM SALVA! ID: img_test_123');
+                
+                // Simular sucesso após 2 segundos
+                setTimeout(() => {
+                    resultDiv.innerHTML = `
+                        <div class="success">
+                            <strong>✅ Teste simulado com sucesso!</strong>
+                            <p>Descrição: ${description}</p>
+                            <p>Este é um teste simulado. No sistema real, uma imagem seria gerada aqui.</p>
+                        </div>
+                    `;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Erro no teste:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro no teste</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Processar imagens de teste
+        async function processTestImages() {
+            console.log('🔄 Processando imagens de teste...');
+            
+            const images = document.querySelectorAll('#test-images img');
+            
+            images.forEach((img, index) => {
+                const src = img.getAttribute('src');
+                if (src.startsWith('ai-researched-image://')) {
+                    const description = src.replace('ai-researched-image://', '');
+                    console.log(`📸 Processando imagem ${index + 1}: ${description.substring(0, 30)}...`);
+                    
+                    // Simular processamento
+                    setTimeout(() => {
+                        // Em um teste real, isso seria substituído por uma imagem real
+                        console.log(`✅ Imagem ${index + 1} processada (simulação)`);
+                        
+                        // Atualizar info
+                        const infoDiv = img.nextElementSibling;
+                        infoDiv.innerHTML = `Processado: ${description.substring(0, 20)}...`;
+                        infoDiv.style.color = 'green';
+                    }, (index + 1) * 1000);
+                }
+            });
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Sistema de debug carregado!');
+            checkSystemStatus();
+            
+            // Adicionar informações sobre o ambiente
+            console.log('🌍 Ambiente:', {
+                userAgent: navigator.userAgent,
+                localStorage: !!window.localStorage,
+                fetch: !!window.fetch,
+                URL: window.location.href
+            });
+        });
+    </script>
+</body>
+</html>

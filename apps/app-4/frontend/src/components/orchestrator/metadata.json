@@ -1,0 +1,8 @@
+{
+  "name": "Sistema Nervoso Clínico - Orquestrador",
+  "description": "Plataforma de telemedicina biprofissional com IA para match inteligente, copiloto clínico e gestão de 'pasta viva' do paciente.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

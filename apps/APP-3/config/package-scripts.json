@@ -1,0 +1,11 @@
+{
+  "scripts": {
+    "build:prod": "npm run build && npm run test:build",
+    "test:build": "npm run preview -- --port 4173 &",
+    "deploy:vercel": "vercel --prod",
+    "deploy:staging": "vercel",
+    "env:setup": "node scripts/setup-env.js",
+    "db:migrate": "node scripts/migrate-supabase.js",
+    "health:check": "node scripts/health-check.js"
+  }
+}

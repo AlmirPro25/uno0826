@@ -1,0 +1,12 @@
+
+# ==============================================================================
+# Docker Compose Configuration for MANIFEST-ARCHITECT Development Environment
+# Purpose: Facilitate local development with hot-reloading for frontend and backend.
+# Services: PostgreSQL (metadata), InfluxDB (time-series), Mosquitto (MQTT broker),
+#           Twin Service (Go backend), Frontend UI (React/Vite).
+# ==============================================================================
+version: '3.8'
+
+services:
+
+  #

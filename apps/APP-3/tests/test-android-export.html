@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Android Export</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        p {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .emoji {
+            font-size: 24px;
+        }
+
+        .info {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .info ul {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .info li {
+            color: #666;
+            margin-bottom: 8px;
+            padding-left: 20px;
+            position: relative;
+        }
+
+        .info li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            min-height: 50px;
+            color: #333;
+            font-family: monospace;
+            font-size: 14px;
+            display: none;
+        }
+
+        #output.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Teste Android Export</h1>
+        <p>Este HTML será convertido em um app Android nativo!</p>
+
+        <div class="button-group">
+            <button onclick="testToast()">
+                <span class="emoji">💬</span>
+                Mostrar Toast
+            </button>
+
+            <button onclick="testVibrate()">
+                <span class="emoji">📳</span>
+                Vibrar Dispositivo
+            </button>
+
+            <button onclick="testShare()">
+                <span class="emoji">📤</span>
+                Compartilhar
+            </button>
+
+            <button onclick="testCanvas()">
+                <span class="emoji">🎨</span>
+                Desenhar Canvas
+            </button>
+        </div>
+
+        <div id="output"></div>
+
+        <div class="info">
+            <h3>📱 Funcionalidades Android:</h3>
+            <ul>
+                <li>WebView com JavaScript habilitado</li>
+                <li>Interface nativa para Toast</li>
+                <li>Controle de vibração</li>
+                <li>Sistema de compartilhamento</li>
+                <li>Canvas 2D funcionando</li>
+            </ul>
+        </div>
+    </div>
+
+    <canvas id="myCanvas" style="display: none;" width="300" height="300"></canvas>
+
+    <script>
+        const output = document.getElementById('output');
+
+        function showOutput(message) {
+            output.textContent = message;
+            output.classList.add('show');
+            setTimeout(() => {
+                output.classList.remove('show');
+            }, 3000);
+        }
+
+        function testToast() {
+            if (typeof Android !== 'undefined') {
+                Android.showToast('🎉 Toast funcionando no Android!');
+                showOutput('✅ Toast enviado para Android');
+            } else {
+                showOutput('⚠️ Rodando no navegador. No Android, mostraria um Toast.');
+                alert('🎉 Toast funcionando!');
+            }
+        }
+
+        function testVibrate() {
+            if (typeof Android !== 'undefined') {
+                Android.vibrate(200);
+                showOutput('✅ Vibração ativada (200ms)');
+            } else {
+                showOutput('⚠️ Rodando no navegador. No Android, vibraria o dispositivo.');
+                // Fallback para navegador
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+            }
+        }
+
+        function testShare() {
+            const text = 'Confira este app incrível criado com AI Web Weaver! 🚀';
+            
+            if (typeof Android !== 'undefined') {
+                Android.shareText(text);
+                showOutput('✅ Compartilhamento ativado');
+            } else {
+                showOutput('⚠️ Rodando no navegador. No Android, abriria o menu de compartilhamento.');
+                // Fallback para Web Share API
+                if (navigator.share) {
+                    navigator.share({ text: text });
+                } else {
+                    alert(text);
+                }
+            }
+        }
+
+        function testCanvas() {
+            const canvas = document.getElementById('myCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Limpar canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Desenhar gradiente
+            const gradient = ctx.createLinearGradient(0, 0, 300, 300);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 300, 300);
+            
+            // Desenhar círculo
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(150, 150, 80, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Desenhar texto
+            ctx.fillStyle = '#667eea';
+            ctx.font = 'bold 24px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Canvas OK!', 150, 160);
+            
+            // Mostrar canvas
+            canvas.style.display = 'block';
+            canvas.style.margin = '20px auto';
+            canvas.style.borderRadius = '10px';
+            canvas.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
+            
+            showOutput('✅ Canvas renderizado com sucesso!');
+            
+            // Esconder após 3 segundos
+            setTimeout(() => {
+                canvas.style.display = 'none';
+            }, 3000);
+        }
+
+        // Detectar se está rodando no Android
+        window.addEventListener('load', () => {
+            const isAndroid = typeof Android !== 'undefined';
+            const platform = isAndroid ? 'Android App' : 'Navegador Web';
+            console.log(`🚀 Rodando em: ${platform}`);
+            
+            if (isAndroid) {
+                showOutput(`✅ Rodando no Android! Todas as funções nativas estão disponíveis.`);
+            }
+        });
+    </script>
+</body>
+</html>

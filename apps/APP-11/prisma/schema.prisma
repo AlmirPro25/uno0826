@@ -1,0 +1,129 @@
+
+// This Prisma schema defines the database structure for the AI Web Weaver.
+// While the backend is in Go, this schema serves as a canonical representation
+// of the data model, adhering to the user's request for 'schema.prisma'.
+// Go's backend will interact with PostgreSQL directly, potentially using
+// tools like sqlc or a Go ORM, guided by this schema.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  // This client is primarily for dev tools/migrations.
+  // The Go backend will manage its own database interactions.
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  email         String         @unique
+  passwordHash  String
+  role          UserRole       @default(USER)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  sessions      Session[]
+  projects      Project[]
+  subscriptions UserSubscription[]
+}
+
+model Session {
+  id           String    @id @default(uuid())
+  userId       String
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String    @unique // AES-256 encrypted in DB
+  expiresAt    DateTime
+  createdAt    DateTime  @default(now())
+  userAgent    String?
+  ipAddress    String?
+}
+
+model BetaSubscription {
+  id             String     @id @default(uuid())
+  name           String
+  email          String     @unique
+  subscriptionDate DateTime @default(now())
+  status         BetaStatus @default(PENDING) // pending, approved, rejected
+}
+
+model Project {
+  id             String     @id @default(uuid())
+  userId         String
+  user           User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name           String
+  description    String
+  requirements   String[]   // Stored as text array or JSONB
+  stylePreference ProjectStyle @default(MODERN)
+  targetAudience String?
+  generatedCodeUrl String?    // URL to the stored generated code (e.g., S3 bucket)
+  previewImageUrl  String?    // URL to a screenshot/preview of the generated site
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  status         ProjectStatus @default(DRAFT) // draft, generating, completed, error
+}
+
+model Plan {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  price       Float    // Price per billing period (e.g., monthly)
+  currency    String   @default("USD")
+  features    String[] // List of features included, e.g., ["5 projects/month", "priority support"]
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userSubscriptions UserSubscription[]
+}
+
+model UserSubscription {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  planId    String
+  plan      Plan         @relation(fields: [planId], references: [id])
+  startDate DateTime     @default(now())
+  endDate   DateTime?    // Null for lifetime or if not yet set
+  status    SubscriptionStatus @default(ACTIVE) // active, canceled, trial, expired
+  stripeCustomerId String? // Optional: for Stripe integration
+  stripeSubscriptionId String? // Optional: for Stripe integration
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum BetaStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProjectStatus {
+  DRAFT
+  GENERATING
+  COMPLETED
+  ERROR
+}
+
+enum ProjectStyle {
+  MODERN
+  MINIMALIST
+  CORPORATE
+  PLAYFUL
+  VINTAGE
+  CUSTOM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  TRIAL
+  EXPIRED
+  PAUSED
+}

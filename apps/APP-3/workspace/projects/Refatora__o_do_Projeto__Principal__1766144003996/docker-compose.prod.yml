@@ -1,0 +1,12 @@
+
+# ==============================================================================
+# Docker Compose Configuration for MANIFEST-ARCHITECT Production Environment
+# Objective: Deploy pre-built images with high-availability configuration.
+# Key Differences from Dev: No hot-reloading volumes, `restart: always` policy,
+#                             using pre-built images from Docker registry (or local build).
+# ==============================================================================
+version: '3.8'
+
+services:
+
+  #

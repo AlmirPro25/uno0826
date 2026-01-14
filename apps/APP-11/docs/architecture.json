@@ -1,0 +1,77 @@
+
+{
+  "project_name": "AI Web Weaver",
+  "vision": "Um ecossistema digital fullstack para geração de interfaces de altíssima fidelidade, performance extrema e acessibilidade total por IA, construindo uma empresa de milhões de dólares.",
+  "architecture_style": "Monorepo (Frontend & Backend co-located)",
+  "components": {
+    "frontend": {
+      "stack": {
+        "framework": "Next.js 15 (App Router)",
+        "language": "TypeScript (strict)",
+        "styling": "Tailwind CSS (JIT, purge-time compiled)",
+        "ui_components": "Shadcn/UI",
+        "animations": "Framer Motion",
+        "validation": "Zod",
+        "state_management": "React Context / Zustand (for global states) / Server Actions"
+      },
+      "deployment": "Vercel (Edge Computing)",
+      "priorities": [
+        "Core Web Vitals (< 1.2s LCP)",
+        "WCAG 2.1 Compliance (AA/AAA target)",
+        "SEO Optimization (JSON-LD, dynamic Meta Tags)",
+        "Security (CSP, SRI, XSS protection)",
+        "Responsive Design"
+      ],
+      "pages_routes": [
+        "/",
+        "/auth/login",
+        "/auth/register",
+        "/dashboard",
+        "/dashboard/profile",
+        "/dashboard/projects",
+        "/dashboard/settings",
+        "/privacy",
+        "/terms"
+      ]
+    },
+    "backend": {
+      "stack": {
+        "language": "Go (Golang)",
+        "framework": "Standard Library + chi (router) / gin (for rapid development)",
+        "architecture_pattern": "Clean Architecture + SOLID Principles",
+        "database_orm": "PostgreSQL (direct SQL / sqlc for type-safe queries)",
+        "cache_message_broker": "Redis",
+        "authentication": "JWT (JSON Web Tokens) with Refresh Tokens",
+        "validation": "go-playground/validator",
+        "security": "AES-256 for sensitive data at rest, HTTPS (TLS 1.3), OWASP best practices, CSRF/XSS protection via API design",
+        "logging": "Structured Logging (Zap / Logrus)"
+      },
+      "deployment": "Containerized (Docker) on Cloud Provider (e.g., GCP Cloud Run, AWS ECS, DigitalOcean App Platform)",
+      "api_style": "RESTful (versioned: /api/v1)",
+      "core_services": [
+        "Auth Service (User management, JWT issuance/validation)",
+        "Beta Service (Beta subscription management)",
+        "User Service (User profile, settings)",
+        "Project Service (AI-generated projects management - placeholder for core AI logic)",
+        "Plan/Billing Service (Subscription plans, payment integration - placeholder)"
+      ],
+      "data_storage_strategy": "PostgreSQL (primary data persistence), Redis (session caching, API response caching)",
+      "error_handling": "Centralized, structured error responses with specific error codes and messages."
+    },
+    "ai_core_integration": {
+      "description": "The 'AI Web Weaver' core logic will be integrated as a dedicated service (within the Go backend or as a separate microservice). For initial phases, this will be represented by placeholder endpoints in the Project Service.",
+      "technologies_consideration": [
+        "Go (for orchestration)",
+        "Python (for ML models, if needed)",
+        "LLMs (e.g., OpenAI, Google Gemini API)"
+      ]
+    }
+  },
+  "security_posture": "Zero Trust (Authentication and Authorization at every layer, least privilege)",
+  "observability": {
+    "logging": "Structured logs (JSON format) with correlation IDs",
+    "monitoring": "Prometheus/Grafana (metrics), distributed tracing (OpenTelemetry)",
+    "alerting": "Integrated with monitoring for critical events"
+  },
+  "development_methodology": "Test-Driven Development (TDD), Code Reviews, CI/CD pipelines."
+}

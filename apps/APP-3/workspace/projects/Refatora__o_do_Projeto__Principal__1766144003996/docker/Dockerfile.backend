@@ -1,0 +1,56 @@
+
+# ==============================================================================
+# Multi-stage Dockerfile for MANIFEST-ARCHITECT Backend (Go Service)
+# Objective: Create a minimal, secure, production-ready image.
+# Stage 1: Build stage for compiling the Go application and managing dependencies.
+# Stage 2: Final image stage with minimal components (scratch or alpine) for small size and security.
+# ==============================================================================
+
+# Stage 1: Build Go binary
+FROM golang:1.21-alpine AS builder
+
+# Set build arguments for versioning
+ARG VERSION="0.0.1"
+ENV VERSION=${VERSION}
+
+# Install necessary C libraries for CGO-enabled dependencies (e.g., database drivers)
+# Note: InfluxDB client and other pure Go libraries generally don't require CGO.
+# If using CGO, add `apk add --no-cache gcc musl-dev` here.
+# For pure Go, we can simplify and potentially use scratch later.
+# We'll use alpine for simplicity and including certificates.
+
+WORKDIR /app
+
+# Copy go.mod and go.sum first to leverage Docker cache for dependencies
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the Go binary statically linked to reduce final image size and runtime dependencies.
+# -ldflags "-s -w": Strips debugging symbols (-s) and omits DWARF table generation (-w) for optimization.
+RUN CGO_ENABLED=0 go build -o /app/bin/twin-service -ldflags "-s -w" ./cmd/twin-service/main.go
+
+# Stage 2: Create final production image
+FROM alpine:3.18
+
+# Install ca-certificates to enable SSL/TLS connections for services like InfluxDB and MQTT Broker.
+RUN apk add --no-cache ca-certificates
+
+# Set working directory inside the container
+WORKDIR /app
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /app/bin/twin-service .
+
+# Copy configuration files (if any, though better to use environment variables)
+# COPY --from=builder /app/config.json ./config.json
+
+# Expose the port where the Go server listens (e.g., default 8080)
+EXPOSE 8080
+
+# Define the command to run the application
+ENTRYPOINT ["/app/twin-service"]

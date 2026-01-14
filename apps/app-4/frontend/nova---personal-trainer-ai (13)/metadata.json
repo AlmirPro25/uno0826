@@ -1,0 +1,9 @@
+{
+  "name": "Nova - Personal Trainer AI",
+  "description": "Seu coach de bem-estar inteligente. Treino em tempo real, análise nutricional e acompanhamento biométrico com Gemini Live e Vision.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "bluetooth"
+  ]
+}

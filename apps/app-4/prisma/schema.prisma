@@ -1,0 +1,119 @@
+// Define o conector de banco de dados e as configurações de migração
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Habilita o gerador de cliente Prisma
+generator client {
+  provider = "go run github.com/prisma/prisma-client-go"
+}
+
+// ===================================
+// Modelo de Usuário e RBAC
+// ===================================
+
+// Tabela de Usuários: Administradores, Médicos e Pacientes
+model User {
+  id              Int             @id @default(autoincrement())
+  email           String          @unique
+  passwordHash    String          @map("password_hash")
+  fullName        String          @map("full_name")
+  phone           String?
+  roleId          Int             @map("role_id")
+  isActive        Boolean         @default(true) @map("is_active")
+  createdAt       DateTime        @default(now()) @map("created_at")
+  updatedAt       DateTime        @updatedAt @map("updated_at")
+
+  // Relacionamento com Role
+  role            Role            @relation(fields: [roleId], references: [id])
+
+  // Relacionamento com Agendamentos (como paciente)
+  appointmentsAsPatient Appointment[] @relation("PatientAppointments")
+  // Relacionamento com Agendamentos (como médico)
+  appointmentsAsDoctor  Appointment[] @relation("DoctorAppointments")
+
+  // Relacionamento com Prontuários (como paciente)
+  medicalRecordsAsPatient MedicalRecord[] @relation("PatientRecords")
+  // Relacionamento com Prontuários (como médico)
+  medicalRecordsAsDoctor  MedicalRecord[] @relation("DoctorRecords")
+
+  // Relacionamento com Fila de Espera
+  waitingListItems WaitingList[]
+
+  // Índices para otimizar consultas
+  @@index([roleId])
+}
+
+// Tabela de Papéis (Roles) para RBAC
+model Role {
+  id    Int     @id @default(autoincrement())
+  name  String  @unique // ADMIN, MEDICO, PACIENTE
+
+  // Relacionamento com Usuários
+  users User[]
+}
+
+// ===================================
+// Modelo de Agendamento Inteligente
+// ===================================
+
+// Tabela de Agendamentos
+model Appointment {
+  id              Int         @id @default(autoincrement())
+  patientId       Int         @map("patient_id")
+  doctorId        Int         @map("doctor_id")
+  startTime       DateTime    @map("start_time")
+  endTime         DateTime    @map("end_time")
+  status          String      @default("pending") // pending, booked, completed, cancelled
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  // Relacionamentos com Usuários (patient e doctor)
+  patient         User        @relation("PatientAppointments", fields: [patientId], references: [id])
+  doctor          User        @relation("DoctorAppointments", fields: [doctorId], references: [id])
+
+  // Índices e constraints para evitar conflitos de agendamento (smart scheduling)
+  // Constraint para garantir que não haja sobreposição de horários para o mesmo médico.
+  // Será implementado via lógica de negócio (transação) e não apenas constraint de banco.
+  // O índice em doctorId e startTime otimiza a busca por disponibilidade.
+  @@index([doctorId, startTime])
+}
+
+// ===================================
+// Modelo de Prontuário Eletrônico Seguro
+// ===================================
+
+// Tabela de Prontuários Médicos
+model MedicalRecord {
+  id              Int      @id @default(autoincrement())
+  patientId       Int      @map("patient_id")
+  doctorId        Int      @map("doctor_id")
+  diagnosis       String   @map("diagnosis")
+  notes           String   @map("notes") // Conteúdo sensível, deve ser criptografado na aplicação.
+  consultationDate DateTime @map("consultation_date") @default(now())
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relacionamentos com Usuários (patient e doctor)
+  patient         User     @relation("PatientRecords", fields: [patientId], references: [id])
+  doctor          User     @relation("DoctorRecords", fields: [doctorId], references: [id])
+
+  @@index([patientId])
+  @@index([doctorId])
+}
+
+// ===================================
+// Modelo Fila de Espera em Tempo Real
+// ===================================
+
+// Tabela para rastrear pacientes na sala de espera virtual
+// O status é usado pelo WebSocket para notificar o médico em tempo real.
+model WaitingList {
+  id              Int      @id @default(autoincrement())
+  patientId       Int      @unique @map("patient_id") // Apenas um paciente por vez na fila.
+  joinedAt        DateTime @default(now()) @map("joined_at")
+  status          String   @default("waiting") // waiting, in_consultation, left
+
+  patient         User     @relation(fields: [patientId], references: [id])
+}

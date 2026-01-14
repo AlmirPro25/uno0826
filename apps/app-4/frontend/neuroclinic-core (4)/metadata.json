@@ -1,0 +1,8 @@
+{
+  "name": "NeuroClinic Core",
+  "description": "A distributed clinical cognitive architecture featuring real-time multimodal interaction and bifurcated subconscious processing (Light/Pro).",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

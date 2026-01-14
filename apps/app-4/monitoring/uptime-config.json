@@ -1,0 +1,139 @@
+{
+  "name": "MediSync Monitoring",
+  "description": "Configuração de monitoramento para o sistema MediSync",
+  "version": "1.0.0",
+  
+  "endpoints": [
+    {
+      "name": "Health Check",
+      "url": "${BASE_URL}/health",
+      "method": "GET",
+      "interval": 60,
+      "timeout": 10,
+      "expectedStatus": 200,
+      "expectedBody": {
+        "status": "healthy"
+      },
+      "alerts": {
+        "email": true,
+        "slack": true
+      }
+    },
+    {
+      "name": "Readiness Check",
+      "url": "${BASE_URL}/health/ready",
+      "method": "GET",
+      "interval": 60,
+      "timeout": 10,
+      "expectedStatus": 200,
+      "alerts": {
+        "email": true,
+        "slack": true
+      }
+    },
+    {
+      "name": "Liveness Check",
+      "url": "${BASE_URL}/health/live",
+      "method": "GET",
+      "interval": 30,
+      "timeout": 5,
+      "expectedStatus": 200,
+      "alerts": {
+        "email": true,
+        "slack": true
+      }
+    },
+    {
+      "name": "Frontend",
+      "url": "${FRONTEND_URL}",
+      "method": "GET",
+      "interval": 60,
+      "timeout": 15,
+      "expectedStatus": 200,
+      "alerts": {
+        "email": true,
+        "slack": true
+      }
+    },
+    {
+      "name": "API Auth",
+      "url": "${BASE_URL}/auth/login",
+      "method": "OPTIONS",
+      "interval": 300,
+      "timeout": 10,
+      "expectedStatus": [200, 204],
+      "alerts": {
+        "email": true
+      }
+    }
+  ],
+  
+  "alerting": {
+    "email": {
+      "enabled": true,
+      "recipients": [
+        "admin@medisync.com",
+        "devops@medisync.com"
+      ],
+      "onDown": true,
+      "onRecovery": true,
+      "cooldown": 300
+    },
+    "slack": {
+      "enabled": true,
+      "webhookUrl": "${SLACK_WEBHOOK_URL}",
+      "channel": "#alerts",
+      "onDown": true,
+      "onRecovery": true
+    },
+    "pagerduty": {
+      "enabled": false,
+      "serviceKey": "${PAGERDUTY_SERVICE_KEY}",
+      "onDown": true
+    }
+  },
+  
+  "statusPage": {
+    "enabled": true,
+    "public": true,
+    "url": "https://status.medisync.com",
+    "components": [
+      {
+        "name": "API",
+        "description": "Backend API",
+        "endpoints": ["Health Check", "Readiness Check"]
+      },
+      {
+        "name": "Website",
+        "description": "Frontend Application",
+        "endpoints": ["Frontend"]
+      },
+      {
+        "name": "Authentication",
+        "description": "Login and Registration",
+        "endpoints": ["API Auth"]
+      }
+    ]
+  },
+  
+  "metrics": {
+    "responseTime": {
+      "warning": 1000,
+      "critical": 3000
+    },
+    "uptime": {
+      "target": 99.9
+    }
+  },
+  
+  "maintenance": {
+    "windows": [
+      {
+        "name": "Weekly Maintenance",
+        "schedule": "0 3 * * 0",
+        "duration": 60,
+        "timezone": "America/Sao_Paulo"
+      }
+    ]
+  }
+}

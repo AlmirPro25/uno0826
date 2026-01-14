@@ -1,0 +1,9 @@
+{
+  "name": "Gemini Live Companion",
+  "description": "A revolutionary AI companion that analyzes your screen, sees through your camera, and converses in real-time. Capture screen regions for specific queries, engage in deep 'Thinking Mode' for complex tasks, and get help with coding, data analysis, and more.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "display-capture"
+  ]
+}

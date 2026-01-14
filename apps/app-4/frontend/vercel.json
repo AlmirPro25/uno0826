@@ -1,0 +1,11 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "regions": ["gru1"],
+  "env": {
+    "NEXT_PUBLIC_API_URL": "https://saude-production-126e.up.railway.app",
+    "NEXT_PUBLIC_GEMINI_API_KEY": "AIzaSyD5BjcefuQDJOD311IjHsj_XzJRSaQCNUQ"
+  }
+}

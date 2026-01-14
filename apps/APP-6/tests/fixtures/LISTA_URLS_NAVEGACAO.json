@@ -1,0 +1,435 @@
+{
+    "metadata": {
+        "version": "2.0",
+        "total_sites": 550,
+        "description": "Base de conhecimento completa de URLs para IA autônoma - O sistema DECIDE onde navegar",
+        "categories": 20,
+        "last_updated": "2025-01-02",
+        "usage": "O Gemini usa esta lista como MEMÓRIA para decidir autonomamente onde buscar informações"
+    },
+    "categories": {
+        "noticias_brasil": {
+            "description": "Portais de notícias brasileiros",
+            "sites": [
+                "https://g1.globo.com",
+                "https://www.uol.com.br",
+                "https://www.folha.uol.com.br",
+                "https://www.estadao.com.br",
+                "https://oglobo.globo.com",
+                "https://www.cartacapital.com.br",
+                "https://www.nexojornal.com.br",
+                "https://www.brasildefato.com.br",
+                "https://www.terra.com.br",
+                "https://noticias.r7.com",
+                "https://www.band.uol.com.br",
+                "https://www.cnnbrasil.com.br",
+                "https://www.metropoles.com",
+                "https://www.poder360.com.br",
+                "https://www.gazetadopovo.com.br"
+            ]
+        },
+        "noticias_internacional": {
+            "description": "Portais de notícias internacionais",
+            "sites": [
+                "https://www.bbc.com",
+                "https://www.reuters.com",
+                "https://www.apnews.com",
+                "https://www.theguardian.com",
+                "https://www.nytimes.com",
+                "https://www.aljazeera.com",
+                "https://www.dw.com",
+                "https://www.npr.org",
+                "https://www.cnn.com",
+                "https://www.washingtonpost.com",
+                "https://www.ft.com",
+                "https://www.economist.com",
+                "https://www.wsj.com",
+                "https://www.bloomberg.com"
+            ]
+        },
+        "ecommerce_brasil": {
+            "description": "E-commerce e marketplaces brasileiros",
+            "sites": [
+                "https://www.mercadolivre.com.br",
+                "https://www.amazon.com.br",
+                "https://www.magazineluiza.com.br",
+                "https://www.americanas.com",
+                "https://www.casasbahia.com.br",
+                "https://www.extra.com.br",
+                "https://www.submarino.com.br",
+                "https://www.shoptime.com.br",
+                "https://www.pontofrio.com.br",
+                "https://www.carrefour.com.br",
+                "https://www.walmart.com.br",
+                "https://www.leroymerlin.com.br",
+                "https://www.kabum.com.br",
+                "https://www.netshoes.com.br",
+                "https://www.dafiti.com.br",
+                "https://www.zattini.com.br",
+                "https://www.saraiva.com.br",
+                "https://www.fnac.com.br",
+                "https://www.rihappy.com.br",
+                "https://www.elo7.com.br"
+            ]
+        },
+        "ecommerce_internacional": {
+            "description": "E-commerce internacional",
+            "sites": [
+                "https://www.ebay.com",
+                "https://www.etsy.com",
+                "https://www.aliexpress.com",
+                "https://www.wish.com",
+                "https://www.shopify.com",
+                "https://www.rakuten.com",
+                "https://www.newegg.com",
+                "https://www.bestbuy.com",
+                "https://www.target.com",
+                "https://www.homedepot.com",
+                "https://www.ikea.com",
+                "https://www.costco.com",
+                "https://www.wayfair.com",
+                "https://www.overstock.com",
+                "https://www.zappos.com"
+            ]
+        },
+        "tecnologia": {
+            "description": "Portais de tecnologia e inovação",
+            "sites": [
+                "https://www.tecmundo.com.br",
+                "https://olhardigital.com.br",
+                "https://canaltech.com.br",
+                "https://www.wired.com",
+                "https://www.theverge.com",
+                "https://techcrunch.com",
+                "https://arstechnica.com",
+                "https://www.technologyreview.com",
+                "https://www.zdnet.com",
+                "https://www.cnet.com",
+                "https://www.engadget.com",
+                "https://www.gizmodo.com",
+                "https://www.androidauthority.com",
+                "https://9to5mac.com",
+                "https://www.macrumors.com"
+            ]
+        },
+        "programacao": {
+            "description": "Documentação e recursos de programação",
+            "sites": [
+                "https://developer.mozilla.org",
+                "https://docs.python.org",
+                "https://nodejs.org/docs",
+                "https://react.dev",
+                "https://vuejs.org",
+                "https://angular.io",
+                "https://flutter.dev",
+                "https://developer.android.com",
+                "https://developer.apple.com",
+                "https://stackoverflow.com",
+                "https://github.com",
+                "https://gitlab.com",
+                "https://dev.to",
+                "https://medium.com",
+                "https://hashnode.com",
+                "https://freecodecamp.org",
+                "https://www.w3schools.com",
+                "https://css-tricks.com",
+                "https://smashingmagazine.com"
+            ]
+        },
+        "inteligencia_artificial": {
+            "description": "IA, Machine Learning e Deep Learning",
+            "sites": [
+                "https://openai.com",
+                "https://ai.google",
+                "https://deepmind.com",
+                "https://anthropic.com",
+                "https://huggingface.co",
+                "https://pytorch.org",
+                "https://tensorflow.org",
+                "https://keras.io",
+                "https://scikit-learn.org",
+                "https://fast.ai",
+                "https://opencv.org",
+                "https://paperswithcode.com",
+                "https://arxiv.org",
+                "https://towardsdatascience.com",
+                "https://machinelearningmastery.com",
+                "https://wandb.ai",
+                "https://cohere.com",
+                "https://replicate.com",
+                "https://stability.ai"
+            ]
+        },
+        "educacao": {
+            "description": "Plataformas educacionais e universidades",
+            "sites": [
+                "https://www.khanacademy.org",
+                "https://www.coursera.org",
+                "https://www.edx.org",
+                "https://www.udacity.com",
+                "https://www.udemy.com",
+                "https://www.skillshare.com",
+                "https://www.linkedin.com/learning",
+                "https://ocw.mit.edu",
+                "https://www.futurelearn.com",
+                "https://www.codecademy.com",
+                "https://www.datacamp.com",
+                "https://www.pluralsight.com",
+                "https://www.treehouse.com",
+                "https://www.classcentral.com",
+                "https://www.openstax.org"
+            ]
+        },
+        "ciencia_pesquisa": {
+            "description": "Pesquisa científica e acadêmica",
+            "sites": [
+                "https://scholar.google.com",
+                "https://pubmed.ncbi.nlm.nih.gov",
+                "https://www.nature.com",
+                "https://www.science.org",
+                "https://www.sciencedirect.com",
+                "https://www.researchgate.net",
+                "https://www.academia.edu",
+                "https://arxiv.org",
+                "https://biorxiv.org",
+                "https://medrxiv.org",
+                "https://www.plos.org",
+                "https://www.frontiersin.org",
+                "https://www.biomedcentral.com",
+                "https://doaj.org",
+                "https://www.sciencedaily.com"
+            ]
+        },
+        "dados_abertos": {
+            "description": "Bases de dados públicas e abertas",
+            "sites": [
+                "https://data.gov",
+                "https://dados.gov.br",
+                "https://data.europa.eu",
+                "https://data.un.org",
+                "https://data.worldbank.org",
+                "https://ourworldindata.org",
+                "https://www.kaggle.com",
+                "https://datahub.io",
+                "https://data.oecd.org",
+                "https://www.ibge.gov.br",
+                "https://data.gov.uk",
+                "https://data.gov.sg",
+                "https://data.cityofnewyork.us",
+                "https://registry.opendata.aws",
+                "https://zenodo.org"
+            ]
+        },
+        "clima_tempo": {
+            "description": "Previsão do tempo e clima",
+            "sites": [
+                "https://www.climatempo.com.br",
+                "https://www.cptec.inpe.br",
+                "https://portal.inmet.gov.br",
+                "https://www.weather.gov",
+                "https://www.noaa.gov",
+                "https://openweathermap.org",
+                "https://www.weatherstack.com",
+                "https://www.wunderground.com",
+                "https://www.metoffice.gov.uk",
+                "https://www.ecmwf.int",
+                "https://climate.nasa.gov",
+                "https://www.climate.gov"
+            ]
+        },
+        "saude": {
+            "description": "Saúde e medicina",
+            "sites": [
+                "https://www.who.int",
+                "https://www.cdc.gov",
+                "https://www.nih.gov",
+                "https://www.mayoclinic.org",
+                "https://www.webmd.com",
+                "https://medlineplus.gov",
+                "https://www.healthline.com",
+                "https://www.drugs.com",
+                "https://www.rxlist.com",
+                "https://www.medscape.com",
+                "https://www.uptodate.com",
+                "https://www.bmj.com",
+                "https://www.thelancet.com",
+                "https://www.nejm.org"
+            ]
+        },
+        "financas_economia": {
+            "description": "Finanças e economia",
+            "sites": [
+                "https://www.infomoney.com.br",
+                "https://www.valor.globo.com",
+                "https://www.investing.com",
+                "https://www.bloomberg.com",
+                "https://www.reuters.com/markets",
+                "https://www.marketwatch.com",
+                "https://www.investopedia.com",
+                "https://www.fool.com",
+                "https://www.morningstar.com",
+                "https://www.cnbc.com",
+                "https://www.ft.com",
+                "https://www.wsj.com",
+                "https://www.imf.org",
+                "https://www.worldbank.org",
+                "https://www.oecd.org"
+            ]
+        },
+        "entretenimento": {
+            "description": "Entretenimento e cultura",
+            "sites": [
+                "https://www.imdb.com",
+                "https://www.rottentomatoes.com",
+                "https://www.metacritic.com",
+                "https://www.spotify.com",
+                "https://www.youtube.com",
+                "https://www.twitch.tv",
+                "https://www.netflix.com",
+                "https://www.primevideo.com",
+                "https://www.disneyplus.com",
+                "https://www.hbo.com",
+                "https://www.crunchyroll.com",
+                "https://www.goodreads.com",
+                "https://www.allmusic.com",
+                "https://www.last.fm",
+                "https://www.bandcamp.com"
+            ]
+        },
+        "wikipedia_conhecimento": {
+            "description": "Enciclopédias e conhecimento geral",
+            "sites": [
+                "https://pt.wikipedia.org",
+                "https://en.wikipedia.org",
+                "https://www.britannica.com",
+                "https://www.wikihow.com",
+                "https://www.wikidata.org",
+                "https://wikisource.org",
+                "https://commons.wikimedia.org",
+                "https://www.archive.org",
+                "https://www.gutenberg.org",
+                "https://openlibrary.org",
+                "https://www.worldcat.org"
+            ]
+        },
+        "redes_sociais": {
+            "description": "Redes sociais e comunidades",
+            "sites": [
+                "https://www.reddit.com",
+                "https://twitter.com",
+                "https://www.linkedin.com",
+                "https://www.quora.com",
+                "https://stackoverflow.com",
+                "https://dev.to",
+                "https://medium.com",
+                "https://hashnode.com",
+                "https://www.pinterest.com",
+                "https://www.tumblr.com"
+            ]
+        },
+        "viagens_turismo": {
+            "description": "Viagens e turismo",
+            "sites": [
+                "https://www.tripadvisor.com",
+                "https://www.booking.com",
+                "https://www.airbnb.com",
+                "https://www.expedia.com",
+                "https://www.kayak.com",
+                "https://www.skyscanner.com",
+                "https://www.trivago.com",
+                "https://www.hotels.com",
+                "https://www.lonelyplanet.com",
+                "https://www.rome2rio.com"
+            ]
+        },
+        "governo_dados": {
+            "description": "Governo e dados oficiais",
+            "sites": [
+                "https://www.gov.br",
+                "https://www.tse.jus.br",
+                "https://www.stf.jus.br",
+                "https://www.camara.leg.br",
+                "https://www.senado.leg.br",
+                "https://www.planalto.gov.br",
+                "https://www.bcb.gov.br",
+                "https://www.receita.fazenda.gov.br",
+                "https://www.inss.gov.br",
+                "https://www.gov.uk",
+                "https://www.usa.gov"
+            ]
+        },
+        "multimidia": {
+            "description": "Imagens, vídeos e áudio",
+            "sites": [
+                "https://unsplash.com",
+                "https://pixabay.com",
+                "https://pexels.com",
+                "https://freesound.org",
+                "https://archive.org/details/movies",
+                "https://vimeo.com",
+                "https://soundcloud.com",
+                "https://bandcamp.com",
+                "https://mixkit.co",
+                "https://coverr.co"
+            ]
+        },
+        "datasets_ml": {
+            "description": "Datasets para Machine Learning",
+            "sites": [
+                "https://www.kaggle.com/datasets",
+                "https://huggingface.co/datasets",
+                "https://paperswithcode.com/datasets",
+                "https://registry.opendata.aws",
+                "https://zenodo.org",
+                "https://figshare.com",
+                "https://dataverse.harvard.edu",
+                "https://datahub.io",
+                "https://commoncrawl.org",
+                "https://laion.ai"
+            ]
+        }
+    },
+    "navigation_patterns": {
+        "description": "Padrões comuns de navegação em sites",
+        "common_paths": [
+            "/",
+            "/about",
+            "/news",
+            "/blog",
+            "/articles",
+            "/search",
+            "/products",
+            "/services",
+            "/docs",
+            "/api",
+            "/help",
+            "/support",
+            "/contact",
+            "/category",
+            "/tags"
+        ],
+        "search_patterns": [
+            "/search?q=",
+            "/busca?q=",
+            "/?s=",
+            "/pesquisa?q="
+        ]
+    },
+    "tips": {
+        "playwright": [
+            "Use waitForLoadState('networkidle') para garantir que a página carregou",
+            "Adicione delays aleatórios entre 500-1500ms para parecer humano",
+            "Use User-Agent realista",
+            "Evite Google direto (usa Startpage como proxy)",
+            "Feche sessões após uso para liberar recursos",
+            "Use timeout de 30-60 segundos para páginas lentas"
+        ],
+        "extraction": [
+            "Extraia sempre título, snippet e URL",
+            "Marque a fonte (site de origem)",
+            "Remova duplicatas por URL",
+            "Limite a 10-20 resultados por fonte",
+            "Armazene metadados (data, autor, categoria)"
+        ]
+    }
+}

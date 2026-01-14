@@ -1,0 +1,8 @@
+{
+  "name": "MCC-01: Medical Cognitive Core",
+  "description": "An intelligent clinical support agent for triage, risk classification, and clinical organization. Designed for healthcare professionals and preliminary screening.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

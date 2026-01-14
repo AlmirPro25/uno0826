@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste do Sistema de Mídia</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2, h3 {
+      color: #2563eb;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .card {
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    .button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background-color 0.3s;
+    }
+    .button:hover {
+      background-color: #1e40af;
+    }
+    #preview-container {
+      margin-top: 20px;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      min-height: 600px;
+    }
+    .log-container {
+      background-color: #f3f4f6;
+      border-radius: 8px;
+      padding: 15px;
+      margin-top: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: monospace;
+    }
+    .log-entry {
+      margin: 5px 0;
+      padding: 5px;
+      border-bottom: 1px solid #e5e7eb;
+    }
+    .log-entry.error {
+      color: #dc2626;
+    }
+    .log-entry.success {
+      color: #16a34a;
+    }
+    .log-entry.info {
+      color: #2563eb;
+    }
+  </style>
+</head>
+<body>
+  <h1>Teste do Sistema Integrado de Mídia</h1>
+  <p>Esta página demonstra o funcionamento do sistema integrado de imagens e vídeos usando o Pixabay como fonte principal.</p>
+  
+  <div class="container">
+    <div class="card">
+      <h2>Controles de Teste</h2>
+      <p>Clique no botão abaixo para iniciar o teste do sistema de mídia:</p>
+      <button id="test-button" class="button">Iniciar Teste</button>
+    </div>
+    
+    <div class="card">
+      <h2>Preview</h2>
+      <div id="preview-container"></div>
+    </div>
+    
+    <div class="card">
+      <h2>Logs</h2>
+      <div id="log-container" class="log-container"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Importar o script de teste
+    import { testMediaIntegration } from './test-media-integration';
+    
+    // Função para adicionar logs na interface
+    function addLog(message, type = 'info') {
+      const logContainer = document.getElementById('log-container');
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${type}`;
+      logEntry.textContent = message;
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+    }
+    
+    // Sobrescrever console.log para exibir na interface
+    const originalConsole = { ...console };
+    console.log = (...args) => {
+      originalConsole.log(...args);
+      addLog(args.join(' '), 'info');
+    };
+    console.error = (...args) => {
+      originalConsole.error(...args);
+      addLog(args.join(' '), 'error');
+    };
+    console.warn = (...args) => {
+      originalConsole.warn(...args);
+      addLog(args.join(' '), 'warning');
+    };
+    console.info = (...args) => {
+      originalConsole.info(...args);
+      addLog(args.join(' '), 'info');
+    };
+    console.success = (...args) => {
+      originalConsole.log(...args);
+      addLog(args.join(' '), 'success');
+    };
+    
+    // Adicionar evento ao botão de teste
+    document.getElementById('test-button').addEventListener('click', async () => {
+      try {
+        addLog('🚀 Iniciando teste do sistema de mídia...', 'info');
+        document.getElementById('test-button').disabled = true;
+        document.getElementById('preview-container').innerHTML = '<p>Carregando...</p>';
+        
+        const result = await testMediaIntegration();
+        
+        if (result.success) {
+          addLog(`✅ Teste concluído com sucesso!`, 'success');
+          addLog(`📸 Imagens processadas: ${result.imageCount}`, 'success');
+          addLog(`🎬 Vídeos processados: ${result.videoCount}`, 'success');
+        } else {
+          addLog(`❌ Teste falhou: ${result.error}`, 'error');
+        }
+      } catch (error) {
+        addLog(`💥 Erro no teste: ${error.message}`, 'error');
+        console.error(error);
+      } finally {
+        document.getElementById('test-button').disabled = false;
+      }
+    });
+    
+    // Mensagem inicial
+    addLog('📋 Sistema de teste carregado. Clique em "Iniciar Teste" para começar.', 'info');
+  </script>
+</body>
+</html>

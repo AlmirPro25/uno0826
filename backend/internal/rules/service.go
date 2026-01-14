@@ -490,14 +490,14 @@ func (s *RulesService) getAppMetrics(appID uuid.UUID) (map[string]float64, error
 	if snapshot.TotalSessions > 0 {
 		// Bounce rate (sessões < 30s / total)
 		var bounceSessions int64
-		s.db.Table("app_sessions").
+		s.db.Table("telemetry_sessions").
 			Where("app_id = ? AND ended_at IS NOT NULL AND duration_ms < 30000", appID).
 			Count(&bounceSessions)
 		metrics["bounce_rate"] = float64(bounceSessions) / float64(snapshot.TotalSessions) * 100
 		
 		// Match rate
 		var sessionsWithMatch int64
-		s.db.Table("app_sessions").
+		s.db.Table("telemetry_sessions").
 			Where("app_id = ? AND interaction_count > 0", appID).
 			Count(&sessionsWithMatch)
 		metrics["match_rate"] = float64(sessionsWithMatch) / float64(snapshot.TotalSessions) * 100

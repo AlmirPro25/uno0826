@@ -1,0 +1,87 @@
+
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME}
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # For production, we generally do not expose DB port directly to host
+    # ports:
+    #   - "5432:5432"
+
+  redis:
+    image: redis:7.2-alpine
+    restart: always
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    # ports:
+    #   - "6379:6379" # Only if necessary for external access or monitoring
+
+  backend:
+    image: aiwebweaver/backend:${TAG:-latest} # Image will be built and pushed by CI/CD
+    restart: always
+    ports:
+      - "8080:8080" # Exposed to the host, typically behind a reverse proxy (e.g., Nginx)
+    environment:
+      API_PORT: 8080
+      DATABASE_URL: postgresql://${DATABASE_USER}:${DATABASE_PASSWORD}@db:5432/${DATABASE_NAME}?sslmode=disable
+      REDIS_ADDR: redis:6379
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_REFRESH_SECRET_KEY: ${JWT_REFRESH_SECRET_KEY}
+      REFRESH_TOKEN_ENCRYPTION_KEY: ${REFRESH_TOKEN_ENCRYPTION_KEY}
+      FRONTEND_URL: ${FRONTEND_URL} # For CORS
+      BETA_EMAIL_SERVICE_API_KEY: ${BETA_EMAIL_SERVICE_API_KEY}
+      NODE_ENV: production # Ensure production mode
+      # ... other production environment variables ...
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/api/v1/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give more time for production startup
+
+  frontend:
+    image: aiwebweaver/frontend:${TAG:-latest} # Image will be built and pushed by CI/CD
+    restart: always
+    ports:
+      - "3000:3000" # Exposed to the host, typically behind a reverse proxy (e.g., Nginx)
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXT_PUBLIC_API_BASE_URL: ${FRONTEND_BACKEND_API_URL} # Publicly accessible backend URL
+      # ... other production environment variables ...
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give more time for production startup
+
+volumes:
+  db-data:
+  redis-data:

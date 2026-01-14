@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Projetos - AI Web Weaver</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+    </style>
+</head>
+<body class="min-h-screen p-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Header -->
+        <div class="bg-white rounded-lg shadow-xl p-6 mb-8">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800">
+                        <i class="fas fa-folder-open text-purple-600 mr-3"></i>
+                        Dashboard de Projetos
+                    </h1>
+                    <p class="text-gray-600 mt-2">Gerencie todos os seus projetos AI Web Weaver</p>
+                </div>
+                <button onclick="loadProjects()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg transition-colors">
+                    <i class="fas fa-sync-alt mr-2"></i>
+                    Atualizar
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Total de Projetos</p>
+                        <p id="totalProjects" class="text-3xl font-bold text-purple-600">0</p>
+                    </div>
+                    <i class="fas fa-folder text-4xl text-purple-200"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Total de Arquivos</p>
+                        <p id="totalFiles" class="text-3xl font-bold text-blue-600">0</p>
+                    </div>
+                    <i class="fas fa-file-code text-4xl text-blue-200"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Tamanho Total</p>
+                        <p id="totalSize" class="text-3xl font-bold text-green-600">0 MB</p>
+                    </div>
+                    <i class="fas fa-database text-4xl text-green-200"></i>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-lg p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-gray-600 text-sm">Hoje</p>
+                        <p id="todayProjects" class="text-3xl font-bold text-orange-600">0</p>
+                    </div>
+                    <i class="fas fa-calendar-day text-4xl text-orange-200"></i>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search and Filters -->
+        <div class="bg-white rounded-lg shadow-xl p-6 mb-8">
+            <div class="flex gap-4">
+                <div class="flex-1">
+                    <input 
+                        type="text" 
+                        id="searchInput" 
+                        placeholder="Buscar projetos..." 
+                        class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                        onkeyup="filterProjects()"
+                    >
+                </div>
+                <select id="sortSelect" onchange="sortProjects()" class="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500">
+                    <option value="recent">Mais Recentes</option>
+                    <option value="oldest">Mais Antigos</option>
+                    <option value="name">Nome (A-Z)</option>
+                    <option value="size">Tamanho</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Projects Grid -->
+        <div id="projectsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Projects will be loaded here -->
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="text-center py-12">
+            <i class="fas fa-spinner fa-spin text-4xl text-white mb-4"></i>
+            <p class="text-white text-lg">Carregando projetos...</p>
+        </div>
+
+        <!-- Empty State -->
+        <div id="emptyState" class="hidden text-center py-12">
+            <i class="fas fa-folder-open text-6xl text-white mb-4"></i>
+            <p class="text-white text-xl">Nenhum projeto encontrado</p>
+        </div>
+    </div>
+
+    <script>
+        let allProjects = [];
+
+        async function loadProjects() {
+            try {
+                document.getElementById('loading').classList.remove('hidden');
+                document.getElementById('projectsGrid').innerHTML = '';
+                
+                const response = await fetch('http://localhost:5000/api/projects');
+                const data = await response.json();
+                
+                if (data.success && data.projects) {
+                    allProjects = data.projects;
+                    updateStats(allProjects);
+                    displayProjects(allProjects);
+                } else {
+                    showEmptyState();
+                }
+                
+                document.getElementById('loading').classList.add('hidden');
+            } catch (error) {
+                console.error('Erro ao carregar projetos:', error);
+                document.getElementById('loading').innerHTML = `
+                    <i class="fas fa-exclamation-triangle text-4xl text-yellow-300 mb-4"></i>
+                    <p class="text-white text-lg">Erro ao carregar projetos</p>
+                    <p class="text-white text-sm mt-2">Certifique-se de que o backend está rodando</p>
+                    <button onclick="loadProjects()" class="mt-4 bg-white text-purple-600 px-6 py-2 rounded-lg hover:bg-gray-100">
+                        Tentar Novamente
+                    </button>
+                `;
+            }
+        }
+
+        function updateStats(projects) {
+            document.getElementById('totalProjects').textContent = projects.length;
+            
+            const totalFiles = projects.reduce((sum, p) => sum + (p.files?.length || 0), 0);
+            document.getElementById('totalFiles').textContent = totalFiles;
+            
+            // Calcular tamanho total (estimativa)
+            const totalSize = projects.reduce((sum, p) => {
+                const projectSize = p.files?.reduce((s, f) => s + (f.content?.length || 0), 0) || 0;
+                return sum + projectSize;
+            }, 0);
+            document.getElementById('totalSize').textContent = (totalSize / 1024 / 1024).toFixed(2) + ' MB';
+            
+            // Projetos de hoje
+            const today = new Date().toDateString();
+            const todayProjects = projects.filter(p => {
+                const projectDate = new Date(p.createdAt).toDateString();
+                return projectDate === today;
+            }).length;
+            document.getElementById('todayProjects').textContent = todayProjects;
+        }
+
+        function displayProjects(projects) {
+            const grid = document.getElementById('projectsGrid');
+            grid.innerHTML = '';
+            
+            if (projects.length === 0) {
+                showEmptyState();
+                return;
+            }
+            
+            document.getElementById('emptyState').classList.add('hidden');
+            
+            projects.forEach(project => {
+                const card = createProjectCard(project);
+                grid.appendChild(card);
+            });
+        }
+
+        function createProjectCard(project) {
+            const div = document.createElement('div');
+            div.className = 'bg-white rounded-lg shadow-lg p-6 hover:shadow-2xl transition-shadow';
+            
+            const fileCount = project.files?.length || 0;
+            const date = new Date(project.createdAt).toLocaleDateString('pt-BR');
+            const time = new Date(project.createdAt).toLocaleTimeString('pt-BR');
+            
+            div.innerHTML = `
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-bold text-gray-800 mb-1">${project.name || 'Projeto'}</h3>
+                        <p class="text-sm text-gray-500">ID: ${project.id}</p>
+                    </div>
+                    <i class="fas fa-folder text-2xl text-purple-400"></i>
+                </div>
+                
+                <div class="space-y-2 mb-4">
+                    <div class="flex items-center text-sm text-gray-600">
+                        <i class="fas fa-file-code w-5"></i>
+                        <span>${fileCount} arquivo${fileCount !== 1 ? 's' : ''}</span>
+                    </div>
+                    <div class="flex items-center text-sm text-gray-600">
+                        <i class="fas fa-calendar w-5"></i>
+                        <span>${date} às ${time}</span>
+                    </div>
+                    <div class="flex items-center text-sm text-gray-600">
+                        <i class="fas fa-folder-open w-5"></i>
+                        <span class="truncate">${project.path}</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2">
+                    <button onclick="openProject('${project.id}')" class="flex-1 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                        <i class="fas fa-folder-open mr-1"></i>
+                        Abrir
+                    </button>
+                    <button onclick="installProject('${project.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm transition-colors">
+                        <i class="fas fa-box mr-1"></i>
+                        Instalar
+                    </button>
+                </div>
+            `;
+            
+            return div;
+        }
+
+        async function openProject(projectId) {
+            try {
+                const response = await fetch(`http://localhost:5000/api/projects/${projectId}/open`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Explorador aberto!', 'success');
+                } else {
+                    showNotification('Erro ao abrir projeto', 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao abrir projeto', 'error');
+            }
+        }
+
+        async function installProject(projectId) {
+            try {
+                showNotification('Instalando projeto...', 'info');
+                
+                const response = await fetch(`http://localhost:5000/api/projects/${projectId}/install`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification(`App instalado! ID: ${data.appId}`, 'success');
+                } else {
+                    showNotification('Erro ao instalar projeto', 'error');
+                }
+            } catch (error) {
+                showNotification('Erro ao instalar projeto', 'error');
+            }
+        }
+
+        function filterProjects() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allProjects.filter(p => 
+                p.name.toLowerCase().includes(searchTerm) ||
+                p.id.toLowerCase().includes(searchTerm)
+            );
+            displayProjects(filtered);
+        }
+
+        function sortProjects() {
+            const sortBy = document.getElementById('sortSelect').value;
+            let sorted = [...allProjects];
+            
+            switch(sortBy) {
+                case 'recent':
+                    sorted.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+                    break;
+                case 'oldest':
+                    sorted.sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+                    break;
+                case 'name':
+                    sorted.sort((a, b) => a.name.localeCompare(b.name));
+                    break;
+                case 'size':
+                    sorted.sort((a, b) => (b.files?.length || 0) - (a.files?.length || 0));
+                    break;
+            }
+            
+            displayProjects(sorted);
+        }
+
+        function showEmptyState() {
+            document.getElementById('emptyState').classList.remove('hidden');
+            document.getElementById('projectsGrid').innerHTML = '';
+        }
+
+        function showNotification(message, type) {
+            const colors = {
+                success: 'bg-green-500',
+                error: 'bg-red-500',
+                info: 'bg-blue-500'
+            };
+            
+            const notification = document.createElement('div');
+            notification.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-fade-in`;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Load projects on page load
+        loadProjects();
+    </script>
+</body>
+</html>

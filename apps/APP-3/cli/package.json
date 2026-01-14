@@ -1,0 +1,19 @@
+{
+  "name": "@ai-weaver/local-bridge",
+  "version": "1.0.0",
+  "description": "Local execution bridge for AI Web Weaver",
+  "main": "local-bridge.js",
+  "bin": {
+    "ai-weaver": "./local-bridge.js"
+  },
+  "scripts": {
+    "start": "node local-bridge.js"
+  },
+  "keywords": ["ai", "automation", "terminal", "bridge"],
+  "author": "Almir",
+  "license": "MIT",
+  "dependencies": {
+    "socket.io": "^4.7.2",
+    "chalk": "^4.1.2"
+  }
+}

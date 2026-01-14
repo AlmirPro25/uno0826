@@ -1,0 +1,1 @@
+// Backup do App.tsx antes da correção final

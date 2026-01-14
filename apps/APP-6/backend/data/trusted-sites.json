@@ -1,0 +1,510 @@
+{
+  "news_brazil": [
+    {
+      "url": "https://g1.globo.com",
+      "name": "G1",
+      "priority": 1
+    },
+    {
+      "url": "https://www.uol.com.br",
+      "name": "UOL",
+      "priority": 1
+    },
+    {
+      "url": "https://www.folha.uol.com.br",
+      "name": "Folha de S.Paulo",
+      "priority": 1
+    },
+    {
+      "url": "https://www.estadao.com.br",
+      "name": "Estadão",
+      "priority": 1
+    },
+    {
+      "url": "https://www.bbc.com/portuguese",
+      "name": "BBC Brasil",
+      "priority": 1
+    },
+    {
+      "url": "https://www.cnn.com.br",
+      "name": "CNN Brasil",
+      "priority": 1
+    },
+    {
+      "url": "https://www.r7.com",
+      "name": "R7",
+      "priority": 2
+    },
+    {
+      "url": "https://www.band.uol.com.br",
+      "name": "Band",
+      "priority": 2
+    },
+    {
+      "url": "https://www.metropoles.com",
+      "name": "Metrópoles",
+      "priority": 2
+    },
+    {
+      "url": "https://www.poder360.com.br",
+      "name": "Poder360",
+      "priority": 2
+    },
+    {
+      "url": "https://www.cartacapital.com.br",
+      "name": "Carta Capital",
+      "priority": 2
+    },
+    {
+      "url": "https://www.gazetadopovo.com.br",
+      "name": "Gazeta do Povo",
+      "priority": 2
+    },
+    {
+      "url": "https://www.correiobraziliense.com.br",
+      "name": "Correio Braziliense",
+      "priority": 2
+    },
+    {
+      "url": "https://www.oglobo.globo.com",
+      "name": "O Globo",
+      "priority": 2
+    },
+    {
+      "url": "https://www.valor.globo.com",
+      "name": "Valor Econômico",
+      "priority": 2
+    }
+  ],
+  "news_international": [
+    {
+      "url": "https://www.bbc.com",
+      "name": "BBC",
+      "priority": 1
+    },
+    {
+      "url": "https://www.cnn.com",
+      "name": "CNN",
+      "priority": 1
+    },
+    {
+      "url": "https://www.reuters.com",
+      "name": "Reuters",
+      "priority": 1
+    },
+    {
+      "url": "https://www.apnews.com",
+      "name": "AP News",
+      "priority": 1
+    },
+    {
+      "url": "https://www.theguardian.com",
+      "name": "The Guardian",
+      "priority": 1
+    },
+    {
+      "url": "https://www.nytimes.com",
+      "name": "New York Times",
+      "priority": 2
+    },
+    {
+      "url": "https://www.washingtonpost.com",
+      "name": "Washington Post",
+      "priority": 2
+    },
+    {
+      "url": "https://www.aljazeera.com",
+      "name": "Al Jazeera",
+      "priority": 2
+    },
+    {
+      "url": "https://www.dw.com",
+      "name": "Deutsche Welle",
+      "priority": 2
+    },
+    {
+      "url": "https://www.france24.com",
+      "name": "France 24",
+      "priority": 2
+    }
+  ],
+  "search_engines": [
+    {
+      "url": "https://www.bing.com",
+      "name": "Bing",
+      "priority": 1
+    },
+    {
+      "url": "https://www.startpage.com",
+      "name": "Startpage",
+      "priority": 2
+    },
+    {
+      "url": "https://search.brave.com",
+      "name": "Brave Search",
+      "priority": 2
+    },
+    {
+      "url": "https://www.ecosia.org",
+      "name": "Ecosia",
+      "priority": 3
+    },
+    {
+      "url": "https://www.qwant.com",
+      "name": "Qwant",
+      "priority": 3
+    },
+    {
+      "url": "https://www.mojeek.com",
+      "name": "Mojeek",
+      "priority": 4
+    },
+    {
+      "url": "https://www.swisscows.com",
+      "name": "Swisscows",
+      "priority": 4
+    }
+  ],
+  "weather": [
+    {
+      "url": "https://www.climatempo.com.br",
+      "name": "Climatempo",
+      "priority": 1
+    },
+    {
+      "url": "https://www.inmet.gov.br",
+      "name": "INMET",
+      "priority": 1
+    },
+    {
+      "url": "https://www.cptec.inpe.br",
+      "name": "CPTEC/INPE",
+      "priority": 1
+    },
+    {
+      "url": "https://www.tempo.com",
+      "name": "Tempo.com",
+      "priority": 2
+    },
+    {
+      "url": "https://www.accuweather.com",
+      "name": "AccuWeather",
+      "priority": 2
+    },
+    {
+      "url": "https://www.weather.com",
+      "name": "Weather.com",
+      "priority": 2
+    }
+  ],
+  "ecommerce_brazil": [
+    {
+      "url": "https://www.mercadolivre.com.br",
+      "name": "Mercado Livre",
+      "priority": 1
+    },
+    {
+      "url": "https://www.amazon.com.br",
+      "name": "Amazon Brasil",
+      "priority": 1
+    },
+    {
+      "url": "https://www.magazineluiza.com.br",
+      "name": "Magazine Luiza",
+      "priority": 1
+    },
+    {
+      "url": "https://www.americanas.com.br",
+      "name": "Americanas",
+      "priority": 1
+    },
+    {
+      "url": "https://www.casasbahia.com.br",
+      "name": "Casas Bahia",
+      "priority": 1
+    },
+    {
+      "url": "https://www.extra.com.br",
+      "name": "Extra",
+      "priority": 2
+    },
+    {
+      "url": "https://www.pontofrio.com.br",
+      "name": "Ponto Frio",
+      "priority": 2
+    },
+    {
+      "url": "https://www.submarino.com.br",
+      "name": "Submarino",
+      "priority": 2
+    },
+    {
+      "url": "https://www.shoptime.com.br",
+      "name": "Shoptime",
+      "priority": 2
+    },
+    {
+      "url": "https://www.kabum.com.br",
+      "name": "KaBuM!",
+      "priority": 2
+    }
+  ],
+  "reference": [
+    {
+      "url": "https://pt.wikipedia.org",
+      "name": "Wikipedia PT",
+      "priority": 1
+    },
+    {
+      "url": "https://en.wikipedia.org",
+      "name": "Wikipedia EN",
+      "priority": 1
+    },
+    {
+      "url": "https://www.britannica.com",
+      "name": "Britannica",
+      "priority": 2
+    },
+    {
+      "url": "https://www.worldcat.org",
+      "name": "WorldCat",
+      "priority": 3
+    }
+  ],
+  "tech": [
+    {
+      "url": "https://www.tecmundo.com.br",
+      "name": "TecMundo",
+      "priority": 1
+    },
+    {
+      "url": "https://www.olhardigital.com.br",
+      "name": "Olhar Digital",
+      "priority": 1
+    },
+    {
+      "url": "https://www.canaltech.com.br",
+      "name": "Canaltech",
+      "priority": 1
+    },
+    {
+      "url": "https://www.adrenaline.com.br",
+      "name": "Adrenaline",
+      "priority": 2
+    },
+    {
+      "url": "https://www.techcrunch.com",
+      "name": "TechCrunch",
+      "priority": 2
+    },
+    {
+      "url": "https://www.theverge.com",
+      "name": "The Verge",
+      "priority": 2
+    },
+    {
+      "url": "https://www.wired.com",
+      "name": "Wired",
+      "priority": 2
+    },
+    {
+      "url": "https://www.arstechnica.com",
+      "name": "Ars Technica",
+      "priority": 2
+    }
+  ],
+  "sports": [
+    {
+      "url": "https://www.espn.com.br",
+      "name": "ESPN Brasil",
+      "priority": 1
+    },
+    {
+      "url": "https://www.globoesporte.globo.com",
+      "name": "Globo Esporte",
+      "priority": 1
+    },
+    {
+      "url": "https://www.lance.com.br",
+      "name": "Lance!",
+      "priority": 1
+    },
+    {
+      "url": "https://www.uol.com.br/esporte",
+      "name": "UOL Esporte",
+      "priority": 1
+    },
+    {
+      "url": "https://www.espn.com",
+      "name": "ESPN",
+      "priority": 2
+    },
+    {
+      "url": "https://www.skysports.com",
+      "name": "Sky Sports",
+      "priority": 2
+    }
+  ],
+  "health": [
+    {
+      "url": "https://www.drauziovarella.uol.com.br",
+      "name": "Drauzio Varella",
+      "priority": 1
+    },
+    {
+      "url": "https://www.saude.gov.br",
+      "name": "Ministério da Saúde",
+      "priority": 1
+    },
+    {
+      "url": "https://www.who.int",
+      "name": "WHO",
+      "priority": 1
+    },
+    {
+      "url": "https://www.mayoclinic.org",
+      "name": "Mayo Clinic",
+      "priority": 2
+    },
+    {
+      "url": "https://www.webmd.com",
+      "name": "WebMD",
+      "priority": 2
+    }
+  ],
+  "finance": [
+    {
+      "url": "https://www.infomoney.com.br",
+      "name": "InfoMoney",
+      "priority": 1
+    },
+    {
+      "url": "https://www.moneytimes.com.br",
+      "name": "Money Times",
+      "priority": 1
+    },
+    {
+      "url": "https://www.investing.com/br",
+      "name": "Investing.com",
+      "priority": 1
+    },
+    {
+      "url": "https://www.bloomberg.com",
+      "name": "Bloomberg",
+      "priority": 2
+    },
+    {
+      "url": "https://www.reuters.com/business",
+      "name": "Reuters Business",
+      "priority": 2
+    }
+  ],
+  "education": [
+    {
+      "url": "https://www.coursera.org",
+      "name": "Coursera",
+      "priority": 1
+    },
+    {
+      "url": "https://www.edx.org",
+      "name": "edX",
+      "priority": 1
+    },
+    {
+      "url": "https://www.khanacademy.org",
+      "name": "Khan Academy",
+      "priority": 1
+    },
+    {
+      "url": "https://www.udemy.com",
+      "name": "Udemy",
+      "priority": 2
+    },
+    {
+      "url": "https://www.duolingo.com",
+      "name": "Duolingo",
+      "priority": 2
+    }
+  ],
+  "government_brazil": [
+    {
+      "url": "https://www.gov.br",
+      "name": "Gov.br",
+      "priority": 1
+    },
+    {
+      "url": "https://www.planalto.gov.br",
+      "name": "Planalto",
+      "priority": 1
+    },
+    {
+      "url": "https://www.senado.leg.br",
+      "name": "Senado",
+      "priority": 1
+    },
+    {
+      "url": "https://www.camara.leg.br",
+      "name": "Câmara dos Deputados",
+      "priority": 1
+    },
+    {
+      "url": "https://www.stf.jus.br",
+      "name": "STF",
+      "priority": 1
+    }
+  ],
+  "entertainment": [
+    {
+      "url": "https://www.omelete.com.br",
+      "name": "Omelete",
+      "priority": 1
+    },
+    {
+      "url": "https://www.adorocinema.com",
+      "name": "AdoroCinema",
+      "priority": 1
+    },
+    {
+      "url": "https://www.imdb.com",
+      "name": "IMDb",
+      "priority": 1
+    },
+    {
+      "url": "https://www.rottentomatoes.com",
+      "name": "Rotten Tomatoes",
+      "priority": 2
+    },
+    {
+      "url": "https://www.metacritic.com",
+      "name": "Metacritic",
+      "priority": 2
+    }
+  ],
+  "travel": [
+    {
+      "url": "https://www.tripadvisor.com.br",
+      "name": "TripAdvisor",
+      "priority": 1
+    },
+    {
+      "url": "https://www.booking.com",
+      "name": "Booking.com",
+      "priority": 1
+    },
+    {
+      "url": "https://www.airbnb.com.br",
+      "name": "Airbnb",
+      "priority": 1
+    },
+    {
+      "url": "https://www.decolar.com",
+      "name": "Decolar",
+      "priority": 2
+    },
+    {
+      "url": "https://www.maxmilhas.com.br",
+      "name": "MaxMilhas",
+      "priority": 2
+    }
+  ]
+}

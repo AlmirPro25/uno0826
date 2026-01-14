@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste: Integração Single-File App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-600 to-blue-600 min-h-screen p-8">
+  <div class="max-w-4xl mx-auto">
+    <div class="bg-white rounded-2xl shadow-2xl p-8">
+      <h1 class="text-4xl font-bold text-gray-800 mb-2">
+        🎯 Teste: Manifesto Single-File App
+      </h1>
+      <p class="text-gray-600 mb-8">
+        Demonstração da detecção automática e enriquecimento de prompts
+      </p>
+
+      <!-- Status da Integração -->
+      <div class="bg-green-50 border-l-4 border-green-500 p-4 mb-8">
+        <div class="flex items-center">
+          <div class="flex-shrink-0">
+            <svg class="h-5 w-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-green-700 font-semibold">
+              ✅ Manifesto Single-File App integrado com sucesso!
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Teste de Detecção -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">
+          🔍 Teste de Detecção Automática
+        </h2>
+        
+        <div class="space-y-4">
+          <!-- Teste 1 -->
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="flex items-start">
+              <span class="text-2xl mr-3">✅</span>
+              <div class="flex-1">
+                <p class="font-semibold text-gray-800 mb-1">
+                  Prompt: "Crie um app de tarefas em um único arquivo"
+                </p>
+                <p class="text-sm text-green-600">
+                  → Detectado: Single-File App ✓
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Palavra-chave: "único arquivo"
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Teste 2 -->
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="flex items-start">
+              <span class="text-2xl mr-3">✅</span>
+              <div class="flex-1">
+                <p class="font-semibold text-gray-800 mb-1">
+                  Prompt: "Faça um mini app portátil de finanças"
+                </p>
+                <p class="text-sm text-green-600">
+                  → Detectado: Single-File App ✓
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Palavra-chave: "portátil"
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Teste 3 -->
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="flex items-start">
+              <span class="text-2xl mr-3">✅</span>
+              <div class="flex-1">
+                <p class="font-semibold text-gray-800 mb-1">
+                  Prompt: "Crie um app offline de notas"
+                </p>
+                <p class="text-sm text-green-600">
+                  → Detectado: Single-File App ✓
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Palavra-chave: "offline"
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Teste 4 (Negativo) -->
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <div class="flex items-start">
+              <span class="text-2xl mr-3">❌</span>
+              <div class="flex-1">
+                <p class="font-semibold text-gray-800 mb-1">
+                  Prompt: "Crie um site institucional com React"
+                </p>
+                <p class="text-sm text-gray-600">
+                  → Não detectado: App normal
+                </p>
+                <p class="text-xs text-gray-500 mt-1">
+                  Sem palavras-chave de single-file
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recursos Incluídos -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">
+          📦 Recursos Incluídos no Template
+        </h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-blue-50 p-4 rounded-lg">
+            <div class="flex items-center mb-2">
+              <svg class="w-5 h-5 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M3 12v3c0 1.657 3.134 3 7 3s7-1.343 7-3v-3c0 1.657-3.134 3-7 3s-7-1.343-7-3z"/>
+                <path d="M3 7v3c0 1.657 3.134 3 7 3s7-1.343 7-3V7c0 1.657-3.134 3-7 3S3 8.657 3 7z"/>
+                <path d="M17 5c0 1.657-3.134 3-7 3S3 6.657 3 5s3.134-3 7-3 7 1.343 7 3z"/>
+              </svg>
+              <h3 class="font-semibold text-gray-800">IndexedDB</h3>
+            </div>
+            <p class="text-sm text-gray-600">
+              Persistência local completa com CRUD operations
+            </p>
+          </div>
+
+          <div class="bg-green-50 p-4 rounded-lg">
+            <div class="flex items-center mb-2">
+              <svg class="w-5 h-5 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+              </svg>
+              <h3 class="font-semibold text-gray-800">Service Worker</h3>
+            </div>
+            <p class="text-sm text-gray-600">
+              Modo offline com cache inteligente
+            </p>
+          </div>
+
+          <div class="bg-purple-50 p-4 rounded-lg">
+            <div class="flex items-center mb-2">
+              <svg class="w-5 h-5 text-purple-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M13 7H7v6h6V7z"/>
+                <path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/>
+              </svg>
+              <h3 class="font-semibold text-gray-800">Conector IA</h3>
+            </div>
+            <p class="text-sm text-gray-600">
+              Integração com Gemini API (segura)
+            </p>
+          </div>
+
+          <div class="bg-yellow-50 p-4 rounded-lg">
+            <div class="flex items-center mb-2">
+              <svg class="w-5 h-5 text-yellow-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+              </svg>
+              <h3 class="font-semibold text-gray-800">Exportação</h3>
+            </div>
+            <p class="text-sm text-gray-600">
+              Exportar app completo com estado incluído
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exemplo de Manifesto -->
+      <div class="mb-8">
+        <h2 class="text-2xl font-bold text-gray-800 mb-4">
+          📋 Exemplo de Manifesto JSON
+        </h2>
+        
+        <div class="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto">
+          <pre class="text-sm"><code>{
+  "app_id": "todo-singlefile",
+  "title": "Smart Todo",
+  "description": "Lista de tarefas com IA",
+  "capabilities": {
+    "ai": {
+      "enabled": true,
+      "model_preference": ["gemini-2.5-flash"]
+    },
+    "storage": "indexeddb",
+    "offline": true
+  },
+  "permissions": {
+    "network": true,
+    "filesystem": false
+  },
+  "secrets_handling": {
+    "mode": "user_supplied_or_backend"
+  }
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- Próximos Passos -->
+      <div class="bg-blue-50 border-l-4 border-blue-500 p-4">
+        <h3 class="font-semibold text-blue-800 mb-2">
+          🚀 Próximos Passos
+        </h3>
+        <ul class="text-sm text-blue-700 space-y-1">
+          <li>✅ Manifesto integrado ao GeminiService</li>
+          <li>✅ Detecção automática funcionando</li>
+          <li>✅ Enriquecimento de prompts ativo</li>
+          <li>🎯 Teste gerando: "Crie um app de notas em um único arquivo"</li>
+          <li>🎯 Verifique os logs para: "🎯 Detectado pedido de Single-File App"</li>
+          <li>🎯 Valide que o HTML gerado tem todos os recursos</li>
+        </ul>
+      </div>
+
+      <!-- Footer -->
+      <div class="mt-8 pt-8 border-t border-gray-200 text-center">
+        <p class="text-gray-600 text-sm">
+          Manifesto Single-File App • Integrado ao Gemini Service • 2025
+        </p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

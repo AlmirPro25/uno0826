@@ -1,0 +1,70 @@
+
+{
+  "project_name": "MANIFEST-ARCHITECT",
+  "project_goal": "Real-time Digital Twin and Predictive Maintenance for AGV Fleet (5000 units)",
+  "architecture_style": "Event-Driven Microservices with High-Performance Ingestion Layer",
+  "components": [
+    {
+      "component_name": "MQTT Broker (Core Ingestion Bus)",
+      "purpose": "Decouple AGV telemetry from processing services. Provide reliable, low-latency communication for 5,000+ devices.",
+      "implementation_details": {
+        "protocol": "MQTT v5.0 (for improved session management and properties)",
+        "qos_level": "QoS 1 (At Least Once) for critical telemetry",
+        "topics": {
+          "telemetry_in": "telemetry/agv/{agv_id}",
+          "commands_out": "commands/agv/{agv_id}"
+        },
+        "security": "TLS/SSL (mTLS) for device authentication and data encryption in transit"
+      }
+    },
+    {
+      "component_name": "Digital Twin Service (Go)",
+      "role": "Central processing unit for AGV data. Implements the Single Source of Truth (SSOT).",
+      "implementation_details": {
+        "language": "Go (for high concurrency and low latency processing)",
+        "data_ingestion": {
+          "source": "MQTT Broker subscription to telemetry/agv/+",
+          "process": "Receive message -> validate schema -> update Redis cache (hot state) -> buffer for batch writing to InfluxDB."
+        },
+        "data_storage_hot": "Redis (Key-Value Store) for immediate state retrieval. Key: agv:{agv_id}, Value: JSON-encoded Digital Twin snapshot.",
+        "data_storage_historical": "InfluxDB (Time Series Database) for high-frequency writes and long-term analysis. Measurement: agv_telemetry.",
+        "security": "JWT/OIDC validation for internal API endpoints, RBAC enforcement."
+      }
+    },
+    {
+      "component_name": "Heuristics Engine (Go Worker)",
+      "role": "Predictive maintenance trigger based on time-series analysis.",
+      "implementation_details": {
+        "process": "Cron-based worker or stream processing logic. Queries InfluxDB data using Flux language window functions to detect specific patterns (e.g., vibration > 3.5 for 60 seconds AND temperature > 75C).",
+        "output": "If anomaly detected, update AGV state in Redis to PREDICTIVE_MAINTENANCE and send an alert via internal messaging system or database flag."
+      }
+    },
+    {
+      "component_name": "Real-time Streaming API (Go)",
+      "role": "Distribute hot state data to the mission control dashboard efficiently.",
+      "implementation_details": {
+        "protocol": "WebSockets (for full-duplex communication and minimal overhead)",
+        "data_format": "Binary serialization (Protobuf) over WebSockets for performance optimization.",
+        "source": "Listens for updates from Redis/Digital Twin Service and broadcasts updates to connected clients (Frontend)."
+      }
+    },
+    {
+      "component_name": "Mission Control Dashboard (Frontend)",
+      "role": "Operator interface for real-time monitoring and command issuance.",
+      "implementation_details": {
+        "framework": "React/TypeScript + Vite",
+        "visualization_engine": "Canvas 2D/WebGL for high-performance rendering of 5,000 entities without DOM manipulation overhead.",
+        "data_source": "WebSockets for real-time map updates; REST API for historical data queries and command issuance.",
+        "styling": "TailwindCSS with high-contrast theme (dark mode) for industrial accessibility."
+      }
+    }
+  ],
+  "data_flow_summary": [
+    "1. AGV sends Telemetry -> MQTT Broker (telemetry/agv/{id})",
+    "2. Digital Twin Service (Go) consumes MQTT -> Validates -> Updates Redis (Hot State) -> Batches Writes to InfluxDB (Historical)",
+    "3. Heuristics Engine queries InfluxDB -> Detects anomaly -> Updates Redis status (PREDICTIVE_MAINTENANCE)",
+    "4. Streaming API (Go) reads Redis updates -> Pushes to Frontend via WebSockets",
+    "5. Frontend operator sends Command -> REST API endpoint -> Digital Twin Service -> Publishes Command to MQTT Broker (commands/agv/{id})"
+  ],
+  "justification_database_choice": "InfluxDB is chosen over relational databases like PostgreSQL because its schema-less nature and time-series-optimized storage engine allow for millions of write operations per second with high data compression. For 2.500 ops/s, a relational database would suffer from index bloat and significantly slower ingestion rates, violating the high-performance requirement. Redis serves as the low-latency cache for immediate access to the current state, preventing unnecessary queries to InfluxDB for every dashboard update."
+}

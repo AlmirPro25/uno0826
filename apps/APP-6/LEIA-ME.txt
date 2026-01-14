@@ -1,0 +1,41 @@
+╔════════════════════════════════════════════════════════╗
+║  🤖 PROX AI STUDIO - SISTEMA LIMPO                    ║
+╚════════════════════════════════════════════════════════╝
+
+📁 ESTRUTURA LIMPA:
+
+Raiz/
+├── INICIAR.bat              ← Iniciar sistema
+├── instalar-e-iniciar.bat   ← Instalar e iniciar
+├── README.md                ← Documentação principal
+├── backend/                 ← Servidor Node.js
+├── src/                     ← Frontend React
+└── docs/                    ← Documentação detalhada
+
+🚀 INICIAR:
+
+1. Execute: instalar-e-iniciar.bat (primeira vez)
+2. Execute: INICIAR.bat (próximas vezes)
+3. Acesse: http://localhost:3000
+
+⚙️ CONFIGURAR:
+
+1. Obtenha API Key: https://makersuite.google.com/app/apikey
+2. Edite: backend/.env
+3. Cole sua API Key
+4. Reinicie o backend
+
+✅ O QUE FUNCIONA:
+
+- Chat com IA
+- Busca de produtos
+- Busca massiva
+- Navegação automatizada
+
+📚 DOCUMENTAÇÃO:
+
+Veja a pasta docs/ para mais informações.
+
+---
+
+Sistema limpo e organizado! 🎉

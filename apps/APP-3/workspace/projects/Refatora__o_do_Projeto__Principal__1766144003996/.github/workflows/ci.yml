@@ -1,0 +1,97 @@
+
+# ==============================================================================
+# GitHub Actions Workflow: Continuous Integration (CI)
+# Objective: Validate code quality, run unit tests, perform end-to-end (E2E) tests,
+#            and check Docker image build feasibility on every push and pull request.
+# ==============================================================================
+name: CI / Quality Assurance
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  # Job 1: Build and Test Go Backend Service
+  build-and-test-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Go environment
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install dependencies
+        run: go mod download
+
+      - name: Run Go unit tests and benchmarks
+        run: go test -v ./...
+
+      - name: Build Go binary to verify compilation (CGO_ENABLED=0)
+        run: CGO_ENABLED=0 go build -o twin-service ./cmd/twin-service/main.go
+
+  # Job 2: Build and Test React Frontend Service
+  build-and-test-frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js environment
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript type check (Anti-pattern 5)
+        run: npm run typecheck
+
+      - name: Run ESlint for code quality
+        run: npm run lint
+
+      - name: Run Frontend unit tests (if applicable)
+        # Placeholder for future unit tests (e.g., Jest/Vitest)
+        run: echo "No frontend unit tests defined yet."
+
+      - name: Build frontend for production verification
+        run: npm run build
+
+  # Job 3: End-to-End Testing (E2E) with Playwright
+  e2e-tests:
+    runs-on: ubuntu-latest
+    needs: [build-and-test-backend, build-and-test-frontend] # Only run E2E if unit tests pass
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js for Playwright tests
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies for E2E tests
+        run: npm install playwright && npx playwright install --with-deps
+
+      - name: Start services using Docker Compose (for E2E environment)
+        # Note: Use a separate docker-compose file for E2E if necessary to include test data.
+        run: docker-compose up -d --build --wait
+
+      - name: Run Playwright tests
+        run: npx playwright test
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/

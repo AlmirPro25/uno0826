@@ -1,0 +1,38 @@
+
+// Prisma schema for metadata storage. High-frequency time-series data is stored in InfluxDB.
+// This relational database stores configuration and command history logs, not raw telemetry.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql" // Assuming a standard relational database for metadata
+  url      = env("DATABASE_URL")
+}
+
+// Model for AGV configuration and static data.
+model AgvMetadata {
+  id                String    @id @default(uuid())
+  agvId             String    @unique // Corresponds to the AGV identifier in telemetria/MQTT topics
+  modelName         String
+  serialNumber      String    @unique
+  installationDate  DateTime
+  warehouseLocation String    // e.g., "Warehouse A, Zone B"
+  lastMaintenance   DateTime?
+  status            String    // OPERATIONAL, IN_MAINTENANCE, DECOMMISSIONED
+  commandLogs       AgvCommandLog[]
+}
+
+// Model for logging commands sent to AGVs.
+model AgvCommandLog {
+  id        String    @id @default(uuid())
+  agvId     String
+  command   String    // e.g., GOTO_MAINTENANCE_BAY, EMERGENCY_STOP
+  sentBy    String    // User ID who issued the command
+  sentAt    DateTime  @default(now())
+  status    String    // PENDING, ACKNOWLEDGED, EXECUTED, FAILED
+  agv       AgvMetadata @relation(fields: [agvId], references: [agvId])
+
+  @@index([agvId])
+}

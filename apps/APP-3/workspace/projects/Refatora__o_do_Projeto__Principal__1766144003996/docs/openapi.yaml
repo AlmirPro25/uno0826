@@ -1,0 +1,194 @@
+
+openapi: 3.0.0
+info:
+  title: MANIFEST-ARCHITECT Mission Control API
+  description: API for managing AGV fleet status, historical data retrieval, and command issuance. Real-time telemetry streaming is provided via WebSockets (not defined in OpenAPI spec).
+  version: 1.0.0
+servers:
+  - url: https://api.manifest-architect.com/v1
+tags:
+  - name: Fleet Management
+    description: Operations related to the overall fleet status.
+  - name: AGV Control
+    description: Operations related to individual AGV management and data retrieval.
+
+paths:
+  /fleet/status:
+    get:
+      tags:
+        - Fleet Management
+      summary: Get current operational status of all AGVs.
+      description: Retrieves the last known state (Digital Twin snapshot) of all AGVs, sourced from the Redis cache for high speed.
+      operationId: getAllAgvStatus
+      responses:
+        '200':
+          description: A list of all AGV states.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgvStatus'
+        '500':
+          description: Internal server error.
+  /agv/{agvId}:
+    parameters:
+      - in: path
+        name: agvId
+        schema:
+          type: string
+          example: agv-f4f7d9e0-c6a9-4b3e-8f5c-2a8d6b1f0e2d
+        required: true
+        description: Unique identifier of the AGV.
+    get:
+      tags:
+        - AGV Control
+      summary: Get specific AGV's current state.
+      description: Retrieves the latest state of a single AGV from the Redis cache.
+      operationId: getAgvStatusById
+      responses:
+        '200':
+          description: Current AGV state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgvStatus'
+        '404':
+          description: AGV not found.
+    post:
+      tags:
+        - AGV Control
+      summary: Send a command to a specific AGV.
+      description: Sends an immediate command to the specified AGV via MQTT. This endpoint triggers the command broadcast from the backend to the physical robot. Requires RBAC authorization.
+      operationId: sendAgvCommand
+      requestBody:
+        description: Command details to execute on the AGV.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgvCommandRequest'
+      responses:
+        '202':
+          description: Command accepted for processing.
+        '401':
+          description: Unauthorized access.
+        '403':
+          description: Forbidden - Insufficient permissions (RBAC check).
+  /agv/{agvId}/history:
+    parameters:
+      - in: path
+        name: agvId
+        schema:
+          type: string
+          example: agv-f4f7d9e0-c6a9-4b3e-8f5c-2a8d6b1f0e2d
+        required: true
+        description: Unique identifier of the AGV.
+      - in: query
+        name: duration
+        schema:
+          type: string
+          default: "1h"
+          example: "24h"
+        description: Time duration for historical data retrieval (e.g., 1h, 12h, 7d).
+    get:
+      tags:
+        - AGV Control
+      summary: Get historical telemetry data for a specific AGV.
+      description: Retrieves time-series data (position, temperature, vibration) from InfluxDB for trend analysis.
+      operationId: getAgvHistory
+      responses:
+        '200':
+          description: Historical time-series data points.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgvTelemetrySnapshot'
+        '404':
+          description: AGV or data history not found.
+
+components:
+  schemas:
+    AgvStatus:
+      type: object
+      properties:
+        robotId:
+          type: string
+          description: Unique identifier of the AGV.
+          example: agv-f4f7d9e0-c6a9-4b3e-8f5c-2a8d6b1f0e2d
+        status:
+          type: string
+          enum:
+            - OPERATIONAL
+            - WARNING
+            - PREDICTIVE_MAINTENANCE
+            - OFFLINE
+          description: Current operational state based on heuristics engine analysis.
+          example: OPERATIONAL
+        telemetry:
+          $ref: '#/components/schemas/AgvTelemetrySnapshot'
+        metadata:
+          type: object
+          properties:
+            model:
+              type: string
+              example: KUKA_AGV_M100
+            lastMaintenanceDate:
+              type: string
+              format: date
+              example: "2023-10-26"
+    AgvTelemetrySnapshot:
+      type: object
+      properties:
+        positionX:
+          type: number
+          format: float
+          description: Current X coordinate in warehouse grid.
+          example: 123.45
+        positionY:
+          type: number
+          format: float
+          description: Current Y coordinate in warehouse grid.
+          example: 67.89
+        batteryLevel:
+          type: integer
+          description: Battery charge percentage (0-100).
+          example: 85
+        batteryTemperature:
+          type: number
+          format: float
+          description: Battery temperature in degrees Celsius (°C).
+          example: 45.2
+        motorVibrationMS2:
+          type: number
+          format: float
+          description: Motor vibration acceleration in m/s².
+          example: 2.1
+        loadKG:
+          type: number
+          format: float
+          description: Current load weight in kilograms.
+          example: 50.5
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO8601 timestamp of the data point.
+          example: "2024-01-01T10:00:00Z"
+    AgvCommandRequest:
+      type: object
+      properties:
+        command:
+          type: string
+          enum:
+            - GOTO_MAINTENANCE_BAY
+            - EMERGENCY_STOP
+            - RESUME_MISSION
+          description: The command to issue to the AGV.
+          example: GOTO_MAINTENANCE_BAY
+        payload:
+          type: object
+          nullable: true
+          description: Optional parameters for the command (e.g., specific destination coordinates).
+          example: {}

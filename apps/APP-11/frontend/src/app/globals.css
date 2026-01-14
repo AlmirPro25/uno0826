@@ -1,0 +1,123 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 20% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 20% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 20% 98%;
+
+    --primary: 210 20% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 20% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 20% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 20% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom styles for gradients and glassmorphism */
+.hero-gradient-text {
+  @apply text-transparent bg-clip-text;
+  background-image: linear-gradient(to right, theme('colors.primary.DEFAULT'), theme('colors.blue.500'), theme('colors.green.500'));
+  background-size: 200% auto;
+  animation: bg-pan 3s linear infinite alternate;
+}
+
+@keyframes bg-pan {
+  0% { background-position: 0% center; }
+  100% { background-position: -200% center; } /* Adjusted for a smoother loop */
+}
+
+.cta-button {
+  @apply bg-gradient-to-r from-blue-600 to-primary-foreground text-white font-bold py-3 px-6 rounded-full shadow-lg transform transition-all duration-300 ease-out hover:scale-105 hover:shadow-xl;
+  background-image: linear-gradient(45deg, hsl(220 80% 60%), hsl(260 70% 50%), hsl(300 60% 40%));
+  background-size: 200% auto; /* Make the gradient larger than the button */
+  animation: button-gradient-shift 4s linear infinite alternate;
+}
+
+.dark .cta-button {
+  @apply text-black; /* Ensure text is visible on dark gradient */
+}
+
+@keyframes button-gradient-shift {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+/* Skip link for accessibility */
+.skip-link {
+  position: absolute;
+  top: -999px;
+  left: 0;
+  padding: 8px;
+  background-color: #007bff;
+  color: white;
+  z-index: 9999;
+  border-radius: 4px;
+  transition: top 0.3s ease-in-out;
+}
+
+.skip-link:focus {
+  top: 10px;
+}

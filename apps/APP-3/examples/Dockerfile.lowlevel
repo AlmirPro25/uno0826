@@ -1,0 +1,35 @@
+# ============================================================================
+# DOCKERFILE - LOW LEVEL SYSTEMS BUILD ENVIRONMENT
+# ============================================================================
+
+FROM gcc:latest
+
+LABEL maintainer="Low Level Systems Master"
+LABEL description="Build environment for C/C++ systems programming"
+
+WORKDIR /app
+
+# Instalar ferramentas essenciais
+RUN apt-get update && apt-get install -y \
+    make \
+    cmake \
+    gdb \
+    valgrind \
+    perf \
+    strace \
+    ltrace \
+    binutils \
+    objdump \
+    readelf \
+    nm \
+    addr2line \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar código
+COPY . .
+
+# Build
+RUN make -f Makefile.lowlevel clean all
+
+# Executar
+CMD ["make", "-f", "Makefile.lowlevel", "run"]

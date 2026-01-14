@@ -1,0 +1,45 @@
+===========================================
+COMANDOS PARA PUBLICAR NO GITHUB
+===========================================
+
+PASSO 1: Configurar seu nome e email
+-------------------------------------
+git config user.name "SEU_NOME_AQUI"
+git config user.email "SEU_EMAIL_AQUI"
+
+
+PASSO 2: Fazer o commit
+------------------------
+git commit -m "Initial commit - prox ai studio v1.0.0"
+
+
+PASSO 3: Adicionar o remote do seu repositório
+-----------------------------------------------
+git remote add origin URL_DO_SEU_REPOSITORIO_AQUI
+
+
+PASSO 4: Fazer o push
+----------------------
+git branch -M main
+git push -u origin main
+
+
+===========================================
+EXEMPLO (SUBSTITUA COM SEUS DADOS):
+===========================================
+
+git config user.name "Almir"
+git config user.email "almir@email.com"
+git commit -m "Initial commit - prox ai studio v1.0.0"
+git remote add origin https://github.com/SEU_USUARIO/SEU_REPO.git
+git branch -M main
+git push -u origin main
+
+
+===========================================
+IMPORTANTE:
+===========================================
+- Substitua SEU_NOME_AQUI pelo seu nome
+- Substitua SEU_EMAIL_AQUI pelo seu email
+- Substitua URL_DO_SEU_REPOSITORIO_AQUI pela URL do GitHub
+- A URL você pega no repositório que criou no GitHub

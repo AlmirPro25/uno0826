@@ -1,0 +1,60 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies
+node_modules
+
+# Build output
+dist
+dist-ssr
+build
+
+# Environment variables
+*.local
+.env
+.env.local
+.env.production
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
+
+# Misc
+*.tsbuildinfo
+
+# WhatsApp Session Data (NEVER COMMIT!)
+whatsapp-bridge/.wwebjs_auth/
+whatsapp-bridge/.wwebjs_cache/
+whatsapp-bridge/data/*.db
+whatsapp-bridge/data/*.db-journal
+
+# Electron
+electron/dist/
+electron/build/
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3

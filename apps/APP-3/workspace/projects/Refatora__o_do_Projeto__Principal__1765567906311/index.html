@@ -1,0 +1,796 @@
+<html lang="pt-BR"><head></head><body>```html
+
+
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AETHER - Mercado de Ativos de Regeneração</title>
+    <meta name="description" content="AETHER é uma plataforma de negociação de tokens lastreados em projetos de regeneração ambiental. Invista em sustentabilidade de forma transparente e lucrativa.">
+    <!-- Incluindo Tailwind CSS e Tremor (UI Kit para dashboards) via CDN para um frontend vivo e funcional -->
+    <script async="" src="https://cdn.tailwindcss.com"></script>
+    <script async="" src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1"></script>
+    <script async="" src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+    <script async="" src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script async="" src="https://cdn.jsdelivr.net/npm/@tremor/react@3.14.0/umd/tremor-react.js"></script>
+    <!-- Incluindo Axios para chamadas API -->
+    <script async="" src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Incluindo FontAwesome para ícones -->
+    <script async="" src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+    <style>
+        /* Paleta de Cores AETHER */
+        :root {
+            --color-deep-space-blue: #0D1117;
+            --color-neon-green: #00FF00;
+            --color-cyber-gold: #FFD700;
+            --color-glass-dark: rgba(18, 24, 34, 0.4);
+            --color-glass-light: rgba(255, 255, 255, 0.1);
+            --color-text-primary: #ffffff;
+            --color-text-secondary: #a0a0a0;
+        }
+
+        /* Fundo principal com gradiente profundo */
+        body {
+            background-color: var(--color-deep-space-blue);
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            padding: 0;
+            overflow-x: hidden;
+            color: var(--color-text-primary);
+        }
+
+        /* Estilo Glassmorphism para cartões */
+        .glass-card {
+            background-color: var(--color-glass-dark);
+            border-radius: 12px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid var(--color-glass-light);
+            transition: transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Efeito Neon Green */
+        .neon-text {
+            color: var(--color-neon-green);
+        }
+
+        .cyber-gold-text {
+            color: var(--color-cyber-gold);
+        }
+
+        .neon-shadow {
+            text-shadow: 0 0 5px rgba(0, 255, 0, 0.6);
+        }
+
+        /* Sidebar Glassmorphism */
+        .glass-sidebar {
+            background-color: var(--color-glass-dark);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border-right: 1px solid var(--color-glass-light);
+        }
+
+        /* Animação de hover para botões */
+        .neon-button {
+            transition: background-color 0.3s ease, transform 0.2s ease;
+            box-shadow: 0 0 0 rgba(0, 255, 0, 0);
+        }
+
+        .neon-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 15px rgba(0, 255, 0, 0.6);
+        }
+
+        /* Estilização de formulário para Glassmorphism */
+        input[type="email"], input[type="password"] {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            padding: 12px 16px;
+            transition: border-color 0.3s ease;
+        }
+
+        input[type="email"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: var(--color-neon-green);
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.4);
+        }
+
+        /* Tamanho mínimo de toque para acessibilidade */
+        .min-touch-area {
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        /* Classe para esconder elementos em mobile */
+        @media (max-width: 1024px) {
+            .hide-on-mobile { display: none; }
+        }
+    </style>
+
+
+
+    <!-- Container principal da aplicação React -->
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // --- Aplicação AETHER - Frontend React ---
+        const { useState, useEffect, createElement } = React;
+        const Tremor = window.TremorReact;
+
+        // --- Configuração da API ---
+        const api = axios.create({ baseURL: 'http://localhost:8080/api/v1' });
+
+        // Interceptor para adicionar o token JWT
+        api.interceptors.request.use(config => {
+            const token = localStorage.getItem('jwtToken');
+            if (token) {
+                config.headers.Authorization = \`Bearer \${token}\`;
+            }
+            return config;
+        });
+
+        // Interceptor para tratar erros de autenticação
+        api.interceptors.response.use(response => response, error => {
+            if (error.response && error.response.status === 401) {
+                // Token expirado ou inválido, deslogar o usuário
+                localStorage.removeItem('jwtToken');
+                window.location.reload(); // Recarrega para forçar a tela de login
+            }
+            return Promise.reject(error);
+        });
+
+        // --- Componentes Reutilizáveis de UI ---
+
+        /**
+         * Componente de Cartão KPI (Glassmorphism)
+         */
+        function KPICard({ title, value, unit, trend, icon }) {
+            return (
+                <article data-aid="kpi-card-container" className="glass-card p-6 flex flex-col items-start space-y-4">
+                    <div className="flex items-center justify-between w-full">
+                        <span data-aid="kpi-card-title" className="text-sm uppercase text-gray-400 font-medium">{title}</span>
+                        <div data-aid="kpi-card-icon" className="text-3xl cyber-gold-text">
+                            <i className={icon} aria-hidden="true"></i>
+                        </div>
+                    </div>
+                    <div className="text-4xl font-extrabold flex items-baseline neon-shadow">
+                        <span data-aid="kpi-card-value">{value}</span>
+                        <span data-aid="kpi-card-unit" className="text-xl text-gray-400 ml-2">{unit}</span>
+                    </div>
+                    <div data-aid="kpi-card-trend" className={\`text-sm ${trend.startsWith('+') ? 'text-green-400' : 'text-red-400'}\`}>
+                        {trend} desde a semana passada
+                    </div>
+                </article>
+            );
+        }
+
+        /**
+         * Componente de item da barra lateral (Sidebar)
+         */
+        function NavItem({ title, icon, active, onClick }) {
+            const baseClasses = "flex items-center p-4 rounded-lg cursor-pointer transition-colors duration-200 min-touch-area";
+            const activeClasses = "bg-green-700/30 text-white shadow-lg neon-shadow";
+            const inactiveClasses = "hover:bg-green-700/10 text-gray-400 hover:text-white";
+            return (
+                <li role="menuitem" data-aid={\`navitem-\${title.toLowerCase().replace(/\\s/g, '-')}\`} className={active ? activeClasses : inactiveClasses} onClick={onClick}>
+                    <i className={\`${icon} text-xl w-6 mr-3\`} aria-hidden="true"></i>
+                    <span className="font-medium">{title}</span>
+                </li>
+            );
+        }
+
+        // --- Componentes de Estado de Carregamento e Erro ---
+
+        /**
+         * Componente de Estado de Carregamento
+         */
+        function LoadingState() {
+            return (
+                <div data-aid="loading-state" className="flex justify-center items-center h-[50vh]">
+                    <div className="text-neon-green text-xl">
+                        <i className="fas fa-spinner fa-spin mr-2" aria-hidden="true"></i> Carregando dados...
+                    </div>
+                </div>
+            );
+        }
+
+        /**
+         * Componente de Estado de Erro
+         */
+        function ErrorState({ message }) {
+            return (
+                <div data-aid="error-state" className="flex justify-center items-center h-[50vh] flex-col">
+                    <div className="text-red-500 text-xl mb-4 text-center">
+                        <i className="fas fa-exclamation-triangle mr-2" aria-hidden="true"></i> Erro ao carregar: {message}
+                    </div>
+                    <button onClick={() => window.location.reload()} className="neon-button bg-red-600/70 text-white font-semibold py-2 px-4 rounded-full text-sm hover:bg-red-500 transition-all min-touch-area">
+                        Tentar novamente
+                    </button>
+                </div>
+            );
+        }
+
+        // --- Seção de Autenticação (Login/Registro) ---
+
+        /**
+         * Componente de Login
+         */
+        function LoginComponent({ onLoginSuccess, switchToRegister }) {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError('');
+
+                try {
+                    const response = await api.post('/auth/login', { email, password });
+                    localStorage.setItem('jwtToken', response.data.token);
+                    onLoginSuccess();
+                } catch (err) {
+                    setError(err.response?.data?.error || 'Erro ao fazer login. Tente novamente.');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <section data-aid="login-form-container" className="max-w-md w-full mx-auto p-8 glass-card">
+                    <h2 className="text-3xl font-bold neon-text mb-6 text-center">Login AETHER</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div data-aid="email-input-group">
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">Email:</label>
+                            <input
+                                data-aid="email-input"
+                                type="email"
+                                id="email"
+                                name="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full"
+                                required
+                                aria-required="true"
+                            />
+                        </div>
+                        <div data-aid="password-input-group">
+                            <label htmlFor="password" className="block text-sm font-medium text-gray-300 mb-1">Senha:</label>
+                            <input
+                                data-aid="password-input"
+                                type="password"
+                                id="password"
+                                name="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full"
+                                required
+                                aria-required="true"
+                            />
+                        </div>
+                        {error && <p className="text-red-400 text-sm">{error}</p>}
+                        <button
+                            data-aid="login-submit-button"
+                            type="submit"
+                            className="w-full neon-button bg-green-600/70 text-white font-semibold py-2 px-4 rounded-full disabled:opacity-50 min-touch-area"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Entrando...' : 'Entrar'}
+                        </button>
+                    </form>
+                    <div className="mt-4 text-center text-sm">
+                        Não tem conta? <a href="#" onClick={switchToRegister} className="text-neon-green hover:underline min-touch-area" aria-label="Navegar para registro">Registre-se</a>
+                    </div>
+                </section>
+            );
+        }
+
+        /**
+         * Componente de Registro
+         */
+        function RegisterComponent({ switchToLogin }) {
+            const [email, setEmail] = useState('');
+            const [password, setPassword] = useState('');
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setIsLoading(true);
+                setError('');
+
+                try {
+                    await api.post('/auth/register', { email, password });
+                    alert('Registro bem-sucedido! Faça login para continuar.');
+                    switchToLogin();
+                } catch (err) {
+                    setError(err.response?.data?.error || 'Erro ao registrar. Tente novamente.');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <section data-aid="register-form-container" className="max-w-md w-full mx-auto p-8 glass-card">
+                    <h2 className="text-3xl font-bold neon-text mb-6 text-center">Registro AETHER</h2>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div data-aid="email-input-group">
+                            <label htmlFor="reg-email" className="block text-sm font-medium text-gray-300 mb-1">Email:</label>
+                            <input
+                                data-aid="email-input"
+                                type="email"
+                                id="reg-email"
+                                name="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                className="w-full"
+                                required
+                                aria-required="true"
+                            />
+                        </div>
+                        <div data-aid="password-input-group">
+                            <label htmlFor="reg-password" className="block text-sm font-medium text-gray-300 mb-1">Senha:</label>
+                            <input
+                                data-aid="password-input"
+                                type="password"
+                                id="reg-password"
+                                name="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full"
+                                required
+                                aria-required="true"
+                            />
+                        </div>
+                        {error && <p className="text-red-400 text-sm">{error}</p>}
+                        <button
+                            data-aid="register-submit-button"
+                            type="submit"
+                            className="w-full neon-button bg-green-600/70 text-white font-semibold py-2 px-4 rounded-full disabled:opacity-50 min-touch-area"
+                            disabled={isLoading}
+                        >
+                            {isLoading ? 'Registrando...' : 'Registrar'}
+                        </button>
+                    </form>
+                    <div className="mt-4 text-center text-sm">
+                        Já tem conta? <a href="#" onClick={switchToLogin} className="text-neon-green hover:underline min-touch-area" aria-label="Navegar para login">Entrar</a>
+                    </div>
+                </section>
+            );
+        }
+
+        // --- Layout Principal do Dashboard ---
+
+        function DashboardLayout() {
+            const [activePage, setActivePage] = useState('Mercado');
+            const [showMobileNav, setShowMobileNav] = useState(false);
+
+            const [kpis, setKpis] = useState(null);
+            const [projects, setProjects] = useState([]);
+            const [chartData, setChartData] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            // Fetch dos dados do backend Go (AETHER API)
+            useEffect(() => {
+                const fetchInitialData = async () => {
+                    try {
+                        // Fetch KPIs
+                        const kpisResponse = await api.get('/dashboard/kpis');
+                        setKpis(kpisResponse.data);
+                        // Fetch Projects List
+                        const projectsResponse = await api.get('/market/projects');
+                        setProjects(projectsResponse.data);
+                        // Fetch Chart History
+                        const chartResponse = await api.get('/dashboard/tokens/O2T/pricehistory');
+                        setChartData(chartResponse.data);
+                    } catch (err) {
+                        setError(err.response?.data?.error || 'Erro ao carregar dados do dashboard.');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                fetchInitialData();
+            }, []);
+
+            // Gerenciamento de navegação no dashboard
+            const renderPageContent = () => {
+                if (isLoading) {
+                    return <LoadingState />;
+                }
+                if (error) {
+                    return <ErrorState message={error} />;
+                }
+
+                switch (activePage) {
+                    case 'Mercado':
+                        return <MarketplaceSection projects={projects} chartData={chartData} />;
+                    case 'Minha Carteira':
+                        return <PortfolioSection />;
+                    case 'Projetos de Regeneração':
+                        return <RegenerationProjectsSection />;
+                    case 'Analytics':
+                        return <AnalyticsSection />;
+                    case 'Configurações':
+                        return <SettingsSection />;
+                    default:
+                        return <div>Página não encontrada</div>;
+                }
+            };
+
+            return (
+                <div data-aid="dashboard-container" className="min-h-screen flex">
+                    {/* Sidebar de Navegação (Desktop) */}
+                    <aside data-aid="dashboard-sidebar" className={\`hidden lg:flex flex-col w-64 glass-sidebar fixed lg:static top-0 left-0 h-full p-4 transform transition-transform duration-300 ${showMobileNav ? 'translate-x-0 z-50' : '-translate-x-full'}\`}>
+                        <div className="flex items-center justify-center h-16 border-b border-gray-700 mb-6">
+                            <h1 data-aid="logo" className="text-2xl font-black neon-text neon-shadow tracking-widest">AETHER</h1>
+                        </div>
+                        <nav role="navigation" aria-label="Navegação Principal" className="flex-1 space-y-2">
+                            <ul role="menubar">
+                                <NavItem title="Mercado" icon="fas fa-chart-line" active={activePage === 'Mercado'} onClick={() => setActivePage('Mercado')} />
+                                <NavItem title="Minha Carteira" icon="fas fa-wallet" active={activePage === 'Minha Carteira'} onClick={() => setActivePage('Minha Carteira')} />
+                                <NavItem title="Projetos de Regeneração" icon="fas fa-leaf" active={activePage === 'Projetos de Regeneração'} onClick={() => setActivePage('Projetos de Regeneração')} />
+                                <NavItem title="Analytics" icon="fas fa-chart-pie" active={activePage === 'Analytics'} onClick={() => setActivePage('Analytics')} />
+                                <NavItem title="Configurações" icon="fas fa-cog" active={activePage === 'Configurações'} onClick={() => setActivePage('Configurações')} />
+                            </ul>
+                            <button onClick={() => { localStorage.removeItem('jwtToken'); window.location.reload(); }} className="mt-4 w-full text-left p-4 rounded-lg text-red-400 hover:bg-red-700/20 transition duration-200 min-touch-area">
+                                <i className="fas fa-sign-out-alt w-6 mr-3" aria-hidden="true"></i> Sair
+                            </button>
+                        </nav>
+                        <footer className="p-4 border-t border-gray-700 text-sm text-gray-400">
+                            <p>Versão MVP 1.0</p>
+                            <p>&copy; {new Date().getFullYear()} AETHER Labs</p>
+                        </footer>
+                    </aside>
+
+                    {/* Conteúdo Principal do Dashboard */}
+                    <main data-aid="dashboard-main-content" className="flex-1 p-4 lg:p-8 space-y-6">
+                        {/* Header Mobile e Top Bar */}
+                        <header className="flex lg:hidden justify-between items-center h-16">
+                            <h1 data-aid="logo-mobile" className="text-xl font-black neon-text tracking-widest">AETHER</h1>
+                            <button aria-label="Abrir menu" onClick={() => setShowMobileNav(!showMobileNav)} className="text-white text-xl p-2 rounded hover:text-green-400 transition min-touch-area">
+                                <i className="fas fa-bars" aria-hidden="true"></i>
+                            </button>
+                        </header>
+
+                        {/* KPIS Section */}
+                        {!isLoading && kpis && (
+                            <section data-aid="kpis-section" className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <KPICard
+                                    title="Carbono Compensado"
+                                    value={kpis.carbonCompensated.value}
+                                    unit="toneladas"
+                                    trend={`+${kpis.carbonCompensated.trend}%`}
+                                    icon="fas fa-smog"
+                                />
+                                <KPICard
+                                    title="Valor da Carteira"
+                                    value={`$${kpis.portfolioValue.value.toFixed(2)}`}
+                                    unit="USD"
+                                    trend={`${kpis.portfolioValue.trend >= 0 ? '+' : ''}${kpis.portfolioValue.trend}%`}
+                                    icon="fas fa-coins"
+                                />
+                                <KPICard
+                                    title="Árvores Protegidas"
+                                    value={kpis.treesProtected.value}
+                                    unit="milhares"
+                                    trend={`+${kpis.treesProtected.trend}%`}
+                                    icon="fas fa-tree"
+                                />
+                            </section>
+                        )}
+
+                        {renderPageContent()}
+                    </main>
+
+                    {/* Overlay para mobile */}
+                    {showMobileNav && (
+                        <div className="fixed inset-0 bg-black/50 lg:hidden z-40" onClick={() => setShowMobileNav(false)}></div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- Seção de Marketplace (Visão Principal) ---
+        function MarketplaceSection({ projects, chartData }) {
+            const dataForChart = chartData || [];
+            const [viewMode, setViewMode] = useState('list');
+            const [isBuying, setIsBuying] = useState(false);
+
+            const handleBuy = async (project) => {
+                setIsBuying(true);
+                try {
+                    // Aqui seria a lógica de POST para o endpoint /api/v1/market/buy
+                    // Adicionamos um modal para a quantidade a ser comprada em um app real.
+                    const quantity = 1; // Simplificado para MVP
+                    await api.post('/market/buy', { assetId: project.id, quantity: quantity });
+                    alert(\`Compra de \${quantity} unidade de \${project.name} realizada com sucesso!\`);
+                    // Recarregar dados do portfólio e mercado após a compra
+                    // (Implementação futura de recarregamento de dados)
+                } catch (err) {
+                    alert(\`Erro ao comprar: \${err.response?.data?.error || 'Erro desconhecido'}\`);
+                } finally {
+                    setIsBuying(false);
+                }
+            };
+
+            return (
+                <section data-aid="marketplace-section" className="space-y-6">
+                    {/* Gráfico de valorização principal */}
+                    <article data-aid="price-history-chart" className="glass-card">
+                        <Tremor.Title className="text-xl font-bold neon-text">Valorização do O2-Token (30 dias)</Tremor.Title>
+                        <Tremor.Subtitle className="text-gray-400">Desempenho de mercado do ativo principal.</Tremor.Subtitle>
+                        <div className="h-80 w-full mt-4">
+                            <Tremor.LineChart
+                                className="h-full"
+                                data={dataForChart}
+                                index="date"
+                                categories={["price"]}
+                                colors={["green"]}
+                                valueFormatter={(number) => \`$${number.toFixed(2)}\`}
+                                yAxisWidth={48}
+                            />
+                        </div>
+                    </article>
+
+                    {/* Lista de Ativos Disponíveis (Marketplace) */}
+                    <article className="glass-card p-6">
+                        <div className="flex justify-between items-center mb-6">
+                            <h2 data-aid="asset-list-title" className="text-2xl font-bold">Ativos de Regeneração (Projetos)</h2>
+                            <div className="flex space-x-2">
+                                <button
+                                    data-aid="toggle-list-view"
+                                    onClick={() => setViewMode('list')}
+                                    className={\`p-2 rounded transition min-touch-area ${viewMode === 'list' ? 'bg-green-700/50 text-white' : 'hover:bg-green-700/20 text-gray-400'}\`}
+                                    aria-label="Alternar para visualização em lista"
+                                >
+                                    <i className="fas fa-list" aria-hidden="true"></i>
+                                </button>
+                                <button
+                                    data-aid="toggle-grid-view"
+                                    onClick={() => setViewMode('grid')}
+                                    className={\`p-2 rounded transition min-touch-area ${viewMode === 'grid' ? 'bg-green-700/50 text-white' : 'hover:bg-green-700/20 text-gray-400'}\`}
+                                    aria-label="Alternar para visualização em grade"
+                                >
+                                    <i className="fas fa-th-large" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        {viewMode === 'list' ? (
+                            <div className="overflow-x-auto">
+                                <table data-aid="projects-table" className="min-w-full divide-y divide-gray-700">
+                                    <thead className="text-left">
+                                        <tr>
+                                            <th className="px-6 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Projeto</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider hide-on-mobile">Localização</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">APY</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Preço Atual</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Risco</th>
+                                            <th className="px-6 py-3 text-sm font-semibold text-gray-400 uppercase tracking-wider">Ações</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-800">
+                                        {projects.map((project) => (
+                                            <tr key={project.id} className="hover:bg-gray-700/30 transition duration-150">
+                                                <td className="px-6 py-4 whitespace-nowrap text-white">{project.name}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-gray-400 hide-on-mobile">{project.location}</td>
+                                                <td className={\`px-6 py-4 whitespace-nowrap font-medium ${project.projectedApy > 10 ? 'text-green-400' : 'text-yellow-400'}\`}>{project.projectedApy}%</td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-white">${project.associatedAsset.currentPrice.toFixed(2)}</td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className={\`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${project.riskLevel === 'Baixo' ? 'bg-green-100/10 text-green-400' : project.riskLevel === 'Médio' ? 'bg-yellow-100/10 text-yellow-400' : 'bg-red-100/10 text-red-400'}\`}>{project.riskLevel}</span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <button data-aid={\`buy-button-\${project.id}\`} onClick={() => handleBuy(project)} className="neon-button bg-green-600/70 text-white font-semibold py-2 px-4 rounded-full text-sm hover:bg-green-500 transition-all min-touch-area" disabled={isBuying}>
+                                                        {isBuying ? 'Processando...' : 'Comprar'}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        ) : (
+                            <div data-aid="projects-grid" className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {projects.map((project) => (
+                                    <article key={project.id} className="glass-card p-4 flex flex-col justify-between hover:border-green-400 transition">
+                                        <div>
+                                            <h3 className="text-xl font-bold mb-2 neon-text">{project.name}</h3>
+                                            <p className="text-gray-400 text-sm">{project.location}</p>
+                                        </div>
+                                        <div className="mt-4 space-y-2">
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span>APY:</span>
+                                                <span className={\`font-medium ${project.projectedApy > 10 ? 'text-green-400' : 'text-yellow-400'}\`}>{project.projectedApy}%</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span>Preço Atual:</span>
+                                                <span className="font-medium text-white">${project.associatedAsset.currentPrice.toFixed(2)}</span>
+                                            </div>
+                                            <div className="flex justify-between items-center text-sm">
+                                                <span>Risco:</span>
+                                                <span className={\`font-medium ${project.riskLevel === 'Baixo' ? 'text-green-400' : project.riskLevel === 'Médio' ? 'text-yellow-400' : 'text-red-400'}\`}>{project.riskLevel}</span>
+                                            </div>
+                                        </div>
+                                        <button data-aid={\`buy-button-grid-\${project.id}\`} onClick={() => handleBuy(project)} className="neon-button mt-4 bg-green-600/70 text-white font-semibold py-2 px-4 rounded-full text-sm hover:bg-green-500 transition-all min-touch-area" disabled={isBuying}>
+                                            {isBuying ? 'Processando...' : 'Comprar'}
+                                        </button>
+                                    </article>
+                                ))}
+                            </div>
+                        )}
+                    </article>
+                </section>
+            );
+        }
+
+        // --- Seção Minha Carteira (Dados Reais) ---
+        function PortfolioSection() {
+            const [portfolioData, setPortfolioData] = useState(null);
+            const [isLoading, setIsLoading] = useState(true);
+            const [error, setError] = useState(null);
+
+            useEffect(() => {
+                const fetchPortfolio = async () => {
+                    try {
+                        const response = await api.get('/portfolio/assets');
+                        setPortfolioData(response.data);
+                    } catch (err) {
+                        setError(err.response?.data?.error || 'Erro ao carregar portfólio.');
+                    } finally {
+                        setIsLoading(false);
+                    }
+                };
+                fetchPortfolio();
+            }, []);
+
+            if (isLoading) return <LoadingState />;
+            if (error) return <ErrorState message={error} />;
+
+            return (
+                <section data-aid="portfolio-section" className="glass-card p-6 min-h-[50vh]">
+                    <h2 className="text-2xl font-bold neon-text mb-4">Minha Carteira de Ativos</h2>
+                    <p className="text-gray-400 mb-6">Aqui você verá o resumo de seus investimentos em ativos regenerativos, o valor total da carteira e o histórico de transações.</p>
+
+                    <h3 className="text-xl font-semibold text-white mb-2">Valor Total da Carteira: ${portfolioData.totalValue.toFixed(2)} USD</h3>
+
+                    {portfolioData.holdings.length === 0 ? (
+                        <p className="text-gray-500 mt-4">Você ainda não possui ativos. Compre no Marketplace para começar a investir.</p>
+                    ) : (
+                        <div className="mt-6 space-y-4">
+                            {portfolioData.holdings.map(holding => (
+                                <article key={holding.assetId} className="p-4 border border-gray-700 rounded-lg space-y-2 hover:bg-gray-700/20 transition duration-150">
+                                    <h4 className="text-lg font-semibold text-white">{holding.name}</h4>
+                                    <p className="text-sm text-gray-400">Quantidade: {holding.quantity.toFixed(2)}</p>
+                                    <p className="text-sm text-gray-400">Custo Médio: ${holding.averageCost.toFixed(2)}</p>
+                                    <p className="text-sm text-gray-400">Valor Atual: ${holding.currentValue.toFixed(2)}</p>
+                                    <p className={\`text-sm ${holding.gainLoss >= 0 ? 'text-green-400' : 'text-red-400'}\`}>Retorno Total: ${holding.gainLoss.toFixed(2)}</p>
+                                </article>
+                            ))}
+                        </div>
+                    )}
+                </section>
+            );
+        }
+
+        // --- Seções de Exemplo (Para navegação da Sidebar) ---
+        function RegenerationProjectsSection() {
+            return (
+                <section data-aid="projects-section" className="glass-card p-6 min-h-[50vh]">
+                    <h2 className="text-2xl font-bold neon-text mb-4">Projetos de Regeneração</h2>
+                    <p className="text-gray-400">Descubra os detalhes dos projetos que lastreiam os ativos. Acompanhe o progresso da preservação em tempo real via satélite (future feature).</p>
+                    <div className="mt-6 space-y-4 text-gray-400">
+                        <p><i className="fas fa-satellite text-green-400 mr-2" aria-hidden="true"></i> Monitoramento em tempo real da área preservada.</p>
+                        <p><i className="fas fa-chart-line text-green-400 mr-2" aria-hidden="true"></i> Relatórios de impacto ambiental detalhados.</p>
+                        <p><i className="fas fa-shield-alt text-green-400 mr-2" aria-hidden="true"></i> Certificação de Carbono Verificado (VCS).</p>
+                    </div>
+                </section>
+            );
+        }
+
+        function AnalyticsSection() {
+            return (
+                <section data-aid="analytics-section" className="glass-card p-6 min-h-[50vh]">
+                    <h2 className="text-2xl font-bold neon-text mb-4">Analytics Avançado</h2>
+                    <p className="text-gray-400">Ferramentas de análise preditiva para otimizar seu portfólio de ativos regenerativos. Visualize o impacto climático e financeiro.</p>
+                    <div className="mt-6 space-y-4 text-gray-400">
+                        <p><i className="fas fa-cogs text-yellow-400 mr-2" aria-hidden="true"></i> Modelagem de risco climático.</p>
+                        <p><i className="fas fa-robot text-yellow-400 mr-2" aria-hidden="true"></i> Projeções de valorização por IA.</p>
+                        <p><i className="fas fa-database text-yellow-400 mr-2" aria-hidden="true"></i> Exportação de dados para relatórios ESG.</p>
+                    </div>
+                </section>
+            );
+        }
+
+        function SettingsSection() {
+            return (
+                <section data-aid="settings-section" className="glass-card p-6 min-h-[50vh]">
+                    <h2 className="text-2xl font-bold neon-text mb-4">Configurações de Conta</h2>
+                    <p className="text-gray-400">Gerencie seu perfil, segurança de conta e notificações.</p>
+                    <div className="mt-6 space-y-4 text-gray-400">
+                        <p><i className="fas fa-lock text-white mr-2" aria-hidden="true"></i> Autenticação de dois fatores.</p>
+                        <p><i className="fas fa-bell text-white mr-2" aria-hidden="true"></i> Preferências de notificação (email/push).</p>
+                    </div>
+                </section>
+            );
+        }
+
+        // --- Main App Component (Authentication Wrapper) ---
+        function App() {
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [authPageMode, setAuthPageMode] = useState('login'); // 'login' or 'register'
+
+            useEffect(() => {
+                const token = localStorage.getItem('jwtToken');
+                if (token) {
+                    setIsLoggedIn(true);
+                }
+            }, []);
+
+            const handleLoginSuccess = () => setIsLoggedIn(true);
+
+            const renderAuthComponent = () => {
+                if (authPageMode === 'login') {
+                    return createElement(LoginComponent, { onLoginSuccess: handleLoginSuccess, switchToRegister: () => setAuthPageMode('register') });
+                } else {
+                    return createElement(RegisterComponent, { switchToLogin: () => setAuthPageMode('login') });
+                }
+            };
+
+            return (
+                <div data-aid="main-application-container">
+                    {isLoggedIn ? (
+                        createElement(DashboardLayout)
+                    ) : (
+                        <div className="min-h-screen flex items-center justify-center bg-deep-space-blue p-4">
+                            {renderAuthComponent()}
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        // --- Inicialização da Aplicação ---
+        document.addEventListener('DOMContentLoaded', () => {
+            const root = ReactDOM.createRoot(document.getElementById('root'));
+            root.render(createElement(App));
+        });
+    </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+```</body></html>

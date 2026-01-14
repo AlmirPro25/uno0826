@@ -1,0 +1,8 @@
+{
+  "name": "MediCore AI - Triagem Hospitalar",
+  "description": "Sistema avançado de triagem médica utilizando Gemini Live para entrevista e Gemini Pro para análise clínica e pesquisa.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}

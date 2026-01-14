@@ -1,0 +1,61 @@
+
+# ==============================================================================
+# GitHub Actions Workflow: Continuous Deployment (CD)
+# Objective: Deploy the application to a production server via SSH and Docker Compose.
+# Security Note: Use GitHub Secrets for sensitive information like SSH keys.
+# ==============================================================================
+name: CD / Deploy to Production
+
+on:
+  push:
+    branches: [main] # Trigger deployment on merge to main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production # Define an environment for better management and secret handling
+    needs: [ci] # Require CI workflow to pass before deployment
+
+    steps:
+      - name: Checkout repository code
+        uses: actions/checkout@v4
+
+      - name: Setup Docker Buildx for multi-platform build (if needed)
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub Registry
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and Push Docker images
+        env:
+          VERSION: ${{ github.sha }} # Use commit SHA as version tag
+        run: |
+          docker build -t manifest-architect-backend:${{ env.VERSION }} -f docker/Dockerfile.backend .
+          docker push manifest-architect-backend:${{ env.VERSION }}
+          docker build -t manifest-architect-frontend:${{ env.VERSION }} -f docker/Dockerfile.frontend .
+          docker push manifest-architect-frontend:${{ env.VERSION }}
+
+      - name: Deploy via SSH and Docker Compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # 1. Pull latest code (if not using pre-built images with specific version)
+            # cd /path/to/manifest-architect
+            # git pull origin main
+
+            # 2. Update environment variables (if changes occurred)
+            # echo "${{ secrets.PROD_ENV_VARS }}" > .env.production
+
+            # 3. Pull the new image and re-create containers
+            docker compose -f docker-compose.prod.yml down --remove-orphans
+            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.prod.yml up -d
+
+            # 4. Clean up old images to free disk space (best practice for SRE)
+            docker image prune -f

@@ -1,0 +1,21 @@
+
+// This defines the database structure using Prisma.
+// The provider is SQLite for simplicity in a Docker environment, but easily replaceable with PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// Model for storing waitlist entries (emails)
+model WaitlistEntry {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+
+  @@map("waitlist_entries")
+}

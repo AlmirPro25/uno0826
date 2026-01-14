@@ -1,0 +1,38 @@
+
+# --- docker-compose.yml ---
+# Orquestração de contêineres para backend Go e banco de dados PostgreSQL
+version: '3.8'
+
+services:
+  # Serviço de Backend Go (API)
+  backend:
+    build: ./backend
+    container_name: aether-backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app # Mapeia o código local para o contêiner (para desenvolvimento)
+    environment:
+      # Variáveis de ambiente injetadas no contêiner Go
+      PORT: 8080
+      JWT_SECRET: aether-super-secret-key-for-jwt
+      DATABASE_URL: postgres://user:password@db:5432/aether_db?sslmode=disable
+    depends_on:
+      - db
+
+  # Serviço de Banco de Dados PostgreSQL
+  db:
+    image: postgres:15-alpine
+    container_name: aether-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: aether_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data # Persistência de dados
+
+volumes:
+  postgres-data:

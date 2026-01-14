@@ -1,0 +1,140 @@
+name: 👑 PROST-QS CI Gate
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'services/**'
+      - 'aurora-build/**'
+      - 'components/**'
+  push:
+    branches:
+      - main
+      - develop
+
+jobs:
+  prost-qs-gate:
+    name: 🚦 PROST-QS Conformity Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: 📚 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run PROST-QS CI Gate
+        id: ci-gate
+        run: |
+          node -e "
+            const { createCIGate } = require('./services/ProstQSCIGate.ts');
+            const fs = require('fs');
+            const path = require('path');
+            
+            // Coletar todos os arquivos TypeScript/JavaScript gerados
+            const files = [];
+            const dirs = ['src', 'services', 'aurora-build', 'components'];
+            
+            dirs.forEach(dir => {
+              if (fs.existsSync(dir)) {
+                const walk = (p) => {
+                  fs.readdirSync(p).forEach(f => {
+                    const full = path.join(p, f);
+                    if (fs.statSync(full).isDirectory()) {
+                      walk(full);
+                    } else if (f.endsWith('.ts') || f.endsWith('.tsx') || f.endsWith('.js')) {
+                      files.push(full);
+                    }
+                  });
+                };
+                walk(dir);
+              }
+            });
+            
+            // Ler e combinar código
+            let allCode = '';
+            files.forEach(f => {
+              try {
+                allCode += fs.readFileSync(f, 'utf-8') + '\n\n';
+              } catch (e) {
+                // Ignorar erros de leitura
+              }
+            });
+            
+            // Criar gate e validar
+            const gate = createCIGate({
+              strictMode: false,
+              enableHistory: true,
+              enableNotifications: false,
+            });
+            
+            const result = gate.gate(
+              allCode,
+              process.env.PR_NUMBER,
+              process.env.BRANCH,
+              process.env.GITHUB_ACTOR
+            );
+            
+            // Output resultado
+            console.log('::set-output name=decision::' + result.decision);
+            console.log('::set-output name=score::' + result.score);
+            console.log('::set-output name=violations::' + result.violations.length);
+            
+            // Exibir resultado
+            console.log('\\n' + JSON.stringify(result, null, 2));
+            
+            // Falhar se rejeitado
+            if (!result.passed) {
+              process.exit(1);
+            }
+          "
+        env:
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.ref_name }}
+
+      - name: 📊 Generate Conformity Report
+        if: always()
+        run: |
+          node -e "
+            const { generateConformityReport } = require('./services/ProstQSCIGate.ts');
+            console.log(generateConformityReport());
+          " > conformity-report.txt
+          cat conformity-report.txt
+
+      - name: 💬 Comment on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('conformity-report.txt', 'utf-8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '```\n' + report + '\n```'
+            });
+
+      - name: 📈 Upload Conformity Report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: conformity-report
+          path: conformity-report.txt
+
+      - name: ✅ Gate Result
+        if: always()
+        run: |
+          echo "Decision: ${{ steps.ci-gate.outputs.decision }}"
+          echo "Score: ${{ steps.ci-gate.outputs.score }}/100"
+          echo "Violations: ${{ steps.ci-gate.outputs.violations }}"

@@ -1,0 +1,9 @@
+pyautogui==0.9.54
+pywinauto==0.6.8
+opencv-python==4.8.1.78
+pytesseract==0.3.10
+websockets==12.0
+cryptography==41.0.7
+pillow==10.1.0
+python-dotenv==1.0.0
+playwright==1.40.0

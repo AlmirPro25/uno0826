@@ -1,0 +1,127 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                    🎯 FLUXO DE AUDITORIA HARD LAW v1.1                      ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASSO 1: GERAR O APP                                                        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ 1. Abra um arquivo com o prompt (PEDIDO_APP_PARA_AUDITORIA.md)             │
+│ 2. Copie o prompt (entre os backticks)                                     │
+│ 3. Cole no seu sistema de geração (Claude, ChatGPT, etc)                   │
+│ 4. Aguarde a geração completa                                              │
+│                                                                             │
+│ Tempo estimado: 5-10 minutos                                               │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                                      ↓
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASSO 2: VERIFICAR CONFORMIDADE BÁSICA                                      │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ Antes de enviar, verifique:                                                │
+│                                                                             │
+│ ❌ localStorage.setItem?                                                    │
+│ ❌ const PROST_QS = { ... }?                                                │
+│ ❌ if (isPremium)?                                                          │
+│ ❌ bcrypt, jwt.sign?                                                        │
+│ ❌ demo@, test@, free@?                                                     │
+│ ❌ Backend próprio?                                                         │
+│                                                                             │
+│ Se NENHUM desses aparecer → Pronto para enviar                             │
+│ Se ALGUM aparecer → Peça ao sistema para corrigir                          │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                                      ↓
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASSO 3: ENVIAR PARA AUDITORIA                                              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ Cole o código gerado aqui no chat ou crie um arquivo com:                  │
+│                                                                             │
+│ - Estrutura de pastas                                                      │
+│ - Arquivos principais (SDK, stores, services, components)                  │
+│ - Documentação (README, COMPLIANCE, ARCHITECTURE)                          │
+│                                                                             │
+│ Eu vou rodar a auditoria automaticamente                                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                                      ↓
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASSO 4: AUDITORIA HARD LAW v1.1                                            │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ Eu vou executar:                                                           │
+│                                                                             │
+│ 1. ProstQSAuditorV2 (15 padrões agressivos)                                │
+│    - Detecta mocks                                                         │
+│    - Detecta localStorage                                                  │
+│    - Detecta decisões locais                                               │
+│    - Detecta backend próprio                                               │
+│                                                                             │
+│ 2. Hard Law Enforcer (20 regras constitucionais)                           │
+│    - Valida soberania PROST-QS                                             │
+│    - Valida conformidade total                                             │
+│    - Gera score 0-100                                                      │
+│                                                                             │
+│ 3. Relatório de Conformidade                                               │
+│    - Violações encontradas                                                 │
+│    - Severidade de cada uma                                                │
+│    - Recomendações de correção                                             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+                                      ↓
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ PASSO 5: RESULTADO                                                          │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                             │
+│ CENÁRIO A: APPROVE (100/100)                                               │
+│ - Zero violações críticas                                                  │
+│ - Zero violações severas                                                   │
+│ - Zero violações de warning                                                │
+│ - App pronto para produção                                                 │
+│                                                                             │
+│ CENÁRIO B: REJECT (< 100/100)                                              │
+│ - Violações encontradas                                                    │
+│ - Detalhes de cada uma                                                     │
+│ - Recomendações de correção                                                │
+│ - Você refaz e reenvia                                                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                                                                              ║
+║                         RESUMO EXECUTIVO                                    ║
+║                                                                              ║
+║  1. Gere o app com o prompt                                                 ║
+║  2. Verifique conformidade básica                                           ║
+║  3. Envie para auditoria                                                    ║
+║  4. Eu audito com Hard Law v1.1                                             ║
+║  5. Resultado: APPROVE ou REJECT                                            ║
+║                                                                              ║
+║  Objetivo: Score 100/100 - APPROVE                                          ║
+║                                                                              ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+
+PROXIMOS PASSOS:
+
+1. Copie o prompt de PEDIDO_APP_PARA_AUDITORIA.md
+2. Cole no seu sistema de geração
+3. Aguarde a geração
+4. Envie o código aqui
+5. Eu audito e retorno com resultado
+
+BOA SORTE!

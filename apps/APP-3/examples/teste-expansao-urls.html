@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Teste Expansão de URLs</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #e9ecef;
+            border-radius: 8px;
+        }
+        .success { border-left: 4px solid #28a745; background: #d4edda; }
+        .warning { border-left: 4px solid #ffc107; background: #fff3cd; }
+        .error { border-left: 4px solid #dc3545; background: #f8d7da; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #0056b3; }
+        .log-output {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+        .image-test {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .image-test img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 2px solid #ddd;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Teste: Expansão de URLs de Imagem</h1>
+        <p>Este teste verifica se as URLs ai-img:// estão sendo expandidas corretamente.</p>
+
+        <div class="test-section">
+            <h3>📊 Status do LocalStorage</h3>
+            <button onclick="checkLocalStorage()">🔍 Verificar LocalStorage</button>
+            <div id="storage-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Teste de Expansão Manual</h3>
+            <p>Vamos simular o processo de expansão de URLs:</p>
+            <button onclick="testExpansion()">🔄 Testar Expansão</button>
+            <div id="expansion-result"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🖼️ Teste Visual</h3>
+            <p>HTML com URLs ai-img:// que devem ser expandidas:</p>
+            <div class="code-block" id="original-html">
+                &lt;img src="ai-img://img_test_123" alt="Teste"&gt;
+            </div>
+            <button onclick="testVisualExpansion()">👁️ Expandir Visualmente</button>
+            <div id="visual-test"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Logs do Sistema</h3>
+            <button onclick="clearLogs()">🗑️ Limpar Logs</button>
+            <div id="log-output" class="log-output">Logs aparecerão aqui...</div>
+        </div>
+    </div>
+
+    <script>
+        // Capturar logs do console
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        let logs = [];
+        
+        function addLog(type, ...args) {
+            const timestamp = new Date().toLocaleTimeString();
+            const message = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            
+            logs.push(`[${timestamp}] ${type.toUpperCase()}: ${message}`);
+            updateLogDisplay();
+            
+            // Chamar função original
+            if (type === 'log') originalLog(...args);
+            else if (type === 'error') originalError(...args);
+            else if (type === 'warn') originalWarn(...args);
+        }
+        
+        console.log = (...args) => addLog('log', ...args);
+        console.error = (...args) => addLog('error', ...args);
+        console.warn = (...args) => addLog('warn', ...args);
+        
+        function updateLogDisplay() {
+            const logOutput = document.getElementById('log-output');
+            logOutput.textContent = logs.slice(-50).join('\n');
+            logOutput.scrollTop = logOutput.scrollHeight;
+        }
+        
+        function clearLogs() {
+            logs = [];
+            updateLogDisplay();
+        }
+        
+        // Verificar localStorage
+        function checkLocalStorage() {
+            const resultDiv = document.getElementById('storage-result');
+            
+            try {
+                const imageStore = JSON.parse(localStorage.getItem('ai-generated-images') || '{}');
+                const imageIds = Object.keys(imageStore);
+                
+                console.log('🔍 Verificando localStorage...');
+                console.log(`💾 Encontradas ${imageIds.length} imagens no storage`);
+                
+                let html = `
+                    <div class="${imageIds.length > 0 ? 'success' : 'warning'}">
+                        <strong>${imageIds.length > 0 ? '✅' : '⚠️'} LocalStorage Status</strong>
+                        <p>Imagens encontradas: ${imageIds.length}</p>
+                `;
+                
+                if (imageIds.length > 0) {
+                    html += '<p><strong>IDs das imagens:</strong></p><ul>';
+                    imageIds.forEach(id => {
+                        const image = imageStore[id];
+                        html += `<li>${id} - ${image.description?.substring(0, 30) || 'Sem descrição'}... (${image.dataUrl?.length || 0} chars)</li>`;
+                    });
+                    html += '</ul>';
+                } else {
+                    html += '<p>Nenhuma imagem encontrada. Gere um site com imagens primeiro.</p>';
+                }
+                
+                html += '</div>';
+                resultDiv.innerHTML = html;
+                
+            } catch (error) {
+                console.error('❌ Erro ao verificar localStorage:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro ao verificar localStorage</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Testar expansão manual
+        function testExpansion() {
+            const resultDiv = document.getElementById('expansion-result');
+            
+            try {
+                console.log('🧪 Iniciando teste de expansão...');
+                
+                // Simular HTML com URLs ai-img://
+                const testHtml = `
+                    <div>
+                        <img src="ai-img://img_test_123" alt="Teste 1">
+                        <img src="ai-img://img_test_456" alt="Teste 2">
+                    </div>
+                `;
+                
+                console.log('📄 HTML original:', testHtml);
+                
+                // Simular função de expansão
+                const imageStore = JSON.parse(localStorage.getItem('ai-generated-images') || '{}');
+                const imageIds = Object.keys(imageStore);
+                
+                console.log(`💾 Storage contém ${imageIds.length} imagens`);
+                
+                // Encontrar URLs ai-img://
+                const aiImgMatches = testHtml.match(/ai-img:\/\/([^"'\s]+)/g) || [];
+                console.log('🔗 URLs encontradas:', aiImgMatches);
+                
+                let expandedHtml = testHtml;
+                let expansions = 0;
+                
+                expandedHtml = expandedHtml.replace(/ai-img:\/\/([^"'\s]+)/g, (match, imageId) => {
+                    console.log(`🔄 Tentando expandir: ${match}`);
+                    
+                    const storedImage = imageStore[imageId];
+                    if (storedImage && storedImage.dataUrl) {
+                        console.log(`✅ Imagem encontrada para ${imageId}`);
+                        expansions++;
+                        return storedImage.dataUrl;
+                    } else {
+                        console.log(`❌ Imagem não encontrada para ${imageId}`);
+                        return `data:image/svg+xml,${encodeURIComponent(`
+                            <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
+                                <rect width="100%" height="100%" fill="#dc3545"/>
+                                <text x="100" y="75" font-family="Arial" font-size="12" 
+                                      fill="white" text-anchor="middle" dominant-baseline="middle">
+                                    ❌ ${imageId}
+                                </text>
+                            </svg>
+                        `)}`;
+                    }
+                });
+                
+                console.log(`🎉 Expansão concluída! ${expansions} URLs expandidas`);
+                
+                resultDiv.innerHTML = `
+                    <div class="${expansions > 0 ? 'success' : 'warning'}">
+                        <strong>${expansions > 0 ? '✅' : '⚠️'} Teste de Expansão</strong>
+                        <p>URLs encontradas: ${aiImgMatches.length}</p>
+                        <p>URLs expandidas: ${expansions}</p>
+                        <details>
+                            <summary>HTML Original</summary>
+                            <pre>${testHtml}</pre>
+                        </details>
+                        <details>
+                            <summary>HTML Expandido</summary>
+                            <pre>${expandedHtml.substring(0, 500)}...</pre>
+                        </details>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Erro no teste de expansão:', error);
+                resultDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro no teste</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Teste visual
+        function testVisualExpansion() {
+            const visualDiv = document.getElementById('visual-test');
+            
+            try {
+                console.log('👁️ Iniciando teste visual...');
+                
+                // Criar imagem de teste no localStorage se não existir
+                const imageStore = JSON.parse(localStorage.getItem('ai-generated-images') || '{}');
+                
+                if (!imageStore['img_test_123']) {
+                    // Criar uma imagem de teste simples
+                    const testDataUrl = `data:image/svg+xml,${encodeURIComponent(`
+                        <svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
+                            <rect width="100%" height="100%" fill="#28a745"/>
+                            <text x="100" y="75" font-family="Arial" font-size="14" 
+                                  fill="white" text-anchor="middle" dominant-baseline="middle">
+                                ✅ Teste OK
+                            </text>
+                        </svg>
+                    `)}`;
+                    
+                    imageStore['img_test_123'] = {
+                        dataUrl: testDataUrl,
+                        description: 'Imagem de teste',
+                        timestamp: Date.now()
+                    };
+                    
+                    localStorage.setItem('ai-generated-images', JSON.stringify(imageStore));
+                    console.log('💾 Imagem de teste criada: img_test_123');
+                }
+                
+                // HTML com URL ai-img://
+                const testHtml = '<img src="ai-img://img_test_123" alt="Teste Visual" style="width: 200px; height: 150px; border: 2px solid #28a745;">';
+                
+                // Expandir URL
+                const expandedHtml = testHtml.replace(/ai-img:\/\/([^"'\s]+)/g, (match, imageId) => {
+                    const storedImage = imageStore[imageId];
+                    return storedImage?.dataUrl || match;
+                });
+                
+                console.log('🔄 HTML original:', testHtml);
+                console.log('✅ HTML expandido:', expandedHtml.substring(0, 100) + '...');
+                
+                visualDiv.innerHTML = `
+                    <div class="success">
+                        <strong>✅ Teste Visual</strong>
+                        <p>Se a expansão estiver funcionando, você deve ver uma imagem verde abaixo:</p>
+                        ${expandedHtml}
+                        <p><small>URL original: ai-img://img_test_123</small></p>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Erro no teste visual:', error);
+                visualDiv.innerHTML = `
+                    <div class="error">
+                        <strong>❌ Erro no teste visual</strong>
+                        <p>${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('🚀 Sistema de teste de expansão carregado!');
+            checkLocalStorage();
+        });
+    </script>
+</body>
+</html>

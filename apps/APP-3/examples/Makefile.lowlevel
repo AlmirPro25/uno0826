@@ -1,0 +1,118 @@
+# ============================================================================
+# MAKEFILE PROFISSIONAL - LOW LEVEL SYSTEMS
+# ============================================================================
+
+# Compiladores
+CC = gcc
+CXX = g++
+CFLAGS = -Wall -Wextra -O2 -std=c11 -fPIC -g
+CXXFLAGS = -Wall -Wextra -O2 -std=c++20 -fPIC -g
+LDFLAGS = -lm
+
+# Diretórios
+SRC_DIR = .
+BUILD_DIR = build
+BIN_DIR = bin
+
+# Arquivos
+SOURCES = $(wildcard $(SRC_DIR)/*.c)
+OBJECTS = $(patsubst $(SRC_DIR)/%.c,$(BUILD_DIR)/%.o,$(SOURCES))
+TARGET = $(BIN_DIR)/lowlevel_demo
+
+# Targets
+.PHONY: all clean run debug valgrind help
+
+help:
+	@echo "╔════════════════════════════════════════════════════════════╗"
+	@echo "║     LOW LEVEL SYSTEMS BUILD SYSTEM                        ║"
+	@echo "╚════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "Targets:"
+	@echo "  make all       - Build everything"
+	@echo "  make run       - Build and run"
+	@echo "  make debug     - Build with debug symbols and run GDB"
+	@echo "  make valgrind  - Run with Valgrind (memory check)"
+	@echo "  make clean     - Remove build artifacts"
+	@echo ""
+
+all: $(TARGET)
+
+$(BUILD_DIR):
+	@mkdir -p $(BUILD_DIR)
+	@echo "[BUILD] Created $(BUILD_DIR)"
+
+$(BIN_DIR):
+	@mkdir -p $(BIN_DIR)
+	@echo "[BUILD] Created $(BIN_DIR)"
+
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.c | $(BUILD_DIR)
+	@echo "[CC] Compiling $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
+
+$(TARGET): $(OBJECTS) | $(BIN_DIR)
+	@echo "[LD] Linking $@"
+	@$(CC) $(OBJECTS) $(LDFLAGS) -o $@
+	@echo "[SUCCESS] Built: $@"
+
+run: $(TARGET)
+	@echo "[RUN] Executing $(TARGET)"
+	@./$(TARGET)
+
+debug: CFLAGS += -g -O0
+debug: clean $(TARGET)
+	@echo "[DEBUG] Starting GDB"
+	@gdb ./$(TARGET)
+
+valgrind: CFLAGS += -g
+valgrind: clean $(TARGET)
+	@echo "[VALGRIND] Running memory check"
+	@valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes ./$(TARGET)
+
+clean:
+	@echo "[CLEAN] Removing build artifacts"
+	@rm -rf $(BUILD_DIR) $(BIN_DIR)
+	@echo "[CLEAN] Done"
+
+# ============================================================================
+# TARGETS AVANÇADOS
+# ============================================================================
+
+.PHONY: asan ubsan profile
+
+# AddressSanitizer - Detecção de memory bugs
+asan: CFLAGS += -fsanitize=address -g -O1
+asan: clean $(TARGET)
+	@echo "[ASAN] Running with AddressSanitizer"
+	@./$(TARGET)
+
+# UndefinedBehaviorSanitizer
+ubsan: CFLAGS += -fsanitize=undefined -g -O1
+ubsan: clean $(TARGET)
+	@echo "[UBSAN] Running with UndefinedBehaviorSanitizer"
+	@./$(TARGET)
+
+# Profiling com perf
+profile: CFLAGS += -g -O2
+profile: clean $(TARGET)
+	@echo "[PERF] Recording performance data"
+	@perf record -g ./$(TARGET)
+	@echo "[PERF] Generating report"
+	@perf report
+
+# ============================================================================
+# INFORMAÇÕES
+# ============================================================================
+
+info:
+	@echo "╔════════════════════════════════════════════════════════════╗"
+	@echo "║     BUILD INFORMATION                                     ║"
+	@echo "╚════════════════════════════════════════════════════════════╝"
+	@echo ""
+	@echo "Compiler: $(CC)"
+	@echo "C Flags: $(CFLAGS)"
+	@echo "LD Flags: $(LDFLAGS)"
+	@echo ""
+	@echo "Sources: $(SOURCES)"
+	@echo "Objects: $(OBJECTS)"
+	@echo "Target: $(TARGET)"
+	@echo ""

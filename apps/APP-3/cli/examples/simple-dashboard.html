@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Simples - Exemplo CLI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900 text-white min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="mb-8">
+            <h1 class="text-5xl font-bold mb-2">📊 Dashboard Exemplo</h1>
+            <p class="text-gray-300">Instalado via AI Web Weaver CLI</p>
+        </header>
+
+        <!-- Stats Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-gradient-to-br from-blue-600 to-blue-800 p-6 rounded-xl shadow-2xl transform hover:scale-105 transition-transform">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Usuários</h3>
+                    <span class="text-3xl">👥</span>
+                </div>
+                <p class="text-4xl font-bold mb-2" id="users-count">1,234</p>
+                <p class="text-sm text-blue-200">+12% este mês</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-green-600 to-green-800 p-6 rounded-xl shadow-2xl transform hover:scale-105 transition-transform">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Vendas</h3>
+                    <span class="text-3xl">💰</span>
+                </div>
+                <p class="text-4xl font-bold mb-2" id="sales-count">R$ 45,678</p>
+                <p class="text-sm text-green-200">+8% este mês</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-purple-600 to-purple-800 p-6 rounded-xl shadow-2xl transform hover:scale-105 transition-transform">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Satisfação</h3>
+                    <span class="text-3xl">⭐</span>
+                </div>
+                <p class="text-4xl font-bold mb-2" id="satisfaction-count">89%</p>
+                <p class="text-sm text-purple-200">+3% este mês</p>
+            </div>
+
+            <div class="bg-gradient-to-br from-orange-600 to-orange-800 p-6 rounded-xl shadow-2xl transform hover:scale-105 transition-transform">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold">Conversão</h3>
+                    <span class="text-3xl">🎯</span>
+                </div>
+                <p class="text-4xl font-bold mb-2" id="conversion-count">23%</p>
+                <p class="text-sm text-orange-200">+5% este mês</p>
+            </div>
+        </div>
+
+        <!-- Chart Area -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                <h3 class="text-xl font-bold mb-4">📈 Vendas por Mês</h3>
+                <div class="h-64 flex items-end justify-around space-x-2">
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 bg-blue-500 rounded-t" style="height: 60%"></div>
+                        <span class="text-xs mt-2">Jan</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 bg-blue-500 rounded-t" style="height: 75%"></div>
+                        <span class="text-xs mt-2">Fev</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 bg-blue-500 rounded-t" style="height: 85%"></div>
+                        <span class="text-xs mt-2">Mar</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 bg-blue-500 rounded-t" style="height: 70%"></div>
+                        <span class="text-xs mt-2">Abr</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 bg-blue-500 rounded-t" style="height: 90%"></div>
+                        <span class="text-xs mt-2">Mai</span>
+                    </div>
+                    <div class="flex flex-col items-center">
+                        <div class="w-12 bg-blue-500 rounded-t" style="height: 100%"></div>
+                        <span class="text-xs mt-2">Jun</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+                <h3 class="text-xl font-bold mb-4">🎯 Atividades Recentes</h3>
+                <div class="space-y-4">
+                    <div class="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
+                        <span class="text-2xl">✅</span>
+                        <div>
+                            <p class="font-semibold">Nova venda realizada</p>
+                            <p class="text-sm text-gray-400">Há 5 minutos</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
+                        <span class="text-2xl">👤</span>
+                        <div>
+                            <p class="font-semibold">Novo usuário cadastrado</p>
+                            <p class="text-sm text-gray-400">Há 12 minutos</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-3 p-3 bg-gray-700 rounded-lg">
+                        <span class="text-2xl">📦</span>
+                        <div>
+                            <p class="font-semibold">Produto enviado</p>
+                            <p class="text-sm text-gray-400">Há 1 hora</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="bg-gray-800 p-6 rounded-xl shadow-2xl">
+            <h3 class="text-xl font-bold mb-4">⚡ Ações Rápidas</h3>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <button onclick="alert('Funcionalidade em desenvolvimento!')" 
+                        class="p-4 bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors">
+                    <span class="text-3xl block mb-2">➕</span>
+                    <span class="text-sm">Novo Produto</span>
+                </button>
+                <button onclick="alert('Funcionalidade em desenvolvimento!')" 
+                        class="p-4 bg-green-600 hover:bg-green-700 rounded-lg transition-colors">
+                    <span class="text-3xl block mb-2">📊</span>
+                    <span class="text-sm">Relatórios</span>
+                </button>
+                <button onclick="alert('Funcionalidade em desenvolvimento!')" 
+                        class="p-4 bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors">
+                    <span class="text-3xl block mb-2">⚙️</span>
+                    <span class="text-sm">Configurações</span>
+                </button>
+                <button onclick="alert('Funcionalidade em desenvolvimento!')" 
+                        class="p-4 bg-orange-600 hover:bg-orange-700 rounded-lg transition-colors">
+                    <span class="text-3xl block mb-2">👥</span>
+                    <span class="text-sm">Usuários</span>
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer class="mt-8 text-center text-gray-400">
+            <p>🚀 Gerado pelo AI Web Weaver | Instalado via CLI</p>
+            <p class="text-sm mt-2">Teste: aiweaver debug &lt;id&gt; para análise de código</p>
+        </footer>
+    </div>
+
+    <script>
+        // Animação dos números
+        function animateValue(id, start, end, duration) {
+            const element = document.getElementById(id);
+            const range = end - start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            let current = start;
+            
+            const timer = setInterval(() => {
+                current += increment;
+                if (id.includes('sales')) {
+                    element.textContent = `R$ ${current.toLocaleString('pt-BR')}`;
+                } else if (id.includes('satisfaction') || id.includes('conversion')) {
+                    element.textContent = `${current}%`;
+                } else {
+                    element.textContent = current.toLocaleString('pt-BR');
+                }
+                
+                if (current === end) {
+                    clearInterval(timer);
+                }
+            }, stepTime);
+        }
+
+        // Iniciar animações ao carregar
+        window.addEventListener('load', () => {
+            animateValue('users-count', 0, 1234, 1000);
+            animateValue('sales-count', 0, 45678, 1500);
+            animateValue('satisfaction-count', 0, 89, 1000);
+            animateValue('conversion-count', 0, 23, 1000);
+        });
+
+        // Log para debug
+        console.log('✅ Dashboard carregado com sucesso!');
+        console.log('🔍 Use aiweaver debug <id> para análise detalhada');
+    </script>
+</body>
+</html>

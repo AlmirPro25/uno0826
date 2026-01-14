@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Teste Simples do Sistema de Mídia</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1, h2 {
+      color: #2563eb;
+    }
+    .container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .media-container {
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    img, video {
+      max-width: 100%;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Teste Simples do Sistema de Mídia</h1>
+  <p>Esta página demonstra o funcionamento do sistema integrado de imagens e vídeos usando o Pixabay como fonte principal.</p>
+  
+  <div class="container">
+    <div class="media-container">
+      <h2>Imagens</h2>
+      <img src="ai-researched-image://montanhas com neve" alt="Montanhas com neve">
+      <img src="ai-researched-image://praia tropical" alt="Praia tropical">
+    </div>
+    
+    <div class="media-container">
+      <h2>Vídeos</h2>
+      <video src="ai-researched-video://cachoeira" controls width="400"></video>
+      <video src="ai-researched-video://ondas do mar" controls width="400"></video>
+    </div>
+  </div>
+</body>
+</html>

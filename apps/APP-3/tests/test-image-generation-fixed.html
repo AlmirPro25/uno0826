@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Sistema de Geração de Imagens - CORRIGIDO</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-center mb-8 text-blue-600">🎨 Teste Sistema de Geração de Imagens - SDK OFICIAL GOOGLE</h1>
+        
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Status do Sistema:</h2>
+            <div id="status" class="text-gray-600">Carregando...</div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Teste de Geração de Imagem:</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-700 mb-2">Descrição da Imagem:</label>
+                <input type="text" id="imageDescription" 
+                       class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       placeholder="Ex: pizza margherita artesanal com mussarela de búfala"
+                       value="pizza margherita artesanal com mussarela de búfala, tomate san marzano e manjericão fresco">
+            </div>
+            <button onclick="testImageGeneration()" 
+                    class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
+                🎨 Gerar Imagem de Teste
+            </button>
+            <div id="imageResult" class="mt-4"></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Teste HTML com Placeholders:</h2>
+            <button onclick="testHtmlProcessing()" 
+                    class="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded">
+                🔄 Processar HTML com Placeholders
+            </button>
+            <div id="htmlResult" class="mt-4"></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-xl font-semibold mb-4">Log de Debug:</h2>
+            <div id="debugLog" class="bg-gray-100 p-4 rounded text-sm font-mono h-64 overflow-y-auto"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Interceptar console.log para mostrar no debug
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+        
+        function addToDebugLog(message, type = 'log') {
+            const debugLog = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const colorClass = type === 'error' ? 'text-red-600' : type === 'warn' ? 'text-yellow-600' : 'text-gray-800';
+            debugLog.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+            debugLog.scrollTop = debugLog.scrollHeight;
+        }
+        
+        console.log = (...args) => {
+            originalLog(...args);
+            addToDebugLog(args.join(' '), 'log');
+        };
+        
+        console.error = (...args) => {
+            originalError(...args);
+            addToDebugLog('ERROR: ' + args.join(' '), 'error');
+        };
+        
+        console.warn = (...args) => {
+            originalWarn(...args);
+            addToDebugLog('WARN: ' + args.join(' '), 'warn');
+        };
+
+        // Função para testar geração de imagem individual
+        window.testImageGeneration = async function() {
+            const description = document.getElementById('imageDescription').value;
+            const resultDiv = document.getElementById('imageResult');
+            
+            resultDiv.innerHTML = '<div class="text-blue-600">🔄 Gerando imagem...</div>';
+            
+            try {
+                console.log('🎨 Iniciando teste de geração de imagem...');
+                console.log('📝 Descrição:', description);
+                
+                // Importar o serviço dinamicamente
+                const { generateImageWithGemini } = await import('./services/GeminiImageService.js');
+                
+                const imageUrl = await generateImageWithGemini(description, 'teste de restaurante');
+                
+                console.log('✅ Imagem gerada com sucesso:', imageUrl);
+                
+                resultDiv.innerHTML = `
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-semibold text-green-600 mb-2">✅ Imagem Gerada com Sucesso!</h3>
+                        <p class="text-sm text-gray-600 mb-2">URL: ${imageUrl}</p>
+                        <img src="${imageUrl}" alt="${description}" class="max-w-full h-auto rounded border" 
+                             onerror="this.src='data:image/svg+xml,<svg xmlns=\\"http://www.w3.org/2000/svg\\" width=\\"400\\" height=\\"300\\"><rect width=\\"100%\\" height=\\"100%\\" fill=\\"%23f3f4f6\\"/><text x=\\"50%\\" y=\\"50%\\" text-anchor=\\"middle\\" dy=\\".3em\\" fill=\\"%236b7280\\">Erro ao carregar imagem</text></svg>'">
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Erro na geração de imagem:', error);
+                resultDiv.innerHTML = `
+                    <div class="border border-red-300 rounded-lg p-4 bg-red-50">
+                        <h3 class="font-semibold text-red-600 mb-2">❌ Erro na Geração</h3>
+                        <p class="text-sm text-red-700">${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+
+        // Função para testar processamento de HTML
+        window.testHtmlProcessing = async function() {
+            const resultDiv = document.getElementById('htmlResult');
+            
+            resultDiv.innerHTML = '<div class="text-blue-600">🔄 Processando HTML...</div>';
+            
+            const testHtml = `
+                <div class="restaurant-hero">
+                    <img src="ai-researched-image://pizza margherita artesanal com mussarela de búfala, tomate san marzano e manjericão fresco em forno a lenha, fotografia gastronômica profissional" alt="Pizza Margherita" class="w-full h-64 object-cover">
+                    <img src="ai-researched-image://hambúrguer gourmet com carne angus, queijo cheddar, alface e tomate, fotografia de produto profissional" alt="Hambúrguer Gourmet" class="w-full h-64 object-cover">
+                </div>
+            `;
+            
+            try {
+                console.log('🔄 Iniciando processamento de HTML...');
+                
+                const { processHtmlAndGenerateImages } = await import('./services/GeminiImageService.js');
+                
+                const result = await processHtmlAndGenerateImages(testHtml, (current, total, desc) => {
+                    console.log(`📸 Gerando imagem ${current}/${total}: ${desc.substring(0, 50)}...`);
+                    resultDiv.innerHTML = `<div class="text-blue-600">🔄 Gerando imagem ${current}/${total}...</div>`;
+                });
+                
+                console.log('✅ HTML processado com sucesso!');
+                console.log(`📊 ${result.imagesGenerated} imagens geradas`);
+                
+                resultDiv.innerHTML = `
+                    <div class="border rounded-lg p-4">
+                        <h3 class="font-semibold text-green-600 mb-2">✅ HTML Processado com Sucesso!</h3>
+                        <p class="text-sm text-gray-600 mb-4">Imagens geradas: ${result.imagesGenerated}</p>
+                        <div class="bg-gray-100 p-4 rounded">
+                            <h4 class="font-semibold mb-2">HTML Resultante:</h4>
+                            <div class="text-xs overflow-x-auto">${result.htmlContent}</div>
+                        </div>
+                    </div>
+                `;
+                
+            } catch (error) {
+                console.error('❌ Erro no processamento de HTML:', error);
+                resultDiv.innerHTML = `
+                    <div class="border border-red-300 rounded-lg p-4 bg-red-50">
+                        <h3 class="font-semibold text-red-600 mb-2">❌ Erro no Processamento</h3>
+                        <p class="text-sm text-red-700">${error.message}</p>
+                    </div>
+                `;
+            }
+        };
+
+        // Verificar status do sistema
+        async function checkSystemStatus() {
+            const statusDiv = document.getElementById('status');
+            
+            try {
+                // Verificar se os serviços estão disponíveis
+                const { hasImagePlaceholders, countImagePlaceholders } = await import('./services/GeminiImageService.js');
+                
+                const testHtml = 'src="ai-researched-image://teste"';
+                const hasPlaceholders = hasImagePlaceholders(testHtml);
+                const count = countImagePlaceholders(testHtml);
+                
+                statusDiv.innerHTML = `
+                    <div class="space-y-2">
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                            <span>GeminiImageService carregado com sucesso</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                            <span>Detecção de placeholders funcionando (teste: ${hasPlaceholders ? 'OK' : 'FALHOU'})</span>
+                        </div>
+                        <div class="flex items-center">
+                            <span class="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+                            <span>Contador de placeholders funcionando (teste: ${count})</span>
+                        </div>
+                    </div>
+                `;
+                
+                console.log('✅ Sistema de geração de imagens carregado e funcionando');
+                
+            } catch (error) {
+                console.error('❌ Erro ao verificar status do sistema:', error);
+                statusDiv.innerHTML = `
+                    <div class="flex items-center">
+                        <span class="w-3 h-3 bg-red-500 rounded-full mr-2"></span>
+                        <span class="text-red-600">Erro: ${error.message}</span>
+                    </div>
+                `;
+            }
+        }
+
+        // Inicializar
+        checkSystemStatus();
+        console.log('🚀 Página de teste carregada - Sistema usando SDK OFICIAL GOOGLE');
+    </script>
+</body>
+</html>

@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📸 Sistema Pixabay Completo - API v2 com Rate Limiting e Cache</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .test-section {
+            margin-bottom: 40px;
+            padding: 25px;
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            background: #f9fafb;
+        }
+
+        .test-section h2 {
+            color: #1f2937;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .test-section p {
+            color: #6b7280;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .search-controls {
+            display: grid;
+            grid-template-columns: 2fr 1fr 1fr auto;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: end;
+        }
+
+        .search-input {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+
+        .search-select {
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #059669;
+        }
+
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+
+        .stats-panel {
+            background: linear-gradient(135deg, #1f2937, #374151);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #10b981;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+
+        .media-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .media-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .media-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+        }
+
+        .media-card img, .media-card video {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        .media-info {
+            padding: 15px;
+        }
+
+        .media-tags {
+            font-size: 12px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+
+        .media-stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #10b981;
+        }
+
+        .media-user {
+            font-size: 11px;
+            color: #9ca3af;
+            margin-top: 5px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6b7280;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e5e7eb;
+            border-top: 4px solid #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .activity-log {
+            background: #1f2937;
+            color: #e5e7eb;
+            border-radius: 8px;
+            padding: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            line-height: 1.5;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+
+        .log-success { color: #10b981; }
+        .log-error { color: #ef4444; }
+        .log-info { color: #3b82f6; }
+        .log-warning { color: #f59e0b; }
+
+        .filter-panel {
+            background: #f0f9ff;
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .filter-label {
+            font-weight: 600;
+            color: #0c4a6e;
+            font-size: 14px;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            border: 2px solid #e5e7eb;
+            background: white;
+            color: #374151;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .tab-btn.active {
+            border-color: #3b82f6;
+            background: #3b82f6;
+            color: white;
+        }
+
+        .tab-btn:hover:not(.active) {
+            border-color: #9ca3af;
+        }
+
+        .video-overlay {
+            position: relative;
+        }
+
+        .video-duration {
+            position: absolute;
+            bottom: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .download-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            border: none;
+            padding: 6px;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+
+        .media-card:hover .download-btn {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📸 Sistema Pixabay Completo</h1>
+            <p>API v2 com Rate Limiting, Cache 24h, Filtros Avançados e Suporte a Vídeos</p>
+        </div>
+
+        <div class="content">
+            <!-- Painel de Estatísticas -->
+            <div class="stats-panel">
+                <h3 style="margin-bottom: 20px; text-align: center;">📊 Estatísticas do Sistema</h3>
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-value" id="rate-limit-remaining">100</div>
+                        <div class="stat-label">Requests Restantes</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="cache-size">0</div>
+                        <div class="stat-label">Itens no Cache</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="total-results">0</div>
+                        <div class="stat-label">Resultados Encontrados</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="search-time">0ms</div>
+                        <div class="stat-label">Tempo de Busca</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Abas de Conteúdo -->
+            <div class="tab-buttons">
+                <button class="tab-btn active" data-tab="images">🖼️ Imagens</button>
+                <button class="tab-btn" data-tab="videos">🎬 Vídeos</button>
+                <button class="tab-btn" data-tab="editor">✏️ Editor Integrado</button>
+            </div>
+
+            <!-- Tab: Imagens -->
+            <div id="tab-images" class="tab-content">
+                <div class="test-section">
+                    <h2>🔍 Busca Avançada de Imagens</h2>
+                    <p>Sistema completo com todos os filtros da API Pixabay v2</p>
+                    
+                    <div class="search-controls">
+                        <input type="text" id="image-search" class="search-input" placeholder="Digite sua busca..." value="natureza">
+                        <select id="image-category" class="search-select">
+                            <option value="">Todas Categorias</option>
+                            <option value="nature">Natureza</option>
+                            <option value="people">Pessoas</option>
+                            <option value="animals">Animais</option>
+                            <option value="food">Comida</option>
+                            <option value="travel">Viagem</option>
+                            <option value="business">Negócios</option>
+                            <option value="technology">Tecnologia</option>
+                            <option value="backgrounds">Fundos</option>
+                        </select>
+                        <select id="image-orientation" class="search-select">
+                            <option value="all">Todas</option>
+                            <option value="horizontal">Horizontal</option>
+                            <option value="vertical">Vertical</option>
+                        </select>
+                        <button class="btn btn-success" onclick="searchImages()">🔍 Buscar</button>
+                    </div>
+
+                    <div class="filter-panel">
+                        <div class="filter-grid">
+                            <div class="filter-group">
+                                <label class="filter-label">Tipo de Imagem</label>
+                                <select id="image-type" class="search-select">
+                                    <option value="photo">Foto</option>
+                                    <option value="illustration">Ilustração</option>
+                                    <option value="vector">Vetor</option>
+                                    <option value="all">Todos</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">Cores</label>
+                                <select id="image-colors" class="search-select">
+                                    <option value="">Todas Cores</option>
+                                    <option value="red">Vermelho</option>
+                                    <option value="blue">Azul</option>
+                                    <option value="green">Verde</option>
+                                    <option value="yellow">Amarelo</option>
+                                    <option value="black">Preto</option>
+                                    <option value="white">Branco</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">Tamanho Mínimo</label>
+                                <select id="image-size" class="search-select">
+                                    <option value="">Qualquer</option>
+                                    <option value="640">640px</option>
+                                    <option value="1280">1280px</option>
+                                    <option value="1920">1920px</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
+                                <label class="filter-label">Qualidade</label>
+                                <select id="image-quality" class="search-select">
+                                    <option value="false">Todas</option>
+                                    <option value="true">Editor's Choice</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="images-loading" class="loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <div>Buscando imagens no Pixabay...</div>
+                    </div>
+
+                    <div id="images-grid" class="media-grid"></div>
+                </div>
+            </div>
+
+            <!-- Tab: Vídeos -->
+            <div id="tab-videos" class="tab-content" style="display: none;">
+                <div class="test-section">
+                    <h2>🎬 Busca Avançada de Vídeos</h2>
+                    <p>Explore vídeos gratuitos com diferentes qualidades e formatos</p>
+                    
+                    <div class="search-controls">
+                        <input type="text" id="video-search" class="search-input" placeholder="Digite sua busca..." value="oceano">
+                        <select id="video-category" class="search-select">
+                            <option value="">Todas Categorias</option>
+                            <option value="nature">Natureza</option>
+                            <option value="people">Pessoas</option>
+                            <option value="animals">Animais</option>
+                            <option value="travel">Viagem</option>
+                            <option value="business">Negócios</option>
+                            <option value="technology">Tecnologia</option>
+                        </select>
+                        <select id="video-type" class="search-select">
+                            <option value="all">Todos Tipos</option>
+                            <option value="film">Filme</option>
+                            <option value="animation">Animação</option>
+                        </select>
+                        <button class="btn btn-success" onclick="searchVideos()">🔍 Buscar</button>
+                    </div>
+
+                    <div id="videos-loading" class="loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <div>Buscando vídeos no Pixabay...</div>
+                    </div>
+
+                    <div id="videos-grid" class="media-grid"></div>
+                </div>
+            </div>
+
+            <!-- Tab: Editor Integrado -->
+            <div id="tab-editor" class="tab-content" style="display: none;">
+                <div class="test-section">
+                    <h2>✏️ Editor de Imagens Integrado</h2>
+                    <p>Teste o sistema completo com editor interativo, Pixabay e URLs customizadas</p>
+                    
+                    <div style="display: flex; gap: 15px; margin-bottom: 20px;">
+                        <button class="btn btn-primary" onclick="initializeEditor()">🚀 Inicializar Editor</button>
+                        <button class="btn btn-secondary" onclick="testPixabayIntegration()">📸 Teste Pixabay</button>
+                    </div>
+
+                    <div class="media-grid">
+                        <div class="media-card">
+                            <img src="https://via.placeholder.com/300x180/3b82f6/ffffff?text=Teste+Editor" 
+                                 data-aid="editor-test-001" 
+                                 alt="Teste do editor">
+                            <div class="media-info">
+                                <div class="media-tags">Imagem de teste para editor</div>
+                                <div class="media-stats">
+                                    <span>data-aid="editor-test-001"</span>
+                                </div>
+                                <div class="media-user">Clique para editar com Pixabay</div>
+                            </div>
+                        </div>
+
+                        <div class="media-card">
+                            <img src="https://via.placeholder.com/300x180/10b981/ffffff?text=Pixabay+Test" 
+                                 data-aid="editor-test-002" 
+                                 alt="Teste Pixabay">
+                            <div class="media-info">
+                                <div class="media-tags">Teste integração Pixabay</div>
+                                <div class="media-stats">
+                                    <span>data-aid="editor-test-002"</span>
+                                </div>
+                                <div class="media-user">Duplo clique para regeneração rápida</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Log de Atividades -->
+            <div class="test-section">
+                <h2>📊 Log de Atividades</h2>
+                <p>Acompanhe em tempo real as operações do sistema Pixabay</p>
+                
+                <div class="activity-log" id="activity-log">
+                    <div class="log-entry log-info">[SISTEMA] Pixabay API v2 carregado com sucesso</div>
+                    <div class="log-entry log-info">[CACHE] Sistema de cache 24h inicializado</div>
+                    <div class="log-entry log-info">[RATE LIMIT] 100/100 requests disponíveis</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importar serviços
+        import { PixabayService, PixabayImageUtils, PixabayVideoUtils } from './services/PixabayService.js';
+        import { InteractiveImageEditor } from './services/InteractiveImageEditor.js';
+        
+        let imageEditor = null;
+        let currentTab = 'images';
+
+        // Função para log de atividades
+        function logActivity(message, type = 'info') {
+            const logContainer = document.getElementById('activity-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry log-${type}`;
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logContainer.appendChild(logEntry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Atualizar estatísticas
+        function updateStats() {
+            const stats = PixabayService.getStats();
+            document.getElementById('rate-limit-remaining').textContent = stats.rateLimit.remaining;
+            document.getElementById('cache-size').textContent = stats.cache.size;
+        }
+
+        // Gerenciamento de abas
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const tabId = btn.dataset.tab;
+                
+                // Atualizar botões
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                // Mostrar conteúdo
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.style.display = 'none';
+                });
+                document.getElementById(`tab-${tabId}`).style.display = 'block';
+                
+                currentTab = tabId;
+                logActivity(`📑 Mudou para aba: ${tabId}`, 'info');
+            });
+        });
+
+        // Buscar imagens
+        window.searchImages = async function() {
+            const query = document.getElementById('image-search').value.trim();
+            if (!query) {
+                alert('Digite algo para buscar');
+                return;
+            }
+
+            const loadingDiv = document.getElementById('images-loading');
+            const gridDiv = document.getElementById('images-grid');
+            
+            loadingDiv.style.display = 'block';
+            gridDiv.innerHTML = '';
+
+            const startTime = Date.now();
+
+            try {
+                logActivity(`🔍 Buscando imagens: "${query}"`, 'info');
+
+                const options = {
+                    category: document.getElementById('image-category').value || undefined,
+                    orientation: document.getElementById('image-orientation').value,
+                    imageType: document.getElementById('image-type').value,
+                    colors: document.getElementById('image-colors').value || undefined,
+                    editorsChoice: document.getElementById('image-quality').value === 'true',
+                    perPage: 20
+                };
+
+                const sizeValue = document.getElementById('image-size').value;
+                if (sizeValue) {
+                    options.minWidth = parseInt(sizeValue);
+                    options.minHeight = parseInt(sizeValue);
+                }
+
+                const result = await PixabayService.searchImagesAdvanced(query, options);
+                
+                const searchTime = Date.now() - startTime;
+                document.getElementById('search-time').textContent = `${searchTime}ms`;
+                document.getElementById('total-results').textContent = result.totalHits;
+
+                loadingDiv.style.display = 'none';
+
+                if (result.hits.length === 0) {
+                    gridDiv.innerHTML = '<div class="loading">Nenhuma imagem encontrada</div>';
+                    return;
+                }
+
+                gridDiv.innerHTML = result.hits.map(image => `
+                    <div class="media-card">
+                        <div style="position: relative;">
+                            <img src="${PixabayImageUtils.getImageUrl(image, 'web')}" alt="${image.tags}">
+                            <button class="download-btn" onclick="downloadImage('${PixabayImageUtils.getDownloadUrl(image.largeImageURL)}')">
+                                ⬇️
+                            </button>
+                        </div>
+                        <div class="media-info">
+                            <div class="media-tags">${image.tags}</div>
+                            <div class="media-stats">
+                                <span>👁️ ${image.views}</span>
+                                <span>⬇️ ${image.downloads}</span>
+                                <span>❤️ ${image.likes}</span>
+                            </div>
+                            <div class="media-user">Por: ${image.user}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                logActivity(`✅ ${result.hits.length} imagens carregadas em ${searchTime}ms`, 'success');
+                updateStats();
+
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                gridDiv.innerHTML = '<div class="loading" style="color: #ef4444;">Erro ao buscar imagens</div>';
+                logActivity(`❌ Erro na busca: ${error.message}`, 'error');
+            }
+        };
+
+        // Buscar vídeos
+        window.searchVideos = async function() {
+            const query = document.getElementById('video-search').value.trim();
+            if (!query) {
+                alert('Digite algo para buscar');
+                return;
+            }
+
+            const loadingDiv = document.getElementById('videos-loading');
+            const gridDiv = document.getElementById('videos-grid');
+            
+            loadingDiv.style.display = 'block';
+            gridDiv.innerHTML = '';
+
+            const startTime = Date.now();
+
+            try {
+                logActivity(`🎬 Buscando vídeos: "${query}"`, 'info');
+
+                const options = {
+                    category: document.getElementById('video-category').value || undefined,
+                    videoType: document.getElementById('video-type').value,
+                    perPage: 12
+                };
+
+                const result = await PixabayService.searchVideosAdvanced(query, options);
+                
+                const searchTime = Date.now() - startTime;
+                document.getElementById('search-time').textContent = `${searchTime}ms`;
+                document.getElementById('total-results').textContent = result.totalHits;
+
+                loadingDiv.style.display = 'none';
+
+                if (result.hits.length === 0) {
+                    gridDiv.innerHTML = '<div class="loading">Nenhum vídeo encontrado</div>';
+                    return;
+                }
+
+                gridDiv.innerHTML = result.hits.map(video => `
+                    <div class="media-card">
+                        <div class="video-overlay" style="position: relative;">
+                            <video poster="${PixabayVideoUtils.getThumbnailUrl(video)}" preload="none">
+                                <source src="${PixabayVideoUtils.getVideoUrl(video, 'small')}" type="video/mp4">
+                            </video>
+                            <div class="video-duration">${PixabayVideoUtils.formatDuration(video.duration)}</div>
+                            <button class="download-btn" onclick="downloadVideo('${PixabayVideoUtils.getDownloadUrl(PixabayVideoUtils.getVideoUrl(video))}')">
+                                ⬇️
+                            </button>
+                        </div>
+                        <div class="media-info">
+                            <div class="media-tags">${video.tags}</div>
+                            <div class="media-stats">
+                                <span>👁️ ${video.views}</span>
+                                <span>⬇️ ${video.downloads}</span>
+                                <span>❤️ ${video.likes}</span>
+                            </div>
+                            <div class="media-user">Por: ${video.user}</div>
+                        </div>
+                    </div>
+                `).join('');
+
+                // Adicionar eventos de play/pause nos vídeos
+                gridDiv.querySelectorAll('video').forEach(video => {
+                    video.addEventListener('click', () => {
+                        if (video.paused) {
+                            video.play();
+                        } else {
+                            video.pause();
+                        }
+                    });
+                });
+
+                logActivity(`✅ ${result.hits.length} vídeos carregados em ${searchTime}ms`, 'success');
+                updateStats();
+
+            } catch (error) {
+                loadingDiv.style.display = 'none';
+                gridDiv.innerHTML = '<div class="loading" style="color: #ef4444;">Erro ao buscar vídeos</div>';
+                logActivity(`❌ Erro na busca: ${error.message}`, 'error');
+            }
+        };
+
+        // Download de imagem
+        window.downloadImage = function(url) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'pixabay-image.jpg';
+            link.click();
+            logActivity('📥 Download de imagem iniciado', 'success');
+        };
+
+        // Download de vídeo
+        window.downloadVideo = function(url) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'pixabay-video.mp4';
+            link.click();
+            logActivity('📥 Download de vídeo iniciado', 'success');
+        };
+
+        // Inicializar editor
+        window.initializeEditor = async function() {
+            try {
+                logActivity('🚀 Inicializando editor interativo...', 'info');
+                imageEditor = new InteractiveImageEditor();
+                imageEditor.initialize();
+                logActivity('✅ Editor inicializado! Clique nas imagens para editar', 'success');
+            } catch (error) {
+                logActivity(`❌ Erro ao inicializar editor: ${error.message}`, 'error');
+            }
+        };
+
+        // Teste integração Pixabay
+        window.testPixabayIntegration = function() {
+            if (!imageEditor) {
+                alert('Inicialize o editor primeiro!');
+                return;
+            }
+            
+            const testImage = document.querySelector('img[data-aid="editor-test-001"]');
+            if (testImage) {
+                testImage.click();
+                logActivity('🧪 Teste de integração Pixabay iniciado', 'info');
+            }
+        };
+
+        // Busca inicial
+        setTimeout(() => {
+            logActivity('🔄 Fazendo busca inicial...', 'info');
+            searchImages();
+        }, 1000);
+
+        // Atualizar stats periodicamente
+        setInterval(updateStats, 5000);
+    </script>
+</body>
+</html>

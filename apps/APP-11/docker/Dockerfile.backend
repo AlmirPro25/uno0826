@@ -1,0 +1,51 @@
+
+# Stage 1: Build the Go application
+FROM golang:1.22-alpine AS builder
+
+# Set necessary environment variables for Go build
+ENV CGO_ENABLED=0 \
+    GOOS=linux \
+    GOARCH=amd64
+
+# Install Git and make for dependencies (if any from private repos or CGO)
+RUN apk add --no-cache git make
+
+WORKDIR /app
+
+# Copy go.mod and go.sum first to leverage Docker cache
+COPY backend/go.mod backend/go.sum ./
+RUN go mod download
+
+# Copy the rest of the backend source code
+COPY backend/ .
+
+# Build the application
+# Use -a to force rebuilding, -installsuffix for static linking
+# -ldflags="-s -w" for smaller binary (remove debug info, symbol table)
+# -o /app/server to specify output path and name
+RUN go build -o /app/server -ldflags="-s -w" ./cmd/api/main.go
+
+# Stage 2: Create a minimal production image
+FROM alpine:3.19.1
+
+# Install ca-certificates for HTTPS calls
+RUN apk add --no-cache ca-certificates
+
+# Set the working directory
+WORKDIR /app
+
+# Copy the compiled binary from the builder stage
+COPY --from=builder /app/server .
+
+# Copy any necessary configuration files or static assets if the Go app serves them
+# For a pure API, this might not be needed, but it's good practice.
+# COPY --from=builder /app/config.yaml ./config.yaml # Example if you have a config file
+
+# Expose the port the Go application listens on
+EXPOSE 8080
+
+# Define the command to run the application
+ENTRYPOINT ["/app/server"]
+
+# Healthcheck for Docker Compose/Kubernetes
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget --quiet --tries=1 --spider http://localhost:8080/health || exit 1

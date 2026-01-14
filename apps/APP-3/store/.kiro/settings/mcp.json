@@ -1,0 +1,48 @@
+{
+  "mcpServers": {
+    "ai-learning-server": {
+      "command": "node",
+      "args": ["mcp-servers/ai-learning-server.js"],
+      "env": {
+        "NODE_ENV": "development",
+        "LOG_LEVEL": "info"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "learn_technology",
+        "get_learning_context",
+        "update_ai_knowledge",
+        "create_game_template",
+        "generate_simple_html",
+        "create_backend_only"
+      ]
+    },
+    "project-intelligence": {
+      "command": "node", 
+      "args": ["mcp-servers/project-intelligence.js"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "analyze_project_needs",
+        "suggest_minimal_solution",
+        "focus_on_functionality",
+        "avoid_complexity"
+      ]
+    },
+    "anti-simulation-v2": {
+      "command": "node",
+      "args": ["mcp-servers/anti-simulation-mcp.js"],
+      "env": {
+        "NODE_ENV": "development"
+      },
+      "disabled": false,
+      "autoApprove": [
+        "detect_simulation",
+        "enforce_functionality",
+        "suggest_minimal_solution"
+      ]
+    }
+  }
+}
