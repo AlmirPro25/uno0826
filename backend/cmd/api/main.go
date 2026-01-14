@@ -225,7 +225,7 @@ func main() {
 	// Iniciar worker de jobs em background
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go jobService.Start(ctx, 2*time.Second) // Poll a cada 2 segundos
+	go jobService.Start(ctx, 5*time.Second) // Poll a cada 5 segundos (reduzido de 2s para diminuir carga no DB)
 
 	// ========================================
 	// INVARIANTS RUNNER - Guardião que nunca dorme
