@@ -255,12 +255,42 @@ app.post('/auth/implicit-login', async (req, res) => {
   }
 });
 
-// TURN credentials - com suporte a credenciais temporárias HMAC
+// ============================================================================
+// TURN CREDENTIALS - VOXGRID GLOBAL (Metered.ca)
+// ============================================================================
+// TECH LEAD RECOMMENDATIONS:
+// 1. TCP primeiro = atravessa firewalls africanos com mais sucesso
+// 2. Usar endpoint global (global.relay.metered.ca) para auto-routing
+// 3. Credenciais temporárias HMAC para segurança
+// ============================================================================
 app.get('/turn-credentials', (req, res) => {
-  const TURN_SECRET = process.env.TURN_SECRET;
-  const TURN_URLS = process.env.TURN_URLS; // ex: "turn:turn.seudominio.com:3478,turns:turn.seudominio.com:5349"
+  // OPÇÃO 1: Metered.ca com API Key (RECOMENDADO PARA PRODUÇÃO)
+  const METERED_API_KEY = process.env.METERED_API_KEY;
+  const METERED_API_SECRET = process.env.METERED_API_SECRET;
   
-  // Se tem TURN próprio configurado, gera credencial temporária
+  if (METERED_API_KEY && METERED_API_SECRET) {
+    // Metered.ca Global - backbone privado entre continentes
+    // Ordem: TCP primeiro (melhor para firewalls africanos/corporativos)
+    const turnServers = [
+      {
+        urls: [
+          'turns:global.relay.metered.ca:443?transport=tcp',  // TLS TCP primeiro
+          'turn:global.relay.metered.ca:443',                  // UDP 443
+          'turn:global.relay.metered.ca:80'                    // UDP 80 fallback
+        ],
+        username: METERED_API_KEY,
+        credential: METERED_API_SECRET
+      }
+    ];
+    
+    console.log(`🌐 VOXGRID: Metered.ca global TURN (API key: ${METERED_API_KEY.substring(0, 8)}...)`);
+    return res.json(turnServers);
+  }
+  
+  // OPÇÃO 2: TURN próprio com HMAC (para escala futura)
+  const TURN_SECRET = process.env.TURN_SECRET;
+  const TURN_URLS = process.env.TURN_URLS;
+  
   if (TURN_SECRET && TURN_URLS) {
     const crypto = require('crypto');
     const ttl = 300; // 5 minutos
@@ -274,27 +304,23 @@ app.get('/turn-credentials', (req, res) => {
     
     const urls = TURN_URLS.split(',').map(u => u.trim());
     
-    console.log(`🔐 Generated TURN credentials (expires in ${ttl}s)`);
-    
-    return res.json([{
-      urls,
-      username,
-      credential: hmac
-    }]);
+    console.log(`🔐 TURN próprio: credenciais temporárias (TTL: ${ttl}s)`);
+    return res.json([{ urls, username, credential: hmac }]);
   }
   
-  // Fallback: TURN público (para desenvolvimento)
+  // OPÇÃO 3: Fallback público (APENAS DESENVOLVIMENTO)
+  // ⚠️ NÃO FUNCIONA PARA CONEXÕES INTERCONTINENTAIS
+  console.warn('⚠️ VOXGRID: Usando TURN público - NÃO RECOMENDADO PARA PRODUÇÃO');
   const turnServers = [
     { 
-      urls: ['turn:a.relay.metered.ca:80', 'turn:a.relay.metered.ca:443'], 
+      urls: [
+        'turns:global.relay.metered.ca:443?transport=tcp',
+        'turn:global.relay.metered.ca:443',
+        'turn:global.relay.metered.ca:80'
+      ], 
       username: 'e8dd65c92f6f1f2d5c67c7a3', 
       credential: 'kW3QfUZKpLqYhDzS' 
-    },
-    { 
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp', 
-      username: 'openrelayproject', 
-      credential: 'openrelayproject' 
-    },
+    }
   ];
   res.json(turnServers);
 });

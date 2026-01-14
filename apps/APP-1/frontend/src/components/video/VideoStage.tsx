@@ -15,38 +15,86 @@ import { useElevatorMusic } from '@/hooks/useElevatorMusic'
 // 6. TURN com endpoint dinâmico (preparado para tokens)
 // ============================================================================
 
-// TURN será buscado do backend (preparado para tokens dinâmicos)
+// ============================================================================
+// VOXGRID - Global TURN Infrastructure
+// ============================================================================
+// TECH LEAD RECOMMENDATIONS:
+// 1. TCP primeiro = atravessa firewalls africanos com mais sucesso
+// 2. iceTransportPolicy: "relay" para teste inicial (força TURN)
+// 3. Telemetria de tipo de conexão (host/srflx/relay)
+// ============================================================================
+
+// Modo de teste: forçar relay para validar TURN global
+const FORCE_RELAY_MODE = process.env.NEXT_PUBLIC_FORCE_RELAY === 'true'
+
 const getIceServers = async (): Promise<RTCIceServer[]> => {
+  // STUN servers (para descoberta de IP público)
   const baseServers: RTCIceServer[] = [
     { urls: 'stun:stun.l.google.com:19302' },
     { urls: 'stun:stun1.l.google.com:19302' },
   ]
   
   try {
-    // Tentar buscar TURN do backend (futuro: tokens dinâmicos)
+    // Buscar TURN do backend (Metered.ca global ou próprio)
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://vox-bridge-api.onrender.com'}/turn-credentials`)
     if (res.ok) {
       const turnServers = await res.json()
+      console.log('🌐 VOXGRID: TURN servers loaded from backend')
       return [...baseServers, ...turnServers]
     }
-  } catch {
-    console.log('⚠️ Using fallback TURN servers')
+  } catch (err) {
+    console.warn('⚠️ VOXGRID: Failed to fetch TURN, using fallback')
   }
   
-  // Fallback - TURN público (temporário)
+  // Fallback - Metered.ca global (TCP primeiro para firewalls)
   return [
     ...baseServers,
     {
-      urls: ['turn:a.relay.metered.ca:80', 'turn:a.relay.metered.ca:443'],
+      urls: [
+        'turns:global.relay.metered.ca:443?transport=tcp',  // TLS TCP primeiro
+        'turn:global.relay.metered.ca:443',                  // UDP 443
+        'turn:global.relay.metered.ca:80'                    // UDP 80 fallback
+      ],
       username: 'e8dd65c92f6f1f2d5c67c7a3',
       credential: 'kW3QfUZKpLqYhDzS'
-    },
-    {
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-      username: 'openrelayproject',
-      credential: 'openrelayproject'
-    },
+    }
   ]
+}
+
+// Telemetria ICE - para métricas de conexão
+const logIceTelemetry = (pc: RTCPeerConnection) => {
+  pc.getStats().then(stats => {
+    let connectionType = 'unknown'
+    let localCandidateType = 'unknown'
+    let remoteCandidateType = 'unknown'
+    let selectedPairId = ''
+    
+    stats.forEach((report) => {
+      if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+        selectedPairId = report.id
+        // @ts-ignore
+        const localId = report.localCandidateId
+        // @ts-ignore
+        const remoteId = report.remoteCandidateId
+        
+        stats.forEach((r) => {
+          if (r.id === localId) localCandidateType = r.candidateType || 'unknown'
+          if (r.id === remoteId) remoteCandidateType = r.candidateType || 'unknown'
+        })
+      }
+    })
+    
+    // Determinar tipo de conexão
+    if (localCandidateType === 'relay' || remoteCandidateType === 'relay') {
+      connectionType = 'relay (TURN)'
+    } else if (localCandidateType === 'srflx' || remoteCandidateType === 'srflx') {
+      connectionType = 'srflx (STUN)'
+    } else if (localCandidateType === 'host' && remoteCandidateType === 'host') {
+      connectionType = 'host (P2P direto)'
+    }
+    
+    console.log(`📡 VOXGRID ICE: ${connectionType} | local=${localCandidateType} remote=${remoteCandidateType}`)
+  }).catch(() => {})
 }
 
 type ViewMode = 'split' | 'pip-remote' | 'pip-local'
@@ -198,13 +246,21 @@ export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
     const isInitiator = isInitiatorRef.current
     console.log('🔗 Creating PC (initiator:', isInitiator, ')')
     
+    // VOXGRID: Configuração otimizada para conexões globais
     const pc = new RTCPeerConnection({
       iceServers,
-      // CORREÇÃO 1: Pool = 0 para TURN público
+      // Pool = 0 para TURN público
       iceCandidatePoolSize: 0,
       bundlePolicy: 'max-bundle',
-      rtcpMuxPolicy: 'require'
+      rtcpMuxPolicy: 'require',
+      // TECH LEAD: iceTransportPolicy: "relay" para teste Brasil ↔ África
+      // Força uso de TURN, ignorando P2P direto
+      ...(FORCE_RELAY_MODE && { iceTransportPolicy: 'relay' as RTCIceTransportPolicy })
     })
+    
+    if (FORCE_RELAY_MODE) {
+      console.log('🔒 VOXGRID: FORCE_RELAY_MODE ativo - forçando TURN')
+    }
 
     // ICE Candidate
     pc.onicecandidate = ({ candidate }) => {
@@ -219,6 +275,9 @@ export function VideoStage({ onNext, onLeave, sendSignal }: VideoStageProps) {
     // Track recebido - com detecção de mute/unmute
     pc.ontrack = ({ track, streams }) => {
       console.log('📺 Remote track received:', track.kind)
+      
+      // VOXGRID: Log telemetria ICE quando conectar
+      setTimeout(() => logIceTelemetry(pc), 2000)
       
       // Detectar remote mute/unmute (UX premium)
       track.onmute = () => {
