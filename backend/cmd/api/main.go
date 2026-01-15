@@ -63,6 +63,7 @@ import (
 	"prost-qs/backend/pkg/db"
 	"prost-qs/backend/pkg/immunity"
 	"prost-qs/backend/pkg/invariants"
+	"prost-qs/backend/pkg/localstore"
 	"prost-qs/backend/pkg/middleware"
 	"prost-qs/backend/pkg/utils"
 	"prost-qs/backend/pkg/warobs"
@@ -132,6 +133,15 @@ func main() {
 	if err != nil {
 		log.Fatalf("Falha ao migrar o schema do banco de dados: %v", err)
 	}
+
+	// ========================================
+	// LOCAL STORE - SQLite local + sync assíncrono
+	// "Escreve local primeiro, sync depois"
+	// ========================================
+	if err := localstore.InitFromEnv(gormDB); err != nil {
+		log.Printf("⚠️  LocalStore não inicializado: %v", err)
+	}
+	defer localstore.StopGlobalStore()
 
 	// Configurar Gin
 	r := gin.Default()
@@ -646,6 +656,15 @@ func main() {
 		// ADMIN SUPREMO - Rotas de Governança
 		// ========================================
 		admin.RegisterAdminRoutes(v1, adminService, middleware.AuthMiddleware(), middleware.AdminOnly())
+
+		// ========================================
+		// LOCAL STORE - Monitoramento do sync
+		// "Ver o estado do buffer local"
+		// ========================================
+		localstore.RegisterLocalStoreRoutes(v1, middleware.AuthMiddleware(), middleware.AdminOnly())
+		if localstore.IsEnabled() {
+			log.Println("✅ LocalStore routes registradas (/localstore/*)")
+		}
 
 		// ========================================
 		// COGNITIVE DASHBOARD - Fase 26.5

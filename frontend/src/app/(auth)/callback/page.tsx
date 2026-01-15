@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/contexts/auth-context";
 import { Loader2, CheckCircle2, XCircle } from "lucide-react";
 import { motion } from "framer-motion";
 
-export default function OAuthCallbackPage() {
+function CallbackContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const { login } = useAuth();
@@ -15,7 +15,6 @@ export default function OAuthCallbackPage() {
 
     useEffect(() => {
         const processCallback = async () => {
-            // Check for error
             const error = searchParams.get("error");
             if (error) {
                 setStatus("error");
@@ -32,7 +31,6 @@ export default function OAuthCallbackPage() {
                 return;
             }
 
-            // Get tokens from URL
             const token = searchParams.get("token");
             const refreshToken = searchParams.get("refresh_token");
 
@@ -44,15 +42,10 @@ export default function OAuthCallbackPage() {
             }
 
             try {
-                // Login with received tokens
                 await login(token, refreshToken);
                 setStatus("success");
                 setMessage("Autenticação bem-sucedida! Redirecionando...");
-                
-                // Small delay for UX
-                setTimeout(() => {
-                    router.push("/dashboard");
-                }, 1000);
+                setTimeout(() => router.push("/dashboard"), 1000);
             } catch (err) {
                 console.error("OAuth callback error:", err);
                 setStatus("error");
@@ -73,47 +66,46 @@ export default function OAuthCallbackPage() {
             {status === "loading" && (
                 <>
                     <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-6" />
-                    <h2 className="text-xl font-bold text-foreground mb-2">
-                        Autenticando...
-                    </h2>
+                    <h2 className="text-xl font-bold text-foreground mb-2">Autenticando...</h2>
                     <p className="text-muted-foreground">{message}</p>
                 </>
             )}
-
             {status === "success" && (
                 <>
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                    >
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
                         <CheckCircle2 className="w-16 h-16 text-emerald-500 mb-6" />
                     </motion.div>
-                    <h2 className="text-xl font-bold text-foreground mb-2">
-                        Bem-vindo!
-                    </h2>
+                    <h2 className="text-xl font-bold text-foreground mb-2">Bem-vindo!</h2>
                     <p className="text-muted-foreground">{message}</p>
                 </>
             )}
-
             {status === "error" && (
                 <>
-                    <motion.div
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                    >
+                    <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 200 }}>
                         <XCircle className="w-16 h-16 text-rose-500 mb-6" />
                     </motion.div>
-                    <h2 className="text-xl font-bold text-foreground mb-2">
-                        Erro na Autenticação
-                    </h2>
+                    <h2 className="text-xl font-bold text-foreground mb-2">Erro na Autenticação</h2>
                     <p className="text-muted-foreground mb-4">{message}</p>
-                    <p className="text-xs text-muted-foreground">
-                        Redirecionando para login...
-                    </p>
+                    <p className="text-xs text-muted-foreground">Redirecionando para login...</p>
                 </>
             )}
         </motion.div>
+    );
+}
+
+function LoadingFallback() {
+    return (
+        <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+            <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-6" />
+            <h2 className="text-xl font-bold text-foreground mb-2">Carregando...</h2>
+        </div>
+    );
+}
+
+export default function OAuthCallbackPage() {
+    return (
+        <Suspense fallback={<LoadingFallback />}>
+            <CallbackContent />
+        </Suspense>
     );
 }
