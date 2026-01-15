@@ -427,8 +427,10 @@ Para estudo mais aprofundado, consulte:
 2. `ENTENDIMENTO-TOTAL-PROST-QS.md` - Visão geral do sistema
 3. `MAPA-SISTEMA-PROST-QS.md` - Mapa detalhado de módulos
 4. `CONSTITUICAO-TECNICA-PROST-QS.md` - Leis e princípios
-5. `docs/GLOSSARIO-TECNICO.md` - Glossário completo
-6. `docs/GUIA-INTEGRACAO-APPS.md` - Como integrar apps
+5. `docs/MAPA-PROJETO.md` - **MAPA COMPLETO DO PROJETO** (pastas, hospedagem, endpoints)
+6. `docs/GLOSSARIO-TECNICO.md` - Glossário completo
+7. `docs/GUIA-INTEGRACAO-APPS.md` - Como integrar apps
+8. `docs/CATALOGO-APPS.md` - Catálogo de apps do ecossistema
 
 ---
 

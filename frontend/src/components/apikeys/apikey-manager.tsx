@@ -39,7 +39,8 @@ interface Scope {
   description: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080";
+// API_URL já inclui /api/v1 em produção
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
 
 export function APIKeyManager() {
   const [keys, setKeys] = useState<APIKey[]>([]);
@@ -72,7 +73,7 @@ export function APIKeyManager() {
 
   const fetchKeys = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/apikeys`, {
+      const res = await fetch(`${API_URL}/apikeys`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) throw new Error("Falha ao carregar API keys");
@@ -87,7 +88,7 @@ export function APIKeyManager() {
 
   const fetchScopes = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/v1/apikeys/scopes`, {
+      const res = await fetch(`${API_URL}/apikeys/scopes`, {
         headers: getAuthHeaders(),
       });
       if (!res.ok) return;
@@ -105,7 +106,7 @@ export function APIKeyManager() {
     }
 
     try {
-      const res = await fetch(`${API_URL}/api/v1/apikeys`, {
+      const res = await fetch(`${API_URL}/apikeys`, {
         method: "POST",
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -136,7 +137,7 @@ export function APIKeyManager() {
     if (!confirm("Tem certeza que deseja revogar esta API key? Esta ação não pode ser desfeita.")) return;
 
     try {
-      const res = await fetch(`${API_URL}/api/v1/apikeys/${id}`, {
+      const res = await fetch(`${API_URL}/apikeys/${id}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
       });
