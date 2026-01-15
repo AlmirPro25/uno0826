@@ -32,7 +32,7 @@ type MonitorConfig struct {
 // DefaultMonitorConfig returns default monitor configuration
 func DefaultMonitorConfig() MonitorConfig {
 	return MonitorConfig{
-		Interval: 30 * time.Second,
+		Interval: 2 * time.Minute, // Increased from 30s to reduce DB load
 	}
 }
 
@@ -126,15 +126,16 @@ func (m *AlertMonitor) checkPressure(pressure *warobs.PressureReport) {
 
 	overallValue := levelValue[pressure.OverallLevel]
 
-	// Check elevated pressure
-	if overallValue >= 1 {
+	// Only alert on HIGH or CRITICAL pressure (not elevated, to reduce noise)
+	// Check high pressure (threshold is 2.0)
+	if overallValue >= 2 {
 		m.engine.FireFromRule("pressure_elevated", overallValue, "monitor", map[string]string{
 			"level":   string(pressure.OverallLevel),
 			"message": pressure.OverallMessage,
 		})
 	}
 
-	// Check critical pressure
+	// Check critical pressure (threshold is 3.0)
 	if overallValue >= 3 {
 		m.engine.FireFromRule("pressure_critical", overallValue, "monitor", map[string]string{
 			"level":   string(pressure.OverallLevel),

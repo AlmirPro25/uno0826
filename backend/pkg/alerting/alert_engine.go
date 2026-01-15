@@ -178,10 +178,10 @@ func (e *AlertEngine) addDefaultRules() {
 		{
 			Name:      "pressure_elevated",
 			Type:      AlertTypePressure,
-			Condition: "System pressure elevated",
-			Threshold: 1.0, // elevated level
+			Condition: "System pressure high",
+			Threshold: 2.0, // high level (not elevated, to reduce noise)
 			Severity:  SeverityWarning,
-			Cooldown:  10 * time.Minute,
+			Cooldown:  30 * time.Minute, // Increased to reduce alert spam
 			Enabled:   true,
 		},
 		{
@@ -190,7 +190,7 @@ func (e *AlertEngine) addDefaultRules() {
 			Condition: "System pressure critical",
 			Threshold: 3.0, // critical level
 			Severity:  SeverityEmergency,
-			Cooldown:  1 * time.Minute,
+			Cooldown:  10 * time.Minute, // Increased from 1 min to reduce DB load
 			Enabled:   true,
 		},
 		{
