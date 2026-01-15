@@ -165,6 +165,8 @@ func main() {
 				"https://uno0826.onrender.com",
 				"https://vox-bridge-api.onrender.com",
 				"https://frontend-prost.vercel.app",
+				"https://prostqs.com.br",
+				"https://www.prostqs.com.br",
 			}
 			for _, allowed := range allowedOrigins {
 				if origin == allowed {

@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { AuthProvider } from "@/contexts/auth-context";
 import { AppProvider } from "@/contexts/app-context";
 import { Toaster } from "@/components/ui/sonner";
+import { AdSenseScript } from "@/components/ads/adsense-script";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -21,12 +22,7 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <head>
-        {/* Google AdSense Verification */}
-        <script
-          async
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5385779634645102"
-          crossOrigin="anonymous"
-        />
+        {/* Google AdSense - loaded dynamically to avoid hydration issues with ad blockers */}
       </head>
       <body
         className={cn(
@@ -37,6 +33,7 @@ export default function RootLayout({
       >
         <AuthProvider>
           <AppProvider>
+            <AdSenseScript />
             {children}
             <Toaster />
           </AppProvider>

@@ -27,14 +27,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const router = useRouter();
 
     const logout = useCallback(() => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("refreshToken");
-        localStorage.removeItem("user");
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem("token");
+            localStorage.removeItem("refreshToken");
+            localStorage.removeItem("user");
+        }
         setUser(null);
         router.push("/login");
     }, [router]);
 
     useEffect(() => {
+        // Only runs on client-side after hydration
         const initializeAuth = async () => {
             const token = localStorage.getItem("token");
             const storedUser = localStorage.getItem("user");
