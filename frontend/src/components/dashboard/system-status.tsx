@@ -83,38 +83,37 @@ export function SystemStatus({ appId, compact = false }: SystemStatusProps) {
                 },
             ];
 
-            try {
-                // Verificar Shadow Mode
-                const shadowRes = await api.get("/admin/rules/shadow");
-                if (shadowRes.data?.active) {
-                    const trustLoop = loopStatuses.find(l => l.id === "trust");
-                    if (trustLoop) {
-                        trustLoop.status = "warning";
-                        trustLoop.metric = "Shadow ativo";
-                        trustLoop.icon = Ghost;
-                    }
+            // Fetch status silently - don't log errors to console
+            const results = await Promise.allSettled([
+                api.get("/admin/rules/shadow").catch(() => null),
+                api.get("/admin/rules/killswitch").catch(() => null),
+                api.get("/approval/pending").catch(() => null)
+            ]);
+
+            // Shadow Mode
+            const shadowRes = results[0].status === 'fulfilled' ? results[0].value : null;
+            if (shadowRes?.data?.active) {
+                const trustLoop = loopStatuses.find(l => l.id === "trust");
+                if (trustLoop) {
+                    trustLoop.status = "warning";
+                    trustLoop.metric = "Shadow ativo";
+                    trustLoop.icon = Ghost;
                 }
-            } catch {
-                // Ignorar erro
             }
 
-            try {
-                // Verificar Kill Switch
-                const killRes = await api.get("/admin/rules/killswitch");
-                if (killRes.data?.active) {
-                    const trustLoop = loopStatuses.find(l => l.id === "trust");
-                    if (trustLoop) {
-                        trustLoop.status = "error";
-                        trustLoop.metric = "Kill Switch ativo";
-                    }
+            // Kill Switch
+            const killRes = results[1].status === 'fulfilled' ? results[1].value : null;
+            if (killRes?.data?.active) {
+                const trustLoop = loopStatuses.find(l => l.id === "trust");
+                if (trustLoop) {
+                    trustLoop.status = "error";
+                    trustLoop.metric = "Kill Switch ativo";
                 }
-            } catch {
-                // Ignorar erro
             }
 
-            try {
-                // Verificar aprovações pendentes
-                const approvalsRes = await api.get("/approval/pending");
+            // Aprovações pendentes
+            const approvalsRes = results[2].status === 'fulfilled' ? results[2].value : null;
+            if (approvalsRes?.data) {
                 const pending = approvalsRes.data.pending || approvalsRes.data || [];
                 const pendingCount = Array.isArray(pending) ? pending.length : 0;
                 
@@ -125,8 +124,6 @@ export function SystemStatus({ appId, compact = false }: SystemStatusProps) {
                         delegationLoop.metric = `${pendingCount} pendente${pendingCount > 1 ? "s" : ""}`;
                     }
                 }
-            } catch {
-                // Ignorar erro
             }
 
             setLoops(loopStatuses);

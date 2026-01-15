@@ -97,24 +97,28 @@ export default function DashboardPage() {
         return date.toLocaleDateString('pt-BR');
     };
 
-    // Buscar métricas de pulso do app ativo
-    const fetchPulseMetrics = async (appId: string) => {
+    // Buscar métricas de pulso do app ativo (silently - no console errors)
+    const fetchPulseMetrics = async (appId: string): Promise<PulseMetrics | null> => {
         try {
-            const res = await api.get(`/admin/telemetry/apps/${appId}/metrics`);
-            const data = res.data;
+            const [metricsRes, eventsRes] = await Promise.allSettled([
+                api.get(`/admin/telemetry/apps/${appId}/metrics`).catch(() => null),
+                api.get(`/events/app/${appId}?limit=1`).catch(() => null)
+            ]);
+
+            const data = metricsRes.status === 'fulfilled' && metricsRes.value?.data 
+                ? metricsRes.value.data 
+                : {};
 
             // Calcular eventos nos últimos 5 min (events_per_minute * 5)
             const events5min = Math.round((data.events_per_minute || 0) * 5);
 
             // Buscar último evento para pegar o tipo
             let lastEventType = null;
-            try {
-                const eventsRes = await api.get(`/events/${appId}?limit=1`);
-                if (eventsRes.data.events?.length > 0) {
-                    lastEventType = eventsRes.data.events[0].type || eventsRes.data.events[0].event_type;
+            if (eventsRes.status === 'fulfilled') {
+                const eventsData = eventsRes.value?.data;
+                if (eventsData?.events?.length > 0) {
+                    lastEventType = eventsData.events[0].type || eventsData.events[0].event_type;
                 }
-            } catch {
-                // Ignorar erro ao buscar último evento
             }
 
             return {
@@ -134,17 +138,17 @@ export default function DashboardPage() {
             if (!user?.id) return;
 
             try {
-                // Parallel fetching for better performance
+                // Parallel fetching for better performance (silently catch errors)
                 const [appsRes, shadowRes, approvalsRes, eventsRes] = await Promise.allSettled([
-                    api.get("/apps/mine?limit=5"),
-                    api.get("/admin/rules/shadow"),
-                    api.get("/approval/pending"),
-                    api.get("/events?limit=10") // Fetch real recent events
+                    api.get("/apps/mine?limit=5").catch(() => ({ data: { apps: [] } })),
+                    api.get("/admin/rules/shadow").catch(() => null),
+                    api.get("/approval/pending").catch(() => ({ data: { pending: [] } })),
+                    api.get("/events/user/" + user.id + "?limit=10").catch(() => ({ data: { events: [] } }))
                 ]);
 
                 // Helper to extract data or default
-                const getVal = (res: PromiseSettledResult<any>, def: any) =>
-                    res.status === 'fulfilled' ? res.value.data : def;
+                const getVal = <T,>(res: PromiseSettledResult<{ data: T } | null>, def: T): T =>
+                    res.status === 'fulfilled' && res.value ? res.value.data : def;
 
                 const appsData = getVal(appsRes, { apps: [] });
                 const apps = appsData.apps || [];
@@ -158,11 +162,12 @@ export default function DashboardPage() {
                 // Process Recent Events
                 const eventsData = getVal(eventsRes, { events: [] });
                 const rawEvents = eventsData.events || eventsData || [];
+                interface RawEvent { type: string; created_at: string; }
                 const recentEvents = Array.isArray(rawEvents)
-                    ? rawEvents.slice(0, 5).map((e: any) => ({
+                    ? rawEvents.slice(0, 5).map((e: RawEvent) => ({
                         name: e.type,
                         time: new Date(e.created_at).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                        status: e.type.includes('fail') || e.type.includes('error') ? 'error' : 'ok'
+                        status: e.type?.includes('fail') || e.type?.includes('error') ? 'error' : 'ok'
                     }))
                     : [];
 
