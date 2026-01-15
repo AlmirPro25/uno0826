@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef, useSyncExternalStore } from "react";
 import { User } from "@/types";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -11,6 +11,7 @@ interface AuthContextType {
     login: (token: string, refreshToken: string) => Promise<void>;
     logout: () => void;
     isAuthenticated: boolean;
+    isHydrated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,11 +20,23 @@ const AuthContext = createContext<AuthContextType>({
     login: async () => { },
     logout: () => { },
     isAuthenticated: false,
+    isHydrated: false,
 });
+
+// Custom hook for hydration state
+function useHydrated() {
+    return useSyncExternalStore(
+        () => () => {},
+        () => true,
+        () => false
+    );
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [loading, setLoading] = useState(true);
+    const isHydrated = useHydrated();
+    const hasInitialized = useRef(false);
     const router = useRouter();
 
     const logout = useCallback(() => {
@@ -37,24 +50,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }, [router]);
 
     useEffect(() => {
-        // Only runs on client-side after hydration
+        // Prevent double initialization in strict mode
+        if (hasInitialized.current) return;
+        hasInitialized.current = true;
+
+        // Initialize auth
         const initializeAuth = async () => {
+            if (typeof window === 'undefined') {
+                setLoading(false);
+                return;
+            }
+
             const token = localStorage.getItem("token");
             const storedUser = localStorage.getItem("user");
 
             if (token && storedUser) {
                 try {
-                    setUser(JSON.parse(storedUser));
+                    const parsedUser = JSON.parse(storedUser);
+                    setUser(parsedUser);
+                    
+                    // Validate token with backend silently
+                    try {
+                        const res = await api.get("/identity/me");
+                        if (res.data) {
+                            setUser(res.data);
+                            localStorage.setItem("user", JSON.stringify(res.data));
+                        }
+                    } catch (err: unknown) {
+                        const error = err as { response?: { status?: number } };
+                        // Token expired or invalid - clear and redirect
+                        if (error.response?.status === 401) {
+                            console.warn("Token expired, clearing session");
+                            localStorage.removeItem("token");
+                            localStorage.removeItem("refreshToken");
+                            localStorage.removeItem("user");
+                            setUser(null);
+                            router.push("/login");
+                            setLoading(false);
+                            return;
+                        }
+                    }
                 } catch (error) {
                     console.error("Auth validation failed", error);
-                    logout();
+                    localStorage.removeItem("token");
+                    localStorage.removeItem("refreshToken");
+                    localStorage.removeItem("user");
+                    setUser(null);
                 }
             }
             setLoading(false);
         };
 
         initializeAuth();
-    }, [logout]);
+    }, [router]);
 
     const login = async (token: string, refreshToken: string) => {
         localStorage.setItem("token", token);
@@ -93,6 +141,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 login,
                 logout,
                 isAuthenticated: !!user,
+                isHydrated,
             }}
         >
             {children}

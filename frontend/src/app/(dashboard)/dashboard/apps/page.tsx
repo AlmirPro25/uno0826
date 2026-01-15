@@ -22,7 +22,7 @@ interface App {
 }
 
 export default function AppsPage() {
-    const { user } = useAuth();
+    const { user, loading: authLoading, isHydrated } = useAuth();
     const [apps, setApps] = useState<App[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -36,6 +36,10 @@ export default function AppsPage() {
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
 
     const fetchApps = async () => {
+        if (!user) return;
+        
+        setLoading(true);
+        setError("");
         try {
             // Admin/Super Admin vê todos os apps, usuários normais veem só os seus
             const endpoint = isAdmin ? "/apps" : "/apps/mine";
@@ -49,23 +53,28 @@ export default function AppsPage() {
     };
 
     useEffect(() => {
-        const loadApps = async () => {
-            try {
-                // Admin/Super Admin vê todos os apps, usuários normais veem só os seus
-                const endpoint = isAdmin ? "/apps" : "/apps/mine";
-                const res = await api.get(endpoint);
-                setApps(res.data.apps || []);
-            } catch {
-                setError("Falha ao carregar aplicações do Kernel.");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        if (user !== null) {
+        // Wait for hydration and auth to complete
+        if (!isHydrated || authLoading) return;
+        
+        if (user) {
+            const loadApps = async () => {
+                setLoading(true);
+                setError("");
+                try {
+                    const endpoint = isAdmin ? "/apps" : "/apps/mine";
+                    const res = await api.get(endpoint);
+                    setApps(res.data.apps || []);
+                } catch {
+                    setError("Falha ao carregar aplicações do Kernel.");
+                } finally {
+                    setLoading(false);
+                }
+            };
             loadApps();
+        } else {
+            setLoading(false);
         }
-    }, [user, isAdmin]);
+    }, [user, isAdmin, isHydrated, authLoading]);
 
     const handleCreateApp = async (e: React.FormEvent) => {
         e.preventDefault();

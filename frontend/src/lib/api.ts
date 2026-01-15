@@ -8,13 +8,16 @@ export const api = axios.create({
     headers: {
         "Content-Type": "application/json",
     },
+    timeout: 30000, // 30 seconds timeout
 });
 
 api.interceptors.request.use(
     (config) => {
-        const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-        if (token) {
-            config.headers.Authorization = `Bearer ${token}`;
+        if (typeof window !== "undefined") {
+            const token = localStorage.getItem("token");
+            if (token) {
+                config.headers.Authorization = `Bearer ${token}`;
+            }
         }
         return config;
     },
@@ -28,9 +31,15 @@ api.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             if (typeof window !== "undefined") {
+                // Clear all auth data
                 localStorage.removeItem("token");
-                // Optional: Redirect to login if not already there
-                // window.location.href = "/login";
+                localStorage.removeItem("refreshToken");
+                localStorage.removeItem("user");
+                
+                // Redirect to login if not already there
+                if (!window.location.pathname.includes("/login")) {
+                    window.location.href = "/login";
+                }
             }
         }
         return Promise.reject(error);
