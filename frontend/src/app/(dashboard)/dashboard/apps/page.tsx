@@ -10,6 +10,7 @@ import { AppHeader } from "@/components/dashboard/app-header";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/contexts/auth-context";
 
 interface App {
     id: string;
@@ -21,6 +22,7 @@ interface App {
 }
 
 export default function AppsPage() {
+    const { user } = useAuth();
     const [apps, setApps] = useState<App[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -31,9 +33,13 @@ export default function AppsPage() {
     const [newDesc, setNewDesc] = useState("");
     const [creating, setCreating] = useState(false);
 
+    const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+
     const fetchApps = async () => {
         try {
-            const res = await api.get("/apps/mine");
+            // Admin/Super Admin vê todos os apps, usuários normais veem só os seus
+            const endpoint = isAdmin ? "/apps" : "/apps/mine";
+            const res = await api.get(endpoint);
             setApps(res.data.apps || []);
         } catch {
             setError("Falha ao carregar aplicações do Kernel.");
@@ -43,8 +49,23 @@ export default function AppsPage() {
     };
 
     useEffect(() => {
-        fetchApps();
-    }, []);
+        const loadApps = async () => {
+            try {
+                // Admin/Super Admin vê todos os apps, usuários normais veem só os seus
+                const endpoint = isAdmin ? "/apps" : "/apps/mine";
+                const res = await api.get(endpoint);
+                setApps(res.data.apps || []);
+            } catch {
+                setError("Falha ao carregar aplicações do Kernel.");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        if (user !== null) {
+            loadApps();
+        }
+    }, [user, isAdmin]);
 
     const handleCreateApp = async (e: React.FormEvent) => {
         e.preventDefault();
