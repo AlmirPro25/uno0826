@@ -159,35 +159,40 @@ func (s *JobService) processNextJob(ctx context.Context) {
 	s.executeJob(ctx, job)
 }
 
-// acquireJob adquire um job para processamento (lock otimista)
+// acquireJob adquire um job para processamento (lock otimista com CTE)
 func (s *JobService) acquireJob() (*Job, error) {
 	var job Job
 	now := time.Now()
+	lockExpiry := now.Add(-5 * time.Minute)
 
-	// Buscar job disponível e fazer lock atômico
-	result := s.db.Model(&Job{}).
-		Where("status IN ?", []string{string(JobStatusPending), string(JobStatusRetrying)}).
-		Where("next_run_at <= ?", now).
-		Where("locked_at IS NULL OR locked_at < ?", now.Add(-5*time.Minute)). // Lock expirado
-		Order("priority DESC, next_run_at ASC").
-		Limit(1).
-		Updates(map[string]interface{}{
-			"status":    string(JobStatusProcessing),
-			"locked_at": now,
-			"locked_by": s.workerID,
-		})
+	// Usar raw SQL com CTE para operação atômica mais eficiente
+	// Isso evita o UPDATE sem WHERE específico que causa full table scan
+	sql := `
+		WITH next_job AS (
+			SELECT id FROM jobs 
+			WHERE status IN ('pending', 'retrying')
+			AND next_run_at <= $1
+			AND (locked_at IS NULL OR locked_at < $2)
+			ORDER BY priority DESC, next_run_at ASC
+			LIMIT 1
+			FOR UPDATE SKIP LOCKED
+		)
+		UPDATE jobs SET 
+			status = 'processing',
+			locked_at = $1,
+			locked_by = $3,
+			updated_at = $1
+		FROM next_job
+		WHERE jobs.id = next_job.id
+		RETURNING jobs.*
+	`
 
+	result := s.db.Raw(sql, now, lockExpiry, s.workerID).Scan(&job)
 	if result.Error != nil {
 		return nil, result.Error
 	}
 	if result.RowsAffected == 0 {
 		return nil, gorm.ErrRecordNotFound
-	}
-
-	// Buscar o job que foi lockado
-	if err := s.db.Where("locked_by = ? AND status = ?", s.workerID, string(JobStatusProcessing)).
-		First(&job).Error; err != nil {
-		return nil, err
 	}
 
 	return &job, nil

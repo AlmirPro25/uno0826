@@ -89,22 +89,61 @@ func (s *TelemetryService) startSessionCleanup() {
 }
 
 // logSystemHealth emite log de saúde do sistema a cada 5 minutos
+// Otimizado: queries paralelas e uso de índices
 func (s *TelemetryService) logSystemHealth() {
 	var totalApps int64
 	var totalSessions int64
 	var activeSessions int64
 	var totalEvents int64
 	var recentAlerts int64
-	
-	s.db.Table("applications").Count(&totalApps)
-	s.db.Model(&AppSession{}).Count(&totalSessions)
-	s.db.Model(&AppSession{}).Where("ended_at IS NULL AND last_seen_at > ?", time.Now().Add(-ActiveSessionThreshold)).Count(&activeSessions)
-	s.db.Model(&TelemetryEvent{}).Count(&totalEvents)
-	s.db.Model(&AlertHistory{}).Where("created_at > ?", time.Now().Add(-1*time.Hour)).Count(&recentAlerts)
-	
-	// Calcular eventos/min (últimos 5 min)
 	var events5min int64
-	s.db.Model(&TelemetryEvent{}).Where("timestamp > ?", time.Now().Add(-5*time.Minute)).Count(&events5min)
+	
+	// Executar queries em paralelo para reduzir tempo total
+	var wg sync.WaitGroup
+	wg.Add(6)
+	
+	go func() {
+		defer wg.Done()
+		s.db.Table("applications").Count(&totalApps)
+	}()
+	
+	go func() {
+		defer wg.Done()
+		s.db.Model(&AppSession{}).Count(&totalSessions)
+	}()
+	
+	go func() {
+		defer wg.Done()
+		// Usa índice idx_telemetry_sessions_active_recent
+		threshold := time.Now().Add(-ActiveSessionThreshold)
+		s.db.Model(&AppSession{}).
+			Where("ended_at IS NULL AND last_seen_at > ?", threshold).
+			Count(&activeSessions)
+	}()
+	
+	go func() {
+		defer wg.Done()
+		s.db.Model(&TelemetryEvent{}).Count(&totalEvents)
+	}()
+	
+	go func() {
+		defer wg.Done()
+		// Usa índice idx_alert_history_created_at
+		s.db.Model(&AlertHistory{}).
+			Where("created_at > ?", time.Now().Add(-1*time.Hour)).
+			Count(&recentAlerts)
+	}()
+	
+	go func() {
+		defer wg.Done()
+		// Usa índice idx_telemetry_events_timestamp
+		s.db.Model(&TelemetryEvent{}).
+			Where("timestamp > ?", time.Now().Add(-5*time.Minute)).
+			Count(&events5min)
+	}()
+	
+	wg.Wait()
+	
 	eventsPerMin := float64(events5min) / 5.0
 	
 	log.Printf("💚 [HEALTH] apps=%d sessions=%d active=%d events=%d events/min=%.1f alerts(1h)=%d",
@@ -114,9 +153,12 @@ func (s *TelemetryService) logSystemHealth() {
 func (s *TelemetryService) cleanupZombieSessions() {
 	cutoff := time.Now().Add(-SessionTimeoutDuration)
 	
-	// Buscar sessões zumbi (sem ended_at e last_seen muito antigo)
+	// Buscar sessões zumbi usando índice idx_telemetry_sessions_active_timeout
+	// Limitar para evitar queries muito grandes
 	var zombies []AppSession
-	s.db.Where("ended_at IS NULL AND last_seen_at < ?", cutoff).Find(&zombies)
+	s.db.Where("ended_at IS NULL AND last_seen_at < ?", cutoff).
+		Limit(100). // Processar em batches
+		Find(&zombies)
 	
 	if len(zombies) == 0 {
 		return
