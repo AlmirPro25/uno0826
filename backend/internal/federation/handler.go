@@ -1,11 +1,15 @@
 package federation
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
+
+	"prost-qs/backend/pkg/utils"
 )
 
 // ========================================
@@ -110,75 +114,95 @@ func (h *FederationHandler) StartOAuth(c *gin.Context) {
 // @Produce json
 // @Param state query string true "State ID"
 // @Param code query string true "Authorization code"
-// @Success 200 {object} OAuthCallbackResponse
+// @Success 302 "Redirect to frontend with tokens"
 // @Router /federation/google/callback [get]
 func (h *FederationHandler) GoogleCallback(c *gin.Context) {
 	stateStr := c.Query("state")
 	code := c.Query("code")
 	errorParam := c.Query("error")
 
+	// URL do frontend para redirect
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "https://prostqs.com.br"
+	}
+
+	// Erro do Google
 	if errorParam != "" {
 		errorDesc := c.Query("error_description")
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error":       errorParam,
-			"description": errorDesc,
-		})
+		redirectURL := fmt.Sprintf("%s/login?error=%s&description=%s",
+			frontendURL,
+			url.QueryEscape(errorParam),
+			url.QueryEscape(errorDesc))
+		c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 		return
 	}
 
+	// Parâmetros faltando
 	if stateStr == "" || code == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing state or code"})
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=missing_params")
 		return
 	}
 
+	// State inválido
 	stateID, err := uuid.Parse(stateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=invalid_state")
 		return
 	}
 
+	// Completar fluxo OAuth
 	identity, fedIdentity, token, err := h.service.CompleteOAuthFlow(stateID, code)
 	if err != nil {
+		var errorCode string
 		switch err {
 		case ErrStateNotFound:
-			c.JSON(http.StatusNotFound, gin.H{"error": "State não encontrado"})
+			errorCode = "state_not_found"
 		case ErrStateExpired:
-			c.JSON(http.StatusGone, gin.H{"error": "State expirado"})
+			errorCode = "state_expired"
 		case ErrStateAlreadyUsed:
-			c.JSON(http.StatusConflict, gin.H{"error": "State já utilizado"})
+			errorCode = "state_already_used"
 		default:
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Falha no OAuth"})
+			errorCode = "oauth_failed"
 		}
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error="+errorCode)
 		return
 	}
 
-	c.JSON(http.StatusOK, OAuthCallbackResponse{
-		Success:   true,
-		UserID:    identity.UserID.String(),
-		Token:     token,
-		IsNewUser: identity.Source == "oauth_google",
-		Email:     fedIdentity.Email,
-		Name:      fedIdentity.Name,
-		Picture:   fedIdentity.Picture,
-	})
+	// Gerar refresh token
+	refreshToken, _ := utils.GenerateRefreshToken(identity.UserID.String(), "user", "active")
+
+	// Redirecionar para frontend com tokens
+	// O frontend vai processar esses tokens e fazer login
+	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&refresh_token=%s&email=%s&name=%s&picture=%s",
+		frontendURL,
+		url.QueryEscape(token),
+		url.QueryEscape(refreshToken),
+		url.QueryEscape(fedIdentity.Email),
+		url.QueryEscape(fedIdentity.Name),
+		url.QueryEscape(fedIdentity.Picture))
+
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
 
 // MockGoogleCallback simula callback do Google para desenvolvimento
 // PROTEGIDO: Só funciona em ambiente de desenvolvimento
 func (h *FederationHandler) MockGoogleCallback(c *gin.Context) {
+	// URL do frontend para redirect
+	frontendURL := os.Getenv("FRONTEND_URL")
+	if frontendURL == "" {
+		frontendURL = "http://localhost:3000"
+	}
+
 	// Bloquear em produção
 	if os.Getenv("GIN_MODE") == "release" {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error":   "Endpoint não disponível em produção",
-			"code":    "PROD_BLOCKED",
-			"message": "Mock OAuth só está disponível em desenvolvimento",
-		})
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=mock_blocked_in_production")
 		return
 	}
 
 	stateStr := c.Query("state")
 	if stateStr == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing state"})
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=missing_state")
 		return
 	}
 
@@ -187,25 +211,29 @@ func (h *FederationHandler) MockGoogleCallback(c *gin.Context) {
 
 	stateID, err := uuid.Parse(stateStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid state"})
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=invalid_state")
 		return
 	}
 
 	identity, fedIdentity, token, err := h.service.CompleteOAuthFlow(stateID, mockCode)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.Redirect(http.StatusTemporaryRedirect, frontendURL+"/login?error=oauth_failed")
 		return
 	}
 
-	c.JSON(http.StatusOK, OAuthCallbackResponse{
-		Success:   true,
-		UserID:    identity.UserID.String(),
-		Token:     token,
-		IsNewUser: true,
-		Email:     fedIdentity.Email,
-		Name:      fedIdentity.Name,
-		Picture:   fedIdentity.Picture,
-	})
+	// Gerar refresh token
+	refreshToken, _ := utils.GenerateRefreshToken(identity.UserID.String(), "user", "active")
+
+	// Redirecionar para frontend com tokens
+	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&refresh_token=%s&email=%s&name=%s&picture=%s",
+		frontendURL,
+		url.QueryEscape(token),
+		url.QueryEscape(refreshToken),
+		url.QueryEscape(fedIdentity.Email),
+		url.QueryEscape(fedIdentity.Name),
+		url.QueryEscape(fedIdentity.Picture))
+
+	c.Redirect(http.StatusTemporaryRedirect, redirectURL)
 }
 
 // ========================================

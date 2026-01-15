@@ -256,44 +256,27 @@ app.post('/auth/implicit-login', async (req, res) => {
 });
 
 // ============================================================================
-// TURN CREDENTIALS - VOXGRID GLOBAL (Metered.ca)
+// TURN CREDENTIALS - VOXGRID SOVEREIGN INFRASTRUCTURE
 // ============================================================================
-// TECH LEAD RECOMMENDATIONS:
-// 1. TCP primeiro = atravessa firewalls africanos com mais sucesso
-// 2. Usar endpoint global (global.relay.metered.ca) para auto-routing
-// 3. Credenciais temporárias HMAC para segurança
+// ARQUITETURA:
+// 1. OPÇÃO SOBERANA: Coturn próprio em 3 continentes (Brasil, Europa, África)
+// 2. OPÇÃO MANAGED: Metered.ca como fallback
+// 3. TCP primeiro = atravessa firewalls africanos com mais sucesso
+// 4. Credenciais temporárias HMAC para segurança
 // ============================================================================
 app.get('/turn-credentials', (req, res) => {
-  // OPÇÃO 1: Metered.ca com API Key (RECOMENDADO PARA PRODUÇÃO)
-  const METERED_API_KEY = process.env.METERED_API_KEY;
-  const METERED_API_SECRET = process.env.METERED_API_SECRET;
+  const crypto = require('crypto');
   
-  if (METERED_API_KEY && METERED_API_SECRET) {
-    // Metered.ca Global - backbone privado entre continentes
-    // Ordem: TCP primeiro (melhor para firewalls africanos/corporativos)
-    const turnServers = [
-      {
-        urls: [
-          'turns:global.relay.metered.ca:443?transport=tcp',  // TLS TCP primeiro
-          'turn:global.relay.metered.ca:443',                  // UDP 443
-          'turn:global.relay.metered.ca:80'                    // UDP 80 fallback
-        ],
-        username: METERED_API_KEY,
-        credential: METERED_API_SECRET
-      }
-    ];
-    
-    console.log(`🌐 VOXGRID: Metered.ca global TURN (API key: ${METERED_API_KEY.substring(0, 8)}...)`);
-    return res.json(turnServers);
-  }
-  
-  // OPÇÃO 2: TURN próprio com HMAC (para escala futura)
+  // ========================================
+  // OPÇÃO 1: INFRAESTRUTURA SOBERANA (PRIORIDADE)
+  // Coturn próprio em múltiplos continentes
+  // ========================================
   const TURN_SECRET = process.env.TURN_SECRET;
-  const TURN_URLS = process.env.TURN_URLS;
+  const TURN_SERVERS = process.env.TURN_SERVERS; // Formato: "turn-br.domain.com,turn-eu.domain.com,turn-af.domain.com"
   
-  if (TURN_SECRET && TURN_URLS) {
-    const crypto = require('crypto');
-    const ttl = 300; // 5 minutos
+  if (TURN_SECRET && TURN_SERVERS) {
+    // Gerar credenciais temporárias HMAC (24h de validade)
+    const ttl = 86400; // 24 horas
     const timestamp = Math.floor(Date.now() / 1000) + ttl;
     const username = `${timestamp}`;
     
@@ -302,15 +285,79 @@ app.get('/turn-credentials', (req, res) => {
       .update(username)
       .digest('base64');
     
-    const urls = TURN_URLS.split(',').map(u => u.trim());
+    // Parsear servidores
+    const servers = TURN_SERVERS.split(',').map(s => s.trim());
     
-    console.log(`🔐 TURN próprio: credenciais temporárias (TTL: ${ttl}s)`);
-    return res.json([{ urls, username, credential: hmac }]);
+    // Gerar configuração para cada servidor
+    // TCP primeiro (melhor para firewalls africanos/corporativos)
+    const turnServers = servers.map(server => ({
+      urls: [
+        `turn:${server}:3478?transport=tcp`,   // TCP primeiro
+        `turn:${server}:3478`,                  // UDP
+        `turns:${server}:5349?transport=tcp`   // TLS TCP (se configurado)
+      ],
+      username,
+      credential: hmac
+    }));
+    
+    console.log(`🌐 VOXGRID SOVEREIGN: ${servers.length} servidores próprios (TTL: ${ttl}s)`);
+    return res.json(turnServers);
   }
   
-  // OPÇÃO 3: Fallback público (APENAS DESENVOLVIMENTO)
+  // ========================================
+  // OPÇÃO 2: METERED.CA (Fallback gerenciado)
+  // ========================================
+  const METERED_API_KEY = process.env.METERED_API_KEY;
+  const METERED_API_SECRET = process.env.METERED_API_SECRET;
+  
+  if (METERED_API_KEY && METERED_API_SECRET) {
+    const turnServers = [
+      {
+        urls: [
+          'turns:global.relay.metered.ca:443?transport=tcp',
+          'turn:global.relay.metered.ca:443',
+          'turn:global.relay.metered.ca:80'
+        ],
+        username: METERED_API_KEY,
+        credential: METERED_API_SECRET
+      }
+    ];
+    
+    console.log(`🌐 VOXGRID: Metered.ca fallback (API key: ${METERED_API_KEY.substring(0, 8)}...)`);
+    return res.json(turnServers);
+  }
+  
+  // ========================================
+  // OPÇÃO 3: TURN ÚNICO (Legacy)
+  // ========================================
+  const TURN_URL = process.env.TURN_URL;
+  
+  if (TURN_SECRET && TURN_URL) {
+    const ttl = 300;
+    const timestamp = Math.floor(Date.now() / 1000) + ttl;
+    const username = `${timestamp}`;
+    
+    const hmac = crypto
+      .createHmac('sha1', TURN_SECRET)
+      .update(username)
+      .digest('base64');
+    
+    console.log(`🔐 TURN único: ${TURN_URL} (TTL: ${ttl}s)`);
+    return res.json([{ 
+      urls: [
+        `turn:${TURN_URL}:3478?transport=tcp`,
+        `turn:${TURN_URL}:3478`
+      ], 
+      username, 
+      credential: hmac 
+    }]);
+  }
+  
+  // ========================================
+  // OPÇÃO 4: Fallback público (APENAS DEV)
   // ⚠️ NÃO FUNCIONA PARA CONEXÕES INTERCONTINENTAIS
-  console.warn('⚠️ VOXGRID: Usando TURN público - NÃO RECOMENDADO PARA PRODUÇÃO');
+  // ========================================
+  console.warn('⚠️ VOXGRID: Nenhum TURN configurado - usando fallback público (NÃO RECOMENDADO)');
   const turnServers = [
     { 
       urls: [
