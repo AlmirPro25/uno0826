@@ -1,0 +1,74 @@
+version: "3.8"
+
+services:
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./letsencrypt:/letsencrypt
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL}
+    networks:
+      - sce-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.${SUPER_DOMAIN}`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+
+  sce-backend:
+    build:
+      context: ./SCE/backend
+      dockerfile: Dockerfile
+    container_name: sce-backend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_URL=${DATABASE_URL}
+      - PROST_QS_JWT_SECRET=${PROST_QS_JWT_SECRET}
+      - PROSTQS_URL=${PROSTQS_URL}
+      - PROSTQS_APP_ID=${PROSTQS_APP_ID}
+      - PROSTQS_APP_KEY=${PROSTQS_APP_KEY}
+      - PROSTQS_APP_SECRET=${PROSTQS_APP_SECRET}
+      - SUPER_DOMAIN=${SUPER_DOMAIN}
+      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./data:/app/data
+    networks:
+      - sce-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sce-api.rule=Host(`api.${SUPER_DOMAIN}`)"
+      - "traefik.http.routers.sce-api.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sce-api.loadbalancer.server.port=3001"
+
+  sce-frontend:
+    build:
+      context: ./SCE/frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=https://api.${SUPER_DOMAIN}
+        - NEXT_PUBLIC_PROSTQS_URL=${PROSTQS_URL}
+    container_name: sce-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - sce-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.sce-dashboard.rule=Host(`${SUPER_DOMAIN}`)"
+      - "traefik.http.routers.sce-dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.services.sce-dashboard.loadbalancer.server.port=3000"
+
+networks:
+  sce-network:
+    external: true
