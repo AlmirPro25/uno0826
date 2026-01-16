@@ -36,21 +36,35 @@ type UserAppMismatch struct {
 }
 
 // CheckUserIsolation verifica se há vazamento de dados entre apps
+// Nota: No modelo sovereign identity, usuários são globais e se conectam a apps via AppUserLink
+// Esta verificação garante que eventos/sessões só existem para apps onde o usuário tem link
+// NOTA: Se a tabela app_user_links não existir, retorna vazio (schema ainda não migrado)
 func (i *IdentityInvariants) CheckUserIsolation(ctx context.Context) ([]UserAppMismatch, error) {
 	var mismatches []UserAppMismatch
 	
-	// Verificar eventos com app_id diferente do usuário
+	// Verificar se a tabela app_user_links existe
+	var tableExists int64
+	i.db.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'app_user_links'").Scan(&tableExists)
+	if tableExists == 0 {
+		// Tabela não existe, schema ainda não migrado - retorna vazio
+		return mismatches, nil
+	}
+	
+	// Verificar eventos de usuários em apps onde não têm link
 	var eventMismatches []struct {
-		UserID    uuid.UUID `gorm:"column:user_id"`
-		UserAppID uuid.UUID `gorm:"column:user_app_id"`
+		UserID     uuid.UUID `gorm:"column:user_id"`
 		EventAppID uuid.UUID `gorm:"column:event_app_id"`
 	}
 	
 	err := i.db.Raw(`
-		SELECT e.user_id, u.app_id as user_app_id, e.app_id as event_app_id
+		SELECT e.user_id, e.app_id as event_app_id
 		FROM telemetry_events e
-		JOIN users u ON e.user_id = u.id
-		WHERE e.app_id != u.app_id
+		WHERE e.user_id IS NOT NULL 
+		AND e.app_id IS NOT NULL
+		AND NOT EXISTS (
+			SELECT 1 FROM app_user_links aul 
+			WHERE aul.user_id = e.user_id AND aul.app_id = e.app_id
+		)
 		LIMIT 100
 	`).Scan(&eventMismatches).Error
 	
@@ -61,24 +75,26 @@ func (i *IdentityInvariants) CheckUserIsolation(ctx context.Context) ([]UserAppM
 	for _, m := range eventMismatches {
 		mismatches = append(mismatches, UserAppMismatch{
 			UserID:    m.UserID,
-			UserAppID: m.UserAppID,
 			DataAppID: m.EventAppID,
 			TableName: "telemetry_events",
 		})
 	}
 	
-	// Verificar sessões com app_id diferente do usuário
+	// Verificar sessões de usuários em apps onde não têm link
 	var sessionMismatches []struct {
-		UserID      uuid.UUID `gorm:"column:user_id"`
-		UserAppID   uuid.UUID `gorm:"column:user_app_id"`
+		UserID       uuid.UUID `gorm:"column:user_id"`
 		SessionAppID uuid.UUID `gorm:"column:session_app_id"`
 	}
 	
 	err = i.db.Raw(`
-		SELECT s.user_id, u.app_id as user_app_id, s.app_id as session_app_id
+		SELECT s.user_id, s.app_id as session_app_id
 		FROM telemetry_sessions s
-		JOIN users u ON s.user_id = u.id
-		WHERE s.app_id != u.app_id
+		WHERE s.user_id IS NOT NULL
+		AND s.app_id IS NOT NULL
+		AND NOT EXISTS (
+			SELECT 1 FROM app_user_links aul 
+			WHERE aul.user_id = s.user_id AND aul.app_id = s.app_id
+		)
 		LIMIT 100
 	`).Scan(&sessionMismatches).Error
 	
@@ -89,7 +105,6 @@ func (i *IdentityInvariants) CheckUserIsolation(ctx context.Context) ([]UserAppM
 	for _, m := range sessionMismatches {
 		mismatches = append(mismatches, UserAppMismatch{
 			UserID:    m.UserID,
-			UserAppID: m.UserAppID,
 			DataAppID: m.SessionAppID,
 			TableName: "telemetry_sessions",
 		})
@@ -105,21 +120,40 @@ func (i *IdentityInvariants) CheckUserIsolation(ctx context.Context) ([]UserAppM
 
 type DuplicateEmail struct {
 	Email string
-	AppID uuid.UUID
 	Count int
 }
 
-// CheckEmailUniqueness verifica emails duplicados por app
+// CheckEmailUniqueness verifica emails duplicados
+// No modelo sovereign identity, email é único globalmente (não por app)
+// NOTA: Se a coluna deleted_at não existir, usa query sem ela
 func (i *IdentityInvariants) CheckEmailUniqueness(ctx context.Context) ([]DuplicateEmail, error) {
 	var duplicates []DuplicateEmail
 	
-	err := i.db.Raw(`
-		SELECT email, app_id, COUNT(*) as count
-		FROM users
-		WHERE deleted_at IS NULL
-		GROUP BY email, app_id
-		HAVING COUNT(*) > 1
-	`).Scan(&duplicates).Error
+	// Verificar se a coluna deleted_at existe
+	var columnExists int64
+	i.db.Raw("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'deleted_at'").Scan(&columnExists)
+	
+	var query string
+	if columnExists > 0 {
+		query = `
+			SELECT email, COUNT(*) as count
+			FROM users
+			WHERE deleted_at IS NULL
+			AND email IS NOT NULL AND email != ''
+			GROUP BY email
+			HAVING COUNT(*) > 1
+		`
+	} else {
+		query = `
+			SELECT email, COUNT(*) as count
+			FROM users
+			WHERE email IS NOT NULL AND email != ''
+			GROUP BY email
+			HAVING COUNT(*) > 1
+		`
+	}
+	
+	err := i.db.Raw(query).Scan(&duplicates).Error
 	
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("erro ao verificar emails: %w", err)
@@ -155,16 +189,46 @@ type OrphanUser struct {
 	AppID  uuid.UUID
 }
 
-// CheckOrphanUsers verifica usuários sem app válido
+// CheckOrphanUsers verifica usuários sem nenhum link de app
+// No modelo sovereign, usuários podem existir sem apps (recém criados)
+// Mas usuários antigos sem nenhum link podem indicar problema
+// NOTA: Se a tabela app_user_links não existir, retorna vazio
 func (i *IdentityInvariants) CheckOrphanUsers(ctx context.Context) ([]OrphanUser, error) {
 	var orphans []OrphanUser
 	
-	err := i.db.Raw(`
-		SELECT u.id as user_id, u.app_id
-		FROM users u
-		LEFT JOIN applications a ON u.app_id = a.id
-		WHERE a.id IS NULL AND u.deleted_at IS NULL
-	`).Scan(&orphans).Error
+	// Verificar se a tabela app_user_links existe
+	var tableExists int64
+	i.db.Raw("SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'app_user_links'").Scan(&tableExists)
+	if tableExists == 0 {
+		// Tabela não existe, schema ainda não migrado - retorna vazio
+		return orphans, nil
+	}
+	
+	// Verificar se a coluna deleted_at existe
+	var columnExists int64
+	i.db.Raw("SELECT COUNT(*) FROM information_schema.columns WHERE table_name = 'users' AND column_name = 'deleted_at'").Scan(&columnExists)
+	
+	var query string
+	if columnExists > 0 {
+		query = `
+			SELECT u.id as user_id, u.origin_app_id as app_id
+			FROM users u
+			LEFT JOIN app_user_links aul ON u.id = aul.user_id
+			WHERE aul.id IS NULL 
+			AND u.deleted_at IS NULL
+			AND u.created_at < NOW() - INTERVAL '1 day'
+		`
+	} else {
+		query = `
+			SELECT u.id as user_id, u.origin_app_id as app_id
+			FROM users u
+			LEFT JOIN app_user_links aul ON u.id = aul.user_id
+			WHERE aul.id IS NULL 
+			AND u.created_at < NOW() - INTERVAL '1 day'
+		`
+	}
+	
+	err := i.db.Raw(query).Scan(&orphans).Error
 	
 	if err != nil && err != gorm.ErrRecordNotFound {
 		return nil, fmt.Errorf("erro ao verificar usuários órfãos: %w", err)

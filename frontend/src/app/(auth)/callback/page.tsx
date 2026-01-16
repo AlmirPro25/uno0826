@@ -45,7 +45,7 @@ function CallbackContent() {
                 await login(token, refreshToken);
                 setStatus("success");
                 setMessage("Autenticação bem-sucedida! Redirecionando...");
-                setTimeout(() => router.push("/dashboard"), 1000);
+                // login() já faz o redirect, não precisa fazer aqui
             } catch (err) {
                 console.error("OAuth callback error:", err);
                 setStatus("error");

@@ -151,6 +151,38 @@ func RegisterEventSystemRoutes(r *gin.RouterGroup, service *EventService, authMi
 	{
 		// Rotas públicas (autenticado)
 		events.GET("/types", handler.GetEventTypes)
+		
+		// GET /events - Lista eventos recentes (para o frontend-old/admin)
+		events.GET("", func(c *gin.Context) {
+			limit := 50
+			if l := c.Query("limit"); l != "" {
+				if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 500 {
+					limit = parsed
+				}
+			}
+			
+			// Buscar eventos recentes do sistema
+			recentEvents, err := statsService.GetRecentSystemEvents(limit)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar eventos"})
+				return
+			}
+			
+			c.JSON(http.StatusOK, gin.H{
+				"events": recentEvents,
+				"count":  len(recentEvents),
+			})
+		})
+		
+		// GET /events/stats - Estatísticas gerais
+		events.GET("/stats", func(c *gin.Context) {
+			stats, err := statsService.GetSystemStats()
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+			c.JSON(http.StatusOK, stats)
+		})
 
 		// Rotas admin
 		admin := events.Group("")

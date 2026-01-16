@@ -194,3 +194,13 @@ func (s *EventStatsService) GetRealtimeStats() (map[string]interface{}, error) {
 		"timestamp":         time.Now(),
 	}, nil
 }
+
+// GetRecentSystemEvents retorna eventos recentes do sistema
+func (s *EventStatsService) GetRecentSystemEvents(limit int) ([]Event, error) {
+	var events []Event
+	err := s.db.Model(&Event{}).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&events).Error
+	return events, err
+}

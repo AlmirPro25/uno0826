@@ -181,8 +181,8 @@ func (h *VerificationHandler) VerifyCode(c *gin.Context) {
 // @Success 200 {object} SovereignIdentity
 // @Router /identity/me [get]
 func (h *VerificationHandler) GetIdentity(c *gin.Context) {
-	// TODO: Extrair user_id do JWT/session
-	userIDStr := c.GetString("userId")
+	// Extrair user_id do JWT (setado pelo AuthMiddleware como "userID")
+	userIDStr := c.GetString("userID")
 	if userIDStr == "" {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "Não autenticado"})
 		return

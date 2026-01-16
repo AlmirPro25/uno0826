@@ -8,14 +8,14 @@ RUN apk add --no-cache git ca-certificates
 WORKDIR /app
 
 # Copiar go.mod e go.sum para resolver as dependências
-COPY backend/go.mod ./
-COPY backend/go.sum ./
+COPY go.mod ./
+COPY go.sum ./
 
 # Baixar as dependências do Go
 RUN go mod download
 
 # Copiar o restante do código do backend
-COPY backend/ .
+COPY . .
 
 # Compilar a aplicação
 # Desabilitar CGO para garantir um binário estático

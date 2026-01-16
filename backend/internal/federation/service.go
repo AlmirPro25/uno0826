@@ -3,6 +3,7 @@ package federation
 import (
 	"errors"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/google/uuid"
@@ -90,22 +91,30 @@ func (s *FederationService) StartOAuthFlow(provider, redirectURI, requestIP stri
 
 // CompleteOAuthFlow completa o fluxo OAuth após callback
 func (s *FederationService) CompleteOAuthFlow(stateID uuid.UUID, code string) (*identity.SovereignIdentity, *FederatedIdentity, string, error) {
+	log.Printf("[OAUTH] Iniciando CompleteOAuthFlow para state=%s", stateID)
+
 	// 1. Validate state
 	var state OAuthState
 	if err := s.db.Where("state_id = ?", stateID).First(&state).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
+			log.Printf("[OAUTH] ERRO: State não encontrado: %s", stateID)
 			return nil, nil, "", ErrStateNotFound
 		}
+		log.Printf("[OAUTH] ERRO: Falha ao buscar state: %v", err)
 		return nil, nil, "", err
 	}
 
 	if state.Used {
+		log.Printf("[OAUTH] ERRO: State já utilizado: %s", stateID)
 		return nil, nil, "", ErrStateAlreadyUsed
 	}
 
 	if time.Now().After(state.ExpiresAt) {
+		log.Printf("[OAUTH] ERRO: State expirado: %s (expirou em %v)", stateID, state.ExpiresAt)
 		return nil, nil, "", ErrStateExpired
 	}
+
+	log.Printf("[OAUTH] State válido, marcando como usado")
 
 	// 2. Mark state as used
 	state.Used = true
@@ -118,23 +127,30 @@ func (s *FederationService) CompleteOAuthFlow(stateID uuid.UUID, code string) (*
 
 	switch Provider(state.Provider) {
 	case ProviderGoogle:
+		log.Printf("[OAUTH] Trocando código por tokens com Google...")
 		tokenResp, err := s.googleService.ExchangeCode(code)
 		if err != nil {
+			log.Printf("[OAUTH] ERRO: Falha ao trocar código: %v", err)
 			return nil, nil, "", fmt.Errorf("failed to exchange code: %w", err)
 		}
 
 		accessToken = tokenResp.AccessToken
 		tokenExpiry = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second)
 
+		log.Printf("[OAUTH] Token obtido, buscando info do usuário...")
 		userInfo, err = s.googleService.GetUserInfo(accessToken)
 		if err != nil {
+			log.Printf("[OAUTH] ERRO: Falha ao obter info do usuário: %v", err)
 			return nil, nil, "", fmt.Errorf("failed to get user info: %w", err)
 		}
+		log.Printf("[OAUTH] Usuário Google: email=%s, name=%s, sub=%s", userInfo.Email, userInfo.Name, userInfo.Sub)
 	default:
+		log.Printf("[OAUTH] ERRO: Provider não suportado: %s", state.Provider)
 		return nil, nil, "", fmt.Errorf("unsupported provider: %s", state.Provider)
 	}
 
 	// 4. Find or create identity
+	log.Printf("[OAUTH] Linkando ou criando identity para provider=%s, providerID=%s", state.Provider, userInfo.Sub)
 	sovereignIdentity, fedIdentity, isNew, err := s.linkOrCreateIdentity(
 		state.Provider,
 		userInfo.Sub,
@@ -146,14 +162,36 @@ func (s *FederationService) CompleteOAuthFlow(stateID uuid.UUID, code string) (*
 		state.UserID,
 	)
 	if err != nil {
+		log.Printf("[OAUTH] ERRO: Falha ao linkar/criar identity: %v", err)
 		return nil, nil, "", err
 	}
 
-	// 5. Generate session token with role and status
-	token, _, err := utils.GenerateJWT(sovereignIdentity.UserID.String(), "user", "active")
+	log.Printf("[OAUTH] Identity OK: userID=%s, isNew=%v", sovereignIdentity.UserID, isNew)
+
+	// 5. Buscar role e status do usuário na tabela users
+	var user identity.User
+	userRole := "user"
+	userStatus := "active"
+	if err := s.db.Where("id = ?", sovereignIdentity.UserID).First(&user).Error; err == nil {
+		if user.Role != "" {
+			userRole = user.Role
+		}
+		if user.Status != "" {
+			userStatus = user.Status
+		}
+		log.Printf("[OAUTH] Usuário encontrado na tabela users: role=%s, status=%s", userRole, userStatus)
+	} else {
+		log.Printf("[OAUTH] Usuário não encontrado na tabela users, usando defaults: role=%s, status=%s", userRole, userStatus)
+	}
+
+	// 6. Generate session token with role and status from database
+	token, _, err := utils.GenerateJWT(sovereignIdentity.UserID.String(), userRole, userStatus)
 	if err != nil {
+		log.Printf("[OAUTH] ERRO: Falha ao gerar JWT: %v", err)
 		return nil, nil, "", fmt.Errorf("failed to generate token: %w", err)
 	}
+
+	log.Printf("[OAUTH] ✅ Login bem-sucedido! Usuário %s logado com role=%s. Token expira em: %v", userInfo.Email, userRole, time.Now().Add(24*time.Hour))
 
 	_ = isNew // Pode ser usado para analytics
 
@@ -167,14 +205,18 @@ func (s *FederationService) linkOrCreateIdentity(
 	existingUserID uuid.UUID,
 ) (*identity.SovereignIdentity, *FederatedIdentity, bool, error) {
 
+	log.Printf("[OAUTH-LINK] Verificando se provider já está linkado: provider=%s, providerID=%s", provider, providerID)
+
 	// Check if provider already linked
 	var existingLink FederatedIdentity
 	err := s.db.Where("provider = ? AND provider_id = ?", provider, providerID).First(&existingLink).Error
 
 	if err == nil {
+		log.Printf("[OAUTH-LINK] Provider já linkado! userID=%s, atualizando token...", existingLink.UserID)
 		// Provider already linked - return existing identity
 		var sovereignIdentity identity.SovereignIdentity
 		if err := s.db.Where("user_id = ?", existingLink.UserID).First(&sovereignIdentity).Error; err != nil {
+			log.Printf("[OAUTH-LINK] ERRO: Sovereign identity não encontrada para userID=%s: %v", existingLink.UserID, err)
 			return nil, nil, false, err
 		}
 
@@ -184,12 +226,16 @@ func (s *FederationService) linkOrCreateIdentity(
 		existingLink.UpdatedAt = time.Now()
 		s.db.Save(&existingLink)
 
+		log.Printf("[OAUTH-LINK] ✅ Usuário existente retornado: userID=%s", sovereignIdentity.UserID)
 		return &sovereignIdentity, &existingLink, false, nil
 	}
 
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		log.Printf("[OAUTH-LINK] ERRO: Falha ao buscar federated identity: %v", err)
 		return nil, nil, false, err
 	}
+
+	log.Printf("[OAUTH-LINK] Provider não linkado ainda, criando novo link...")
 
 	// Provider not linked yet
 	var sovereignIdentity *identity.SovereignIdentity
@@ -197,34 +243,50 @@ func (s *FederationService) linkOrCreateIdentity(
 
 	// Check if linking to existing identity
 	if existingUserID != uuid.Nil {
+		log.Printf("[OAUTH-LINK] Linkando a identity existente: userID=%s", existingUserID)
 		var existing identity.SovereignIdentity
 		if err := s.db.Where("user_id = ?", existingUserID).First(&existing).Error; err != nil {
+			log.Printf("[OAUTH-LINK] ERRO: Identity existente não encontrada: %v", err)
 			return nil, nil, false, fmt.Errorf("existing identity not found: %w", err)
 		}
 		sovereignIdentity = &existing
 	} else {
-		// Try to find identity by email (auto-merge)
-		var existingByEmail identity.SovereignIdentity
-		// Note: This assumes email might be stored somewhere - adjust as needed
-		
-		// Create new sovereign identity
-		sovereignIdentity = &identity.SovereignIdentity{
-			UserID:       uuid.New(),
-			PrimaryPhone: "", // Will be set when phone is verified
-			Source:       "oauth_" + provider,
-			CreatedAt:    time.Now(),
-			UpdatedAt:    time.Now(),
+		// Try to find identity by email in federated_identities (auto-merge)
+		log.Printf("[OAUTH-LINK] Buscando identity existente por email=%s", email)
+		var existingFedByEmail FederatedIdentity
+		if err := s.db.Where("email = ?", email).First(&existingFedByEmail).Error; err == nil {
+			log.Printf("[OAUTH-LINK] Encontrada federated identity com mesmo email! userID=%s", existingFedByEmail.UserID)
+			// Found existing federated identity with same email - use that sovereign identity
+			var existing identity.SovereignIdentity
+			if err := s.db.Where("user_id = ?", existingFedByEmail.UserID).First(&existing).Error; err == nil {
+				sovereignIdentity = &existing
+				log.Printf("[OAUTH-LINK] Usando sovereign identity existente: userID=%s", existing.UserID)
+			}
 		}
 
-		if err := s.db.Create(sovereignIdentity).Error; err != nil {
-			return nil, nil, false, fmt.Errorf("failed to create identity: %w", err)
-		}
-		isNew = true
+		// If no existing identity found, create new one
+		if sovereignIdentity == nil {
+			newUserID := uuid.New()
+			log.Printf("[OAUTH-LINK] Criando nova sovereign identity: userID=%s", newUserID)
+			sovereignIdentity = &identity.SovereignIdentity{
+				UserID:       newUserID,
+				PrimaryPhone: newUserID.String()[:8], // Use partial UUID as unique placeholder instead of empty string
+				Source:       "oauth_" + provider,
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			}
 
-		_ = existingByEmail // Placeholder for future email merge logic
+			if err := s.db.Create(sovereignIdentity).Error; err != nil {
+				log.Printf("[OAUTH-LINK] ERRO: Falha ao criar sovereign identity: %v", err)
+				return nil, nil, false, fmt.Errorf("failed to create identity: %w", err)
+			}
+			isNew = true
+			log.Printf("[OAUTH-LINK] ✅ Nova sovereign identity criada: userID=%s", sovereignIdentity.UserID)
+		}
 	}
 
 	// Create federated identity link
+	log.Printf("[OAUTH-LINK] Criando federated identity link...")
 	fedIdentity := &FederatedIdentity{
 		LinkID:      uuid.New(),
 		UserID:      sovereignIdentity.UserID,
@@ -240,9 +302,11 @@ func (s *FederationService) linkOrCreateIdentity(
 	}
 
 	if err := s.db.Create(fedIdentity).Error; err != nil {
+		log.Printf("[OAUTH-LINK] ERRO: Falha ao criar federated identity: %v", err)
 		return nil, nil, false, fmt.Errorf("failed to create federated identity: %w", err)
 	}
 
+	log.Printf("[OAUTH-LINK] ✅ Federated identity criada: linkID=%s, userID=%s", fedIdentity.LinkID, sovereignIdentity.UserID)
 	return sovereignIdentity, fedIdentity, isNew, nil
 }
 

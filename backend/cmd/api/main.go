@@ -60,16 +60,36 @@ import (
 	"prost-qs/backend/pkg/alerting"
 	"prost-qs/backend/pkg/apigate"
 	"prost-qs/backend/pkg/capabilities"
+	"prost-qs/backend/pkg/chaos"
 	"prost-qs/backend/pkg/db"
 	"prost-qs/backend/pkg/immunity"
 	"prost-qs/backend/pkg/invariants"
 	"prost-qs/backend/pkg/localstore"
 	"prost-qs/backend/pkg/middleware"
+	distobs "prost-qs/backend/pkg/observability"
 	"prost-qs/backend/pkg/utils"
 	"prost-qs/backend/pkg/warobs"
 )
 
+// ========================================
+// VERSION INFO - Injetado via ldflags
+// Build: go build -ldflags="-X main.version=2.0.0"
+// ========================================
+var (
+	version   = "dev"     // Sobrescrito via -ldflags
+	buildTime = "unknown" // Sobrescrito via -ldflags
+	gitCommit = "unknown" // Sobrescrito via -ldflags
+)
+
 func main() {
+	// ========================================
+	// VERSION INFO - Propagar para health handler
+	// ========================================
+	health.Version = version
+	health.BuildTime = buildTime
+	health.GitCommit = gitCommit
+	log.Printf("🚀 PROST-QS %s (build: %s, commit: %s)", version, buildTime, gitCommit)
+
 	// Carregar variáveis de ambiente do arquivo .env (se existir)
 	// Em produção, as variáveis vêm do ambiente do container
 	_ = godotenv.Load("../.env") // Ignora erro se não existir
@@ -1035,6 +1055,22 @@ func main() {
 		lighthouseHandler := lighthouse.NewHandler(lighthouseService)
 		lighthouseHandler.RegisterRoutes(v1)
 		log.Println("✅ Lighthouse routes registradas (/lighthouse/*)")
+
+		// ========================================
+		// DISTRIBUTED OBSERVABILITY - Enterprise Tracing
+		// "Ver o sistema respirar em tempo real"
+		// ========================================
+		distobs.InitObservability("prost-qs")
+		distobs.RegisterRoutes(v1)
+		log.Println("✅ Distributed Observability routes registradas (/observability/*)")
+
+		// ========================================
+		// CHAOS ENGINEERING - Chaos Monkey
+		// "Testar resiliência de forma controlada"
+		// ========================================
+		chaos.InitChaos()
+		chaos.RegisterRoutes(v1)
+		log.Println("✅ Chaos Engineering routes registradas (/chaos/*)")
 
 		// Rotas de Eventos (admin/auditor)
 		event.RegisterEventRoutes(v1, eventService, middleware.AuthMiddleware())

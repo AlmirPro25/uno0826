@@ -10,6 +10,15 @@ import (
 )
 
 // ========================================
+// VERSION INFO - Injetado externamente
+// ========================================
+var (
+	Version   = "dev"
+	BuildTime = "unknown"
+	GitCommit = "unknown"
+)
+
+// ========================================
 // HEALTH HANDLER (Gin)
 // ========================================
 
@@ -113,9 +122,9 @@ func (h *HealthHandler) GetHealth(c *gin.Context) {
 		Timestamp: time.Now().UTC().Format(time.RFC3339),
 		Uptime:    formatDuration(time.Since(h.startTime)),
 		Version: VersionInfo{
-			Version:   "1.0.0",
-			BuildTime: "2026-01-12",
-			GitCommit: "production",
+			Version:   Version,
+			BuildTime: BuildTime,
+			GitCommit: GitCommit,
 		},
 		Services: map[string]string{
 			"database":      dbStatus,

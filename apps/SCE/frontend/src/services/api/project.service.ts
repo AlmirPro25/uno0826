@@ -1,6 +1,6 @@
 
 import api from '@/lib/axios';
-import { Project, AppType } from '../../../../shared/types/schema';
+import { Project, AppType } from '@/types';
 
 export const ProjectService = {
   async getAll(): Promise<Project[]> {

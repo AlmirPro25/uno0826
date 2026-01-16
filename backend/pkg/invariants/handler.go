@@ -7,13 +7,11 @@ import (
 )
 
 // RegisterRoutes registra endpoints para monitoramento de invariants
+// NOTA: O router já vem com o prefixo /admin/invariants, então não criamos subgrupo
 func RegisterRoutes(router *gin.RouterGroup) {
-	inv := router.Group("/invariants")
-	{
-		inv.GET("/violations", getViolations)
-		inv.GET("/stats", getStats)
-		inv.DELETE("/violations", clearViolationsHandler)
-	}
+	router.GET("/violations", getViolations)
+	router.GET("/stats", getStats)
+	router.DELETE("/violations", clearViolationsHandler)
 }
 
 // getViolations retorna todas as violações registradas

@@ -32,8 +32,8 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Instalar Docker CLI (para orquestrar containers)
-RUN apk add --no-cache docker-cli git
+# Instalar Docker CLI (para orquestrar containers) e OpenSSL para Prisma
+RUN apk add --no-cache docker-cli git openssl openssl-dev
 
 # Copiar node_modules e build
 COPY --from=builder /app/node_modules ./node_modules

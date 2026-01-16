@@ -1,7 +1,7 @@
 import axios from "axios";
 
-// IMPORTANTE: Em produção, usar a URL completa com /api/v1
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://uno0826.onrender.com/api/v1";
+// API URL - Oracle Cloud em produção
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prostqs.com.br/api/v1";
 
 export const api = axios.create({
     baseURL: API_URL,
@@ -29,19 +29,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response?.status === 401) {
-            if (typeof window !== "undefined") {
-                // Clear all auth data
-                localStorage.removeItem("token");
-                localStorage.removeItem("refreshToken");
-                localStorage.removeItem("user");
-                
-                // Redirect to login if not already there
-                if (!window.location.pathname.includes("/login")) {
-                    window.location.href = "/login";
-                }
-            }
-        }
+        // Não fazer redirect automático no interceptor
+        // Deixar o auth-context lidar com isso de forma controlada
         return Promise.reject(error);
     }
 );

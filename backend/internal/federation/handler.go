@@ -169,12 +169,26 @@ func (h *FederationHandler) GoogleCallback(c *gin.Context) {
 		return
 	}
 
-	// Gerar refresh token
-	refreshToken, _ := utils.GenerateRefreshToken(identity.UserID.String(), "user", "active")
+	// Extrair role e status do token JWT gerado (que já tem os valores corretos do banco)
+	claims, _ := utils.ParseJWT(token)
+	userRole := "user"
+	userStatus := "active"
+	if claims != nil {
+		if claims.Role != "" {
+			userRole = claims.Role
+		}
+		if claims.AccountStatus != "" {
+			userStatus = claims.AccountStatus
+		}
+	}
+
+	// Gerar refresh token com o mesmo role e status
+	refreshToken, _ := utils.GenerateRefreshToken(identity.UserID.String(), userRole, userStatus)
 
 	// Redirecionar para frontend com tokens
 	// O frontend vai processar esses tokens e fazer login
-	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&refresh_token=%s&email=%s&name=%s&picture=%s",
+	// NOTA: A rota do frontend é /callback (não /auth/callback)
+	redirectURL := fmt.Sprintf("%s/callback?token=%s&refresh_token=%s&email=%s&name=%s&picture=%s",
 		frontendURL,
 		url.QueryEscape(token),
 		url.QueryEscape(refreshToken),
@@ -221,11 +235,25 @@ func (h *FederationHandler) MockGoogleCallback(c *gin.Context) {
 		return
 	}
 
-	// Gerar refresh token
-	refreshToken, _ := utils.GenerateRefreshToken(identity.UserID.String(), "user", "active")
+	// Extrair role e status do token JWT gerado (que já tem os valores corretos do banco)
+	claims, _ := utils.ParseJWT(token)
+	userRole := "user"
+	userStatus := "active"
+	if claims != nil {
+		if claims.Role != "" {
+			userRole = claims.Role
+		}
+		if claims.AccountStatus != "" {
+			userStatus = claims.AccountStatus
+		}
+	}
+
+	// Gerar refresh token com o mesmo role e status
+	refreshToken, _ := utils.GenerateRefreshToken(identity.UserID.String(), userRole, userStatus)
 
 	// Redirecionar para frontend com tokens
-	redirectURL := fmt.Sprintf("%s/auth/callback?token=%s&refresh_token=%s&email=%s&name=%s&picture=%s",
+	// NOTA: A rota do frontend é /callback (não /auth/callback)
+	redirectURL := fmt.Sprintf("%s/callback?token=%s&refresh_token=%s&email=%s&name=%s&picture=%s",
 		frontendURL,
 		url.QueryEscape(token),
 		url.QueryEscape(refreshToken),

@@ -37,6 +37,11 @@ node_modules/
 .env.production
 .env.development
 
+# Credenciais e informações sensíveis
+/docs/CREDENCIAIS-ORACLE.md
+**/CREDENCIAIS*.md
+credenciais*.txt
+
 # Tokens & Keys (CRÍTICO - NUNCA commitar)
 token.txt
 *.pem

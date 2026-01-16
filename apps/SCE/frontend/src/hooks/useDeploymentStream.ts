@@ -1,7 +1,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { DeploymentService } from '@/services/api/deployment.service';
-import { DeploymentStatus } from '../../../shared/types/schema';
+import { DeploymentStatus } from '@/types';
 
 /**
  * @description Hook especializado em streaming de eventos de infraestrutura.
@@ -13,7 +13,7 @@ export function useDeploymentStream(deploymentId: string, currentStatus: Deploym
 
   useEffect(() => {
     // Só inicia stream se estiver em processo de build/deploy
-    const activeStatuses = [DeploymentStatus.QUEUED, DeploymentStatus.BUILDING, DeploymentStatus.DEPLOYING];
+    const activeStatuses: DeploymentStatus[] = ['QUEUED', 'BUILDING', 'DEPLOYING'];
     
     if (!deploymentId || !activeStatuses.includes(currentStatus)) {
       setIsStreaming(false);

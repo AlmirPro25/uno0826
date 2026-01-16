@@ -1,6 +1,6 @@
 
 import { create } from 'zustand';
-import { Project } from '../../../shared/types/schema';
+import { Project } from '@/types';
 import { ProjectService } from '@/services/api/project.service';
 
 interface InfrastructureState {

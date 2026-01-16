@@ -52,9 +52,11 @@ interface UserPayload {
   source: 'PROST_QS' | 'LOCAL';
 }
 
+// Extend FastifyRequest via interface merging
+// Note: Using 'any' to avoid conflicts with Fastify's built-in user property
 declare module 'fastify' {
   interface FastifyRequest {
-    user?: UserPayload;
+    sceUser?: UserPayload;
   }
 }
 
@@ -111,7 +113,7 @@ export async function authMiddleware(
         }
         
         // Token válido do PROST-QS
-        request.user = {
+        request.sceUser = {
           id: decoded.user_id,
           role: decoded.role,
           accountStatus: decoded.account_status,
@@ -124,7 +126,7 @@ export async function authMiddleware(
       // Se tem id (não user_id), é token local
       const localDecoded = decoded as unknown as LegacyJWTPayload;
       if (localDecoded.id) {
-        request.user = {
+        request.sceUser = {
           id: localDecoded.id,
           role: localDecoded.role,
           accountStatus: 'active',
@@ -138,7 +140,7 @@ export async function authMiddleware(
       if (process.env.NODE_ENV === 'development') {
         try {
           const decoded = await request.jwtVerify<LegacyJWTPayload>();
-          request.user = {
+          request.sceUser = {
             id: decoded.id,
             role: decoded.role,
             accountStatus: 'active',
@@ -173,7 +175,7 @@ export async function adminMiddleware(
 ) {
   const adminRoles = ['ADMIN', 'admin', 'super_admin'];
   
-  if (!request.user || !adminRoles.includes(request.user.role)) {
+  if (!request.sceUser || !adminRoles.includes(request.sceUser.role)) {
     return reply.status(403).send({
       error: 'Acesso negado. Requer privilégios de administrador.',
       code: 'FORBIDDEN'
@@ -189,7 +191,7 @@ export function requireScope(scope: string) {
   return async (request: FastifyRequest, reply: FastifyReply) => {
     // TODO: Implementar verificação de escopo quando PROST-QS enviar scopes no JWT
     // Por agora, apenas verifica se está autenticado
-    if (!request.user) {
+    if (!request.sceUser) {
       return reply.status(401).send({
         error: 'Não autenticado',
         code: 'UNAUTHORIZED'

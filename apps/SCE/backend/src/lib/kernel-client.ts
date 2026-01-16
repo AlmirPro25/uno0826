@@ -43,7 +43,7 @@ export async function createKernelIdentity(
       return null;
     }
     
-    return await res.json();
+    return await res.json() as KernelUser;
   } catch (error) {
     console.error('[KERNEL] Error creating identity:', error);
     return null;
@@ -78,7 +78,7 @@ export async function createKernelApp(
       return null;
     }
     
-    return await res.json();
+    return await res.json() as KernelApp;
   } catch (error) {
     console.error('[KERNEL] Error creating app:', error);
     return null;
@@ -149,7 +149,7 @@ export async function getTelemetry(
     });
     
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = await res.json() as { events?: unknown[] };
     return data.events || [];
   } catch (error) {
     console.error('[KERNEL] Error fetching telemetry:', error);
@@ -173,7 +173,7 @@ export async function getAlerts(
     });
     
     if (!res.ok) return [];
-    const data = await res.json();
+    const data = await res.json() as { alerts?: unknown[] };
     return data.alerts || [];
   } catch (error) {
     console.error('[KERNEL] Error fetching alerts:', error);

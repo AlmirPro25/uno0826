@@ -4,7 +4,7 @@
 
 const CONFIG = {
     // URL do Backend API
-    API_URL: 'https://uno0826.onrender.com',
+    API_URL: 'https://api.prostqs.com.br',
     
     // Versão do Frontend
     VERSION: '1.0.0',
