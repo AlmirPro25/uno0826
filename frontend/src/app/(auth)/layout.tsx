@@ -5,12 +5,19 @@ import { motion } from "framer-motion";
 import { TerminalReplay } from "@/components/auth/terminal-replay";
 import { TestimonialCarousel } from "@/components/auth/testimonial-carousel";
 import Link from "next/link";
+import { useState, useEffect } from "react";
 
 export default function AuthLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const [mounted, setMounted] = useState(false);
+    
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+    
     return (
         <div className="min-h-screen flex bg-background text-foreground overflow-hidden">
             {/* Left Side: Marketing/Propaganda */}
@@ -31,8 +38,8 @@ export default function AuthLayout({
                         </Link>
 
                         <motion.div
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
+                            initial={mounted ? { opacity: 0, x: -20 } : false}
+                            animate={mounted ? { opacity: 1, x: 0 } : false}
                             transition={{ duration: 0.8 }}
                         >
                             <h2 className="text-5xl font-black mb-8 leading-[0.9] tracking-tighter">
@@ -58,9 +65,9 @@ export default function AuthLayout({
                                 ].map((item, i) => (
                                     <motion.div
                                         key={i}
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.5 + (i * 0.1) }}
+                                        initial={mounted ? { opacity: 0, y: 10 } : false}
+                                        animate={mounted ? { opacity: 1, y: 0 } : false}
+                                        transition={{ delay: mounted ? 0.5 + (i * 0.1) : 0 }}
                                         className="flex items-center gap-3"
                                     >
                                         <div className="h-5 w-5 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">

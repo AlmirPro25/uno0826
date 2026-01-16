@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/contexts/auth-context";
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,16 @@ const GoogleIcon = ({ className }: { className?: string }) => (
 
 export default function LoginPage() {
     const { login } = useAuth();
+    const [mounted, setMounted] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [googleLoading, setGoogleLoading] = useState(false);
     const [error, setError] = useState("");
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -57,14 +62,32 @@ export default function LoginPage() {
 
     const handleGoogleLogin = async () => {
         setGoogleLoading(true);
+        setError("");
+        
         try {
-            // Start OAuth flow via backend
-            const res = await api.post<{ auth_url: string; state_id: string }>("/federation/oauth/start", {
-                provider: "google"
+            // Start OAuth flow via backend - using fetch to ensure POST method
+            const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://api.prostqs.com.br/api/v1";
+            const response = await fetch(`${baseUrl}/federation/oauth/start`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ provider: "google" }),
+                cache: "no-store",
             });
             
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.auth_url) {
+                throw new Error("No auth_url received from server");
+            }
+            
             // Redirect to Google
-            window.location.href = res.data.auth_url;
+            window.location.href = data.auth_url;
         } catch (err) {
             console.error("Google OAuth error:", err);
             setError("Erro ao iniciar login com Google. Tente novamente.");
@@ -74,8 +97,8 @@ export default function LoginPage() {
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={mounted ? { opacity: 0, y: 10 } : false}
+            animate={mounted ? { opacity: 1, y: 0 } : false}
             transition={{ duration: 0.5 }}
             className="w-full"
         >
