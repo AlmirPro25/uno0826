@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Demo SCE - ProstQS</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+        }
+        .container {
+            text-align: center;
+            padding: 2rem;
+            max-width: 600px;
+        }
+        .logo {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(90deg, #00d4ff, #7b2cbf);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .subtitle {
+            color: #a0a0a0;
+            font-size: 1.2rem;
+            margin-bottom: 2rem;
+        }
+        .status-card {
+            background: rgba(255,255,255,0.1);
+            border-radius: 16px;
+            padding: 2rem;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .status-item:last-child { border-bottom: none; }
+        .status-label { color: #a0a0a0; }
+        .status-value { color: #00d4ff; font-weight: 600; }
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .badge-success { background: #10b981; color: #fff; }
+        .footer {
+            margin-top: 2rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚀</div>
+        <h1>SCE Demo App</h1>
+        <p class="subtitle">Hospedado no Sovereign Cloud Engine</p>
+        
+        <div class="status-card">
+            <div class="status-item">
+                <span class="status-label">Status</span>
+                <span class="badge badge-success">Online</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Plataforma</span>
+                <span class="status-value">SCE v1.0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Kernel</span>
+                <span class="status-value">ProstQS</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Deploy</span>
+                <span class="status-value" id="deploy-time">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Uptime</span>
+                <span class="status-value" id="uptime">0s</span>
+            </div>
+        </div>
+        
+        <p class="footer">
+            Powered by <strong>ProstQS Kernel</strong> • SCE Platform
+        </p>
+    </div>
+    
+    <script>
+        // Deploy time
+        document.getElementById('deploy-time').textContent = new Date().toLocaleString('pt-BR');
+        
+        // Uptime counter
+        let seconds = 0;
+        setInterval(() => {
+            seconds++;
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = seconds % 60;
+            document.getElementById('uptime').textContent = 
+                h > 0 ? `${h}h ${m}m ${s}s` : m > 0 ? `${m}m ${s}s` : `${s}s`;
+        }, 1000);
+    </script>
+</body>
+</html>

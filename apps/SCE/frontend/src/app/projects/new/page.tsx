@@ -6,21 +6,43 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { API } from '@/lib/api';
 import { 
-  ArrowLeft, ArrowRight, Box, Globe, GitBranch, 
+  ArrowLeft, ArrowRight, Globe, GitBranch, 
   Lock, Rocket, Check, AlertCircle, Plus, Trash2,
-  Server, Layout
+  Server, Layout, Loader2, FolderTree, Sparkles,
+  FileCode, Cpu, Zap
 } from 'lucide-react';
 
-type AppType = 'FRONTEND' | 'BACKEND';
+type AppType = 'FRONTEND' | 'BACKEND' | 'FULLSTACK' | 'UNKNOWN';
 
 interface EnvVar {
   key: string;
   value: string;
 }
 
+interface DetectedProject {
+  path: string;
+  name: string;
+  type: AppType;
+  framework: string;
+  language: string;
+  port: number;
+  buildCmd?: string;
+  startCmd?: string;
+  hasDockerfile: boolean;
+  confidence: number;
+}
+
+interface RepoAnalysis {
+  repoUrl: string;
+  branch: string;
+  isMonorepo: boolean;
+  projects: DetectedProject[];
+  totalFiles: number;
+}
+
 const STEPS = [
-  { id: 1, title: 'Tipo', icon: Box },
-  { id: 2, title: 'Repositório', icon: GitBranch },
+  { id: 1, title: 'Repositório', icon: GitBranch },
+  { id: 2, title: 'Análise', icon: FolderTree },
   { id: 3, title: 'Configuração', icon: Globe },
   { id: 4, title: 'Variáveis', icon: Lock },
   { id: 5, title: 'Deploy', icon: Rocket },
@@ -30,13 +52,20 @@ export default function NewProjectPage() {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState('');
   
   // Form state
-  const [type, setType] = useState<AppType>('FRONTEND');
-  const [name, setName] = useState('');
   const [repoUrl, setRepoUrl] = useState('');
   const [branch, setBranch] = useState('main');
+  
+  // Analysis state
+  const [analysis, setAnalysis] = useState<RepoAnalysis | null>(null);
+  const [selectedProject, setSelectedProject] = useState<DetectedProject | null>(null);
+  
+  // Config state (preenchido pela análise)
+  const [name, setName] = useState('');
+  const [type, setType] = useState<AppType>('FRONTEND');
   const [subdomain, setSubdomain] = useState('');
   const [port, setPort] = useState(3000);
   const [buildCmd, setBuildCmd] = useState('');
@@ -59,17 +88,49 @@ export default function NewProjectPage() {
     return projectName.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
   };
 
-  const handleNameChange = (value: string) => {
-    setName(value);
-    if (!subdomain || subdomain === generateSubdomain(name)) {
-      setSubdomain(generateSubdomain(value));
+  // Analisar repositório
+  const analyzeRepo = async () => {
+    if (!repoUrl) return;
+    
+    setAnalyzing(true);
+    setError('');
+    
+    try {
+      const result = await API.request('/repo/analyze', {
+        method: 'POST',
+        body: JSON.stringify({ repoUrl, branch }),
+      });
+      
+      setAnalysis(result.data);
+      
+      // Se só tem um projeto, seleciona automaticamente
+      if (result.data.projects.length === 1) {
+        selectProject(result.data.projects[0]);
+      }
+      
+      setStep(2);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erro ao analisar repositório');
+    } finally {
+      setAnalyzing(false);
     }
+  };
+
+  // Selecionar projeto detectado
+  const selectProject = (project: DetectedProject) => {
+    setSelectedProject(project);
+    setName(project.name);
+    setType(project.type === 'UNKNOWN' ? 'FRONTEND' : project.type as any);
+    setSubdomain(generateSubdomain(project.name));
+    setPort(project.port);
+    setBuildCmd(project.buildCmd || '');
+    setStartCmd(project.startCmd || '');
   };
 
   const canProceed = () => {
     switch (step) {
-      case 1: return type;
-      case 2: return repoUrl && branch;
+      case 1: return repoUrl && branch;
+      case 2: return selectedProject !== null;
       case 3: return name && subdomain && port;
       case 4: return true;
       case 5: return true;
@@ -87,12 +148,18 @@ export default function NewProjectPage() {
         return acc;
       }, {} as Record<string, string>);
 
+      // Determinar o path do projeto no repo
+      const projectPath = selectedProject?.path === '.' ? '' : selectedProject?.path;
+      const finalRepoUrl = projectPath 
+        ? `${repoUrl}#${projectPath}` // Alguns sistemas suportam isso
+        : repoUrl;
+
       const project = await API.request('/projects', {
         method: 'POST',
         body: JSON.stringify({
           name,
-          type,
-          repoUrl,
+          type: type === 'FULLSTACK' || type === 'UNKNOWN' ? 'BACKEND' : type,
+          repoUrl: finalRepoUrl,
           branch,
           subdomain,
           port,
@@ -113,6 +180,21 @@ export default function NewProjectPage() {
     }
   };
 
+  const getTypeColor = (t: AppType) => {
+    switch (t) {
+      case 'FRONTEND': return 'text-cyan-400 bg-cyan-400/10';
+      case 'BACKEND': return 'text-purple-400 bg-purple-400/10';
+      case 'FULLSTACK': return 'text-amber-400 bg-amber-400/10';
+      default: return 'text-slate-400 bg-slate-400/10';
+    }
+  };
+
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 80) return 'text-emerald-400';
+    if (confidence >= 50) return 'text-amber-400';
+    return 'text-red-400';
+  };
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -127,7 +209,7 @@ export default function NewProjectPage() {
           </button>
           <div>
             <h1 className="text-2xl font-bold">Novo Projeto</h1>
-            <p className="text-slate-400">Configure e faça deploy da sua aplicação</p>
+            <p className="text-slate-400">Cole o link do Git e deixe a IA analisar</p>
           </div>
         </div>
 
@@ -156,9 +238,9 @@ export default function NewProjectPage() {
         </div>
 
         {/* Form Content */}
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-3xl mx-auto">
           <AnimatePresence mode="wait">
-            {/* Step 1: Type */}
+            {/* Step 1: Repository URL */}
             {step === 1 && (
               <motion.div
                 key="step1"
@@ -168,53 +250,8 @@ export default function NewProjectPage() {
                 className="space-y-6"
               >
                 <div className="text-center mb-8">
-                  <h2 className="text-xl font-bold mb-2">Qual tipo de aplicação?</h2>
-                  <p className="text-slate-400">Selecione o tipo para otimizarmos o deploy</p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setType('FRONTEND')}
-                    className={`p-6 rounded-2xl border-2 transition-all text-left ${
-                      type === 'FRONTEND' 
-                        ? 'border-cyan-400 bg-cyan-400/5 glow-cyan' 
-                        : 'border-slate-800 hover:border-slate-600'
-                    }`}
-                  >
-                    <Layout className={`w-10 h-10 mb-4 ${type === 'FRONTEND' ? 'text-cyan-400' : 'text-slate-500'}`} />
-                    <h3 className="font-bold text-lg mb-1">Frontend</h3>
-                    <p className="text-sm text-slate-400">React, Next.js, Vue, Angular, Static Sites</p>
-                  </button>
-
-                  <button
-                    onClick={() => setType('BACKEND')}
-                    className={`p-6 rounded-2xl border-2 transition-all text-left ${
-                      type === 'BACKEND' 
-                        ? 'border-purple-400 bg-purple-400/5' 
-                        : 'border-slate-800 hover:border-slate-600'
-                    }`}
-                    style={type === 'BACKEND' ? { boxShadow: '0 0 40px rgba(168, 85, 247, 0.15)' } : {}}
-                  >
-                    <Server className={`w-10 h-10 mb-4 ${type === 'BACKEND' ? 'text-purple-400' : 'text-slate-500'}`} />
-                    <h3 className="font-bold text-lg mb-1">Backend</h3>
-                    <p className="text-sm text-slate-400">Node.js, Go, Python, Java, APIs</p>
-                  </button>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Step 2: Repository */}
-            {step === 2 && (
-              <motion.div
-                key="step2"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                className="space-y-6"
-              >
-                <div className="text-center mb-8">
-                  <h2 className="text-xl font-bold mb-2">Conecte seu repositório</h2>
-                  <p className="text-slate-400">Informe a URL do Git para clonarmos o código</p>
+                  <h2 className="text-xl font-bold mb-2">Cole o link do repositório</h2>
+                  <p className="text-slate-400">A IA vai analisar e detectar automaticamente o tipo de projeto</p>
                 </div>
 
                 <div className="space-y-4">
@@ -226,7 +263,7 @@ export default function NewProjectPage() {
                       type="url"
                       value={repoUrl}
                       onChange={(e) => setRepoUrl(e.target.value)}
-                      placeholder="https://github.com/usuario/projeto.git"
+                      placeholder="https://github.com/usuario/projeto"
                       className="input-field"
                     />
                   </div>
@@ -245,13 +282,131 @@ export default function NewProjectPage() {
                   </div>
                 </div>
 
-                <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
-                  <p className="text-sm text-slate-400">
-                    💡 <strong>Dica:</strong> Para repositórios privados, use tokens de acesso pessoal na URL:
-                    <code className="block mt-2 text-xs bg-black/50 p-2 rounded">
-                      https://TOKEN@github.com/usuario/repo.git
-                    </code>
+                <div className="p-4 rounded-xl bg-cyan-500/5 border border-cyan-500/20">
+                  <div className="flex items-start gap-3">
+                    <Sparkles className="w-5 h-5 text-cyan-400 mt-0.5" />
+                    <div>
+                      <p className="text-sm text-cyan-400 font-medium">Análise Inteligente</p>
+                      <p className="text-sm text-slate-400 mt-1">
+                        O sistema vai detectar automaticamente: framework, linguagem, porta, 
+                        comandos de build e se é um monorepo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 flex items-center gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-400" />
+                    <span className="text-red-400">{error}</span>
+                  </div>
+                )}
+
+                <button
+                  onClick={analyzeRepo}
+                  disabled={!repoUrl || analyzing}
+                  className="w-full btn-primary flex items-center justify-center gap-2"
+                >
+                  {analyzing ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      Analisando repositório...
+                    </>
+                  ) : (
+                    <>
+                      <Zap className="w-5 h-5" />
+                      Analisar Repositório
+                    </>
+                  )}
+                </button>
+              </motion.div>
+            )}
+
+            {/* Step 2: Analysis Results */}
+            {step === 2 && analysis && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                className="space-y-6"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-xl font-bold mb-2">
+                    {analysis.isMonorepo ? 'Monorepo Detectado!' : 'Projeto Detectado!'}
+                  </h2>
+                  <p className="text-slate-400">
+                    {analysis.projects.length > 1 
+                      ? 'Selecione qual projeto você quer hospedar'
+                      : 'Confirme as configurações detectadas'}
                   </p>
+                </div>
+
+                {/* Stats */}
+                <div className="grid grid-cols-3 gap-4 mb-6">
+                  <div className="glass-card rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-cyan-400">{analysis.totalFiles}</div>
+                    <div className="text-xs text-slate-500">Arquivos</div>
+                  </div>
+                  <div className="glass-card rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-purple-400">{analysis.projects.length}</div>
+                    <div className="text-xs text-slate-500">Projetos</div>
+                  </div>
+                  <div className="glass-card rounded-xl p-4 text-center">
+                    <div className="text-2xl font-bold text-emerald-400">{analysis.branch}</div>
+                    <div className="text-xs text-slate-500">Branch</div>
+                  </div>
+                </div>
+
+                {/* Projects List */}
+                <div className="space-y-3">
+                  {analysis.projects.map((project, i) => (
+                    <button
+                      key={i}
+                      onClick={() => selectProject(project)}
+                      className={`w-full p-4 rounded-xl border-2 transition-all text-left ${
+                        selectedProject?.path === project.path
+                          ? 'border-cyan-400 bg-cyan-400/5'
+                          : 'border-slate-800 hover:border-slate-600'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-lg ${getTypeColor(project.type)}`}>
+                            {project.type === 'FRONTEND' ? <Layout className="w-5 h-5" /> : 
+                             project.type === 'BACKEND' ? <Server className="w-5 h-5" /> :
+                             <Cpu className="w-5 h-5" />}
+                          </div>
+                          <div>
+                            <h3 className="font-bold">{project.name}</h3>
+                            <p className="text-sm text-slate-500 font-mono">{project.path}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className={`text-sm font-medium ${getConfidenceColor(project.confidence)}`}>
+                            {project.confidence}% confiança
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <span className="px-2 py-1 rounded-full text-xs bg-slate-800 text-slate-300">
+                          {project.framework}
+                        </span>
+                        <span className="px-2 py-1 rounded-full text-xs bg-slate-800 text-slate-300">
+                          {project.language}
+                        </span>
+                        <span className="px-2 py-1 rounded-full text-xs bg-slate-800 text-slate-300">
+                          :{project.port}
+                        </span>
+                        {project.hasDockerfile && (
+                          <span className="px-2 py-1 rounded-full text-xs bg-emerald-500/20 text-emerald-400">
+                            Dockerfile ✓
+                          </span>
+                        )}
+                      </div>
+                    </button>
+                  ))}
                 </div>
               </motion.div>
             )}
@@ -266,8 +421,8 @@ export default function NewProjectPage() {
                 className="space-y-6"
               >
                 <div className="text-center mb-8">
-                  <h2 className="text-xl font-bold mb-2">Configure seu projeto</h2>
-                  <p className="text-slate-400">Defina nome, domínio e comandos de build</p>
+                  <h2 className="text-xl font-bold mb-2">Ajuste as configurações</h2>
+                  <p className="text-slate-400">Valores pré-preenchidos pela análise</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -278,12 +433,30 @@ export default function NewProjectPage() {
                     <input
                       type="text"
                       value={name}
-                      onChange={(e) => handleNameChange(e.target.value)}
-                      placeholder="meu-app"
+                      onChange={(e) => {
+                        setName(e.target.value);
+                        setSubdomain(generateSubdomain(e.target.value));
+                      }}
                       className="input-field"
                     />
                   </div>
 
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                      Tipo
+                    </label>
+                    <select
+                      value={type}
+                      onChange={(e) => setType(e.target.value as AppType)}
+                      className="input-field"
+                    >
+                      <option value="FRONTEND">Frontend</option>
+                      <option value="BACKEND">Backend</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-2">
                       Subdomínio *
@@ -293,55 +466,63 @@ export default function NewProjectPage() {
                         type="text"
                         value={subdomain}
                         onChange={(e) => setSubdomain(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-                        placeholder="meu-app"
                         className="input-field rounded-r-none"
                       />
                       <span className="bg-slate-800 border border-l-0 border-slate-700 px-3 py-3 rounded-r-xl text-slate-400 text-sm">
-                        .sce.local
+                        .sce.prostqs.com.br
                       </span>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-slate-400 mb-2">
-                    Porta da Aplicação
-                  </label>
-                  <input
-                    type="number"
-                    value={port}
-                    onChange={(e) => setPort(Number(e.target.value))}
-                    className="input-field w-32"
-                  />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-2">
+                      Porta
+                    </label>
+                    <input
+                      type="number"
+                      value={port}
+                      onChange={(e) => setPort(Number(e.target.value))}
+                      className="input-field"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-2">
-                      Comando de Build (opcional)
+                      Comando de Build
                     </label>
                     <input
                       type="text"
                       value={buildCmd}
                       onChange={(e) => setBuildCmd(e.target.value)}
                       placeholder="npm run build"
-                      className="input-field"
+                      className="input-field font-mono text-sm"
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-medium text-slate-400 mb-2">
-                      Comando de Start (opcional)
+                      Comando de Start
                     </label>
                     <input
                       type="text"
                       value={startCmd}
                       onChange={(e) => setStartCmd(e.target.value)}
                       placeholder="npm start"
-                      className="input-field"
+                      className="input-field font-mono text-sm"
                     />
                   </div>
                 </div>
+
+                {selectedProject && (
+                  <div className="p-4 rounded-xl bg-slate-900/50 border border-slate-800">
+                    <div className="flex items-center gap-2 text-sm text-slate-400">
+                      <FileCode className="w-4 h-4" />
+                      <span>Detectado: <strong className="text-white">{selectedProject.framework}</strong> em <strong className="text-white">{selectedProject.language}</strong></span>
+                    </div>
+                  </div>
+                )}
               </motion.div>
             )}
 
@@ -432,18 +613,18 @@ export default function NewProjectPage() {
                   </div>
                   
                   <div className="flex justify-between items-center pb-4 border-b border-slate-800">
+                    <span className="text-slate-400">Framework</span>
+                    <span className="font-mono text-sm">{selectedProject?.framework || 'N/A'}</span>
+                  </div>
+                  
+                  <div className="flex justify-between items-center pb-4 border-b border-slate-800">
                     <span className="text-slate-400">Repositório</span>
                     <span className="font-mono text-sm text-slate-300 truncate max-w-xs">{repoUrl}</span>
                   </div>
                   
                   <div className="flex justify-between items-center pb-4 border-b border-slate-800">
-                    <span className="text-slate-400">Branch</span>
-                    <span className="font-mono">{branch}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center pb-4 border-b border-slate-800">
                     <span className="text-slate-400">URL</span>
-                    <span className="font-mono text-cyan-400">https://{subdomain}.sce.local</span>
+                    <span className="font-mono text-cyan-400">https://{subdomain}.sce.prostqs.com.br</span>
                   </div>
                   
                   <div className="flex justify-between items-center">
@@ -490,7 +671,7 @@ export default function NewProjectPage() {
               >
                 {loading ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-black border-t-transparent animate-spin rounded-full" />
+                    <Loader2 className="w-5 h-5 animate-spin" />
                     Deployando...
                   </>
                 ) : (

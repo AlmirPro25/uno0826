@@ -10,6 +10,7 @@ interface AuthContextType {
     loading: boolean;
     login: (token: string, refreshToken: string) => Promise<void>;
     logout: () => void;
+    refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
     isHydrated: boolean;
 }
@@ -19,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
     loading: true,
     login: async () => { },
     logout: () => { },
+    refreshUser: async () => { },
     isAuthenticated: false,
     isHydrated: false,
 });
@@ -26,7 +28,7 @@ const AuthContext = createContext<AuthContextType>({
 // Custom hook for hydration state
 function useHydrated() {
     return useSyncExternalStore(
-        () => () => {},
+        () => () => { },
         () => true,
         () => false
     );
@@ -51,6 +53,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoggingIn.current = false;
         router.push("/login");
     }, [router]);
+
+    // Force refresh user data from API
+    const refreshUser = useCallback(async () => {
+        if (!localStorage.getItem("token")) return;
+        try {
+            const res = await api.get("/identity/me");
+            if (res.data) {
+                setUser(res.data);
+                localStorage.setItem("user", JSON.stringify(res.data));
+            }
+        } catch (error) {
+            console.error("Failed to refresh user data", error);
+        }
+    }, []);
 
     // Initialize auth state from localStorage
     useEffect(() => {
@@ -89,7 +105,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 // First, set user from localStorage for immediate UI
                 const parsedUser = JSON.parse(storedUser);
                 setUser(parsedUser);
-                
+
                 // Then validate token with backend (silently)
                 try {
                     const res = await api.get("/identity/me");
@@ -121,7 +137,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 localStorage.removeItem("user");
                 setUser(null);
             }
-            
+
             setLoading(false);
         };
 
@@ -131,7 +147,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const login = useCallback(async (token: string, refreshToken: string) => {
         isLoggingIn.current = true;
         setLoading(true);
-        
+
         // Save tokens immediately
         localStorage.setItem("token", token);
         localStorage.setItem("refreshToken", refreshToken);
@@ -144,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             // Save user data
             localStorage.setItem("user", JSON.stringify(userData));
             setUser(userData);
-            
+
             // Check onboarding status
             const onboardingComplete = localStorage.getItem("onboarding_complete");
 
@@ -156,10 +172,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
             // Small delay to ensure React state is committed
             await new Promise(resolve => setTimeout(resolve, 50));
-            
+
             setLoading(false);
             isLoggingIn.current = false;
-            
+
             // Navigate to destination
             router.push(destination);
         } catch (error) {
@@ -182,6 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 loading,
                 login,
                 logout,
+                refreshUser,
                 isAuthenticated: !!user,
                 isHydrated,
             }}

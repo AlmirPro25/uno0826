@@ -53,6 +53,7 @@ import (
 	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/internal/rules"
 	"prost-qs/backend/internal/activity"
+	"prost-qs/backend/internal/aihub"
 	"prost-qs/backend/internal/webhook"
 	"prost-qs/backend/internal/apikey"
 	"prost-qs/backend/internal/events"
@@ -187,6 +188,8 @@ func main() {
 				"https://frontend-prost.vercel.app",
 				"https://prostqs.com.br",
 				"https://www.prostqs.com.br",
+				"https://sce.prostqs.com.br",
+				"https://api.sce.prostqs.com.br",
 			}
 			for _, allowed := range allowedOrigins {
 				if origin == allowed {
@@ -709,6 +712,17 @@ func main() {
 		} else {
 			log.Println("⚠️  Cognitive Narrator desabilitado (configure GEMINI_API_KEY e GEMINI_NARRATOR_ENABLED=true)")
 		}
+
+		// ========================================
+		// AI HUB CENTRAL - Fase 33
+		// "O cérebro central do sistema - chat com IA que controla tudo"
+		// ========================================
+		aiHubService := aihub.NewService(gormDB)
+		aiHubHandler := aihub.NewHandler(aiHubService)
+		aiHubGroup := v1.Group("")
+		aiHubGroup.Use(middleware.AuthMiddleware())
+		aiHubHandler.RegisterRoutes(aiHubGroup)
+		log.Println("✅ AI Hub Central routes registradas (/ai/*)")
 
 		// ========================================
 		// ADS MODULE - Economic Extension

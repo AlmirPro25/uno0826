@@ -13,15 +13,15 @@ export default function AuthLayout({
     children: React.ReactNode;
 }) {
     const [mounted, setMounted] = useState(false);
-    
+
     useEffect(() => {
         setMounted(true);
     }, []);
-    
+
     return (
         <div className="min-h-screen flex bg-background text-foreground overflow-hidden">
             {/* Left Side: Marketing/Propaganda */}
-            <div className="hidden lg:flex lg:w-1/2 relative border-r border-border bg-black/40 flex-col relative overflow-hidden">
+            <div className="hidden lg:flex lg:w-1/2 relative border-r border-border bg-black/40 flex-col overflow-hidden">
                 {/* Dynamic Background */}
                 <div className="absolute inset-0 bg-grid-white/[0.02]" />
                 <div className="absolute top-0 left-0 right-0 h-96 bg-gradient-to-b from-indigo-500/10 via-purple-500/5 to-transparent blur-3xl" />
@@ -34,7 +34,7 @@ export default function AuthLayout({
                             <div className="h-10 w-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/10 group-hover:bg-indigo-500/20 transition-all">
                                 <Shield className="text-indigo-400 w-5 h-5" />
                             </div>
-                            <span className="font-black text-2xl tracking-tighter text-white">UNO<span className="text-indigo-500">.KERNEL</span></span>
+                            <span className="font-black text-2xl tracking-tighter text-white">ProstQS<span className="text-indigo-500">.KERNEL</span></span>
                         </Link>
 
                         <motion.div
@@ -98,7 +98,7 @@ export default function AuthLayout({
                         <div className="h-10 w-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center">
                             <Shield className="text-indigo-400 w-5 h-5" />
                         </div>
-                        <span className="font-black text-2xl tracking-tighter">UNO<span className="text-indigo-500">.KERNEL</span></span>
+                        <span className="font-black text-2xl tracking-tighter">ProstQS<span className="text-indigo-500">.KERNEL</span></span>
                     </div>
                     {children}
                 </div>

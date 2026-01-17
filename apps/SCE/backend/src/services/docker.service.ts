@@ -192,4 +192,38 @@ export class DockerService {
       // Rede já existe
     }
   }
+
+  /**
+   * Verifica se um container está rodando
+   */
+  async isContainerRunning(name: string): Promise<boolean> {
+    try {
+      const { stdout } = await execAsync(`docker inspect -f '{{.State.Running}}' ${name}`);
+      return stdout.trim() === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Copia arquivos de um container para o host
+   */
+  async copyFromContainer(containerName: string, containerPath: string, hostPath: string): Promise<void> {
+    await execAsync(`docker cp ${containerName}:${containerPath} ${hostPath}`);
+  }
+
+  /**
+   * Copia arquivos do host para um container
+   */
+  async copyToContainer(hostPath: string, containerName: string, containerPath: string): Promise<void> {
+    await execAsync(`docker cp ${hostPath} ${containerName}:${containerPath}`);
+  }
+
+  /**
+   * Executa comando dentro de um container
+   */
+  async execInContainer(containerName: string, command: string): Promise<string> {
+    const { stdout } = await execAsync(`docker exec ${containerName} sh -c "${command.replace(/"/g, '\\"')}"`);
+    return stdout;
+  }
 }

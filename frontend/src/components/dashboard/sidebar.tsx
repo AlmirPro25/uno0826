@@ -5,15 +5,13 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import {
-    LayoutGrid, AppWindow, Activity, AlertTriangle, Bell, Webhook, Key, BarChart3,
-    Zap, Ghost, Lock, Package, FileText, CreditCard, Crown, Bot, Gauge, UserCheck,
-    Scale, Database, BookOpen, Eye, GitBranch, Power, ShieldCheck, Megaphone,
-    PiggyBank, Wallet, Brain, DollarSign, Cog, LogOut, Shield, ChevronDown
+    LayoutGrid, AppWindow, Activity, AlertTriangle, Key, BarChart3,
+    Zap, Ghost, Lock, Scale, Database, BookOpen, Brain, Cog, LogOut, Shield,
+    Crown, Webhook
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
 import { AppSwitcher } from "./app-switcher";
-import { motion, AnimatePresence } from "framer-motion";
 
 // --- Configuration ---
 const SECTIONS = {
@@ -46,8 +44,8 @@ const SECTIONS = {
 export function Sidebar() {
     const pathname = usePathname();
     const { logout, user } = useAuth();
-    const { canManage, isOwner } = useApp();
-    const [devMode, setDevMode] = useState(() => {
+    const { canManage } = useApp();
+    const [devMode] = useState(() => {
         if (typeof window === 'undefined') return false;
         return localStorage.getItem('devMode') === 'true';
     });
@@ -92,7 +90,7 @@ export function Sidebar() {
                     </div>
                     <div>
                         <span className="block text-sm font-bold text-white tracking-tight leading-none">
-                            UNO<span className="text-zinc-500">.KERNEL</span>
+                            ProstQS<span className="text-zinc-500">.KERNEL</span>
                         </span>
                     </div>
                 </div>
@@ -135,6 +133,12 @@ export function Sidebar() {
                 )}
 
                 {/* Extra Links */}
+                <SectionLabel label="Inteligência" />
+                <NavItem
+                    item={{ href: "/dashboard/ai", label: "AI Hub", icon: Brain }}
+                    isActive={pathname === "/dashboard/ai"}
+                />
+
                 <SectionLabel label="Recursos" />
                 <NavItem
                     item={{ href: "/docs", label: "Documentação", icon: BookOpen }}

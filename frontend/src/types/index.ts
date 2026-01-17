@@ -3,6 +3,7 @@ export interface User {
     name: string;
     email: string;
     role: "admin" | "user" | "super_admin";
+    plan?: "free" | "pro";
     avatar_url?: string;
     created_at: string;
     status: string;

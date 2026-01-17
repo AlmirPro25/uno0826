@@ -3,37 +3,37 @@
 ## Status Atual
 
 ✅ **Kernel (Oracle Cloud)** — Rodando em `api.prostqs.com.br`
-✅ **SCE (Google Cloud)** — Deployado em `34.95.249.26`, aguardando DNS
+✅ **SCE (Google Cloud)** — Totalmente operacional em `34.95.249.26`
+✅ **Primeiro App Deployado** — `https://hello-docker.sce.prostqs.com.br`
 
 ---
 
-## URGENTE (Fazer Agora)
+## ✅ CONCLUÍDO HOJE (16/01/2026)
 
-### 1. Configurar DNS para SCE
-**Responsável**: Almir (painel do registrador de domínio)
+### 1. ~~Configurar DNS para SCE~~
+✅ DNS configurado no Cloudflare:
+- `sce.prostqs.com.br` → `34.95.249.26`
+- `api.sce.prostqs.com.br` → `34.95.249.26`
+- `traefik.sce.prostqs.com.br` → `34.95.249.26`
+- `hello-docker.sce.prostqs.com.br` → `34.95.249.26`
 
-Adicionar no DNS de `prostqs.com.br`:
+### 2. ~~Testar Fluxo Completo SCE ↔ Kernel~~
+- [x] Acessar `https://sce.prostqs.com.br`
+- [x] Fazer login via Kernel
+- [x] Criar um projeto de teste
+- [x] Fazer deploy de um app simples (`docker/welcome-to-docker`)
+- [ ] Verificar telemetria chegando no Kernel (pendente)
 
-```
-sce.prostqs.com.br          A    34.95.249.26
-api.sce.prostqs.com.br      A    34.95.249.26
-traefik.sce.prostqs.com.br  A    34.95.249.26
-```
-
-Ou wildcard: `*.sce.prostqs.com.br → 34.95.249.26`
-
-**Após configurar**: Traefik gera SSL automaticamente (pode levar 5-10 min).
+### 3. Correções Realizadas
+- [x] CORS no SCE Backend (múltiplas origens)
+- [x] JWT Secret sincronizado com Kernel
+- [x] Healthcheck do container (IPv6 → IPv4)
+- [x] Labels do Traefik para apps deployados
+- [x] Script de deploy manual (`infra/sce/start-backend.sh`)
 
 ---
 
 ## ESTA SEMANA
-
-### 2. Testar Fluxo Completo SCE ↔ Kernel
-- [ ] Acessar `https://sce.prostqs.com.br`
-- [ ] Fazer login via Kernel
-- [ ] Criar um projeto de teste
-- [ ] Fazer deploy de um app simples (ex: hello-world Node.js)
-- [ ] Verificar telemetria chegando no Kernel
 
 ### 3. Deploy do Primeiro App Real no SCE
 Candidatos:
@@ -148,4 +148,11 @@ sudo journalctl -u prostqs -f
 
 ---
 
-*Atualizado em 16/01/2026*
+*Atualizado em 16/01/2026 às 15:50 BRT*
+
+---
+
+## Documentação Relacionada
+
+- [Estado do Sistema 16/01/2026](./ESTADO-SISTEMA-16-JANEIRO-2026.md) — Detalhes técnicos do que foi feito hoje
+- [Infraestrutura Atual](./INFRAESTRUTURA-ATUAL-JANEIRO-2026.md) — Visão geral da infra

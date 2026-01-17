@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Activity, Users, DollarSign, BrainCircuit, Zap, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { Users, DollarSign, BrainCircuit, Zap, BarChart3, ArrowUpRight, ArrowDownRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 
@@ -29,11 +29,11 @@ export default function AdminDashboardPage() {
         const fetchData = async () => {
             try {
                 const [statsRes, healthRes] = await Promise.all([
-                    api.get("/admin/dashboard"),
-                    api.get("/health")
+                    api.get("/admin/dashboard").catch(() => null),
+                    api.get("/health").catch(() => null)
                 ]);
-                setStats(statsRes.data);
-                setHealth(healthRes.data);
+                if (statsRes) setStats(statsRes.data);
+                if (healthRes) setHealth(healthRes.data);
             } catch (error) {
                 console.error("Failed to fetch dashboard data", error);
             } finally {
@@ -42,46 +42,46 @@ export default function AdminDashboardPage() {
         };
 
         fetchData();
-        const interval = setInterval(fetchData, 30000);
+        const interval = setInterval(fetchData, 30000); // Polling real a cada 30s
         return () => clearInterval(interval);
     }, []);
 
-    // Derived metrics
-    const systemTension = health?.status === 'healthy' ? 12 : health?.status === 'degraded' ? 45 : 88;
-    const anomalyScore = health?.services && health.services['job_worker'] !== 'healthy' ? 30 : 2;
+    // Métricas derivadas de dados reais
+    const systemTension = health?.status === 'healthy' ? 0 : health?.status === 'degraded' ? 50 : 100;
+    const anomalyScore = health?.services && Object.values(health.services).some(s => s !== 'healthy') ? 1 : 0;
 
     const cards = [
         {
-            title: "System Tension",
+            title: "Tensão do Sistema",
             value: `${systemTension}%`,
-            change: health?.status === 'healthy' ? "-2% from avg" : "+15% spike",
+            change: health?.status === 'healthy' ? "Nominal" : "Degradado",
             trend: health?.status === 'healthy' ? "down" : "up",
             icon: BrainCircuit,
-            color: systemTension > 50 ? "text-red-500" : "text-green-500",
-            bg: systemTension > 50 ? "bg-red-500/10" : "bg-green-500/10"
+            color: systemTension > 50 ? "text-red-500" : "text-emerald-500",
+            bg: systemTension > 50 ? "bg-red-500/10" : "bg-emerald-500/10"
         },
         {
-            title: "Active Identities",
-            value: stats?.total_identities.toLocaleString() || "0",
-            change: `+${stats?.identities_last_24h || 0} last 24h`,
+            title: "Identidades Ativas",
+            value: stats?.total_identities.toLocaleString() || "-",
+            change: stats?.identities_last_24h ? `+${stats.identities_last_24h} (24h)` : "Sem novos registros",
             trend: "up",
             icon: Users,
             color: "text-blue-500",
             bg: "bg-blue-500/10"
         },
         {
-            title: "Total Revenue",
-            value: new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats?.total_revenue || 0),
-            change: `+${stats?.payments_last_24h || 0} txns`,
+            title: "Receita Total",
+            value: stats ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.total_revenue) : "-",
+            change: stats?.payments_last_24h ? `+${stats.payments_last_24h} txns` : "Sem movimento recente",
             trend: "up",
             icon: DollarSign,
             color: "text-amber-500",
             bg: "bg-amber-500/10"
         },
         {
-            title: "Active Subs",
-            value: stats?.active_subscriptions.toLocaleString() || "0",
-            change: "Stable",
+            title: "Assinaturas Ativas",
+            value: stats?.active_subscriptions.toLocaleString() || "-",
+            change: "Total recorrente",
             trend: "neutral",
             icon: Zap,
             color: "text-purple-500",
@@ -89,17 +89,17 @@ export default function AdminDashboardPage() {
         }
     ];
 
-    if (loading) return <div className="p-8 text-zinc-500">Initializing cognitive matrix...</div>;
+    if (loading && !stats) return <div className="p-8 text-zinc-500 text-sm animate-pulse">Carregando métricas do Kernel...</div>;
 
     return (
         <div className="space-y-6">
             <div className="flex items-center justify-between">
                 <div>
                     <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-red-400">
-                        Cognitive Overview
+                        Visão Geral
                     </h1>
                     <p className="text-muted-foreground text-xs font-mono mt-1">
-                        SYSTEM_STATUS: {health?.status.toUpperCase() || "UNKNOWN"} // UPTIME: {health?.uptime || "0s"}
+                        SYSTEM_STATUS: {health?.status.toUpperCase() || "OFFLINE"} // UPTIME: {health?.uptime || "-"}
                     </p>
                 </div>
             </div>
@@ -128,8 +128,7 @@ export default function AdminDashboardPage() {
                             <div>
                                 <div className="text-2xl font-bold text-white tracking-tight">{card.value}</div>
                                 <div className="flex items-center gap-1 mt-1 text-xs">
-                                    {card.trend === 'up' ? <ArrowUpRight className="w-3 h-3 text-green-500" /> : <ArrowDownRight className="w-3 h-3 text-red-500" />}
-                                    <span className={card.trend === 'up' ? "text-green-500" : "text-zinc-500"}>
+                                    <span className={card.change.includes("Sem") ? "text-zinc-500" : "text-zinc-300"}>
                                         {card.change}
                                     </span>
                                 </div>
@@ -139,52 +138,37 @@ export default function AdminDashboardPage() {
                 ))}
             </div>
 
-            {/* Live Feed Mock - To be replaced with real websocket feed if available */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 p-6 rounded-xl border border-white/10 bg-black/40 backdrop-blur-sm">
-                    <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                        <Activity className="w-4 h-4 text-red-500" />
-                        Live Narrative Stream
-                    </h3>
-                    <div className="space-y-4 font-mono text-xs">
-                        {loading ? (
-                            <div className="text-zinc-500">Connecting to neural stream...</div>
-                        ) : (
-                            <div className="text-green-500/80">
-                                <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span> SYSTEM OPTIMAL. {stats?.total_identities} identities active.
-                            </div>
-                        )}
-                        <div className="text-zinc-500">
-                            <span className="text-zinc-600">[{new Date(Date.now() - 5000).toLocaleTimeString()}]</span> Garbage collection completed. Freed 12MB.
-                        </div>
-                        <div className="text-zinc-500">
-                            <span className="text-zinc-600">[{new Date(Date.now() - 15000).toLocaleTimeString()}]</span> New login session from {stats?.identities_last_24h ? "User pool" : "Admin console"}.
-                        </div>
-                        <div className="text-zinc-500">
-                            <span className="text-zinc-600">[{new Date(Date.now() - 45000).toLocaleTimeString()}]</span> Indexing complete for bucket region-us-east.
+            {/* Seções fake (Logs Stream e Anomaly Graph complexo) removidas. 
+                Ficar apenas com o que é dado real e sólido. 
+                Se o usuário quiser logs, devemos implementar um LogViewer real conectando ao backend.
+            */}
+
+            <div className="p-6 rounded-xl border border-white/10 bg-gradient-to-b from-red-950/10 to-black/40 backdrop-blur-sm">
+                <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
+                    <BarChart3 className="w-4 h-4 text-red-500" />
+                    Estado de Anomalia
+                </h3>
+                <div className="flex items-center gap-6">
+                    <div className="relative">
+                        <svg className="w-24 h-24 transform -rotate-90">
+                            <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" className="text-zinc-800" />
+                            <circle cx="48" cy="48" r="40" stroke="currentColor" strokeWidth="6" fill="transparent" strokeDasharray={251} strokeDashoffset={251 - (251 * anomalyScore * 100)} className={anomalyScore > 0 ? "text-red-500" : "text-emerald-500"} />
+                        </svg>
+                        <div className="absolute inset-0 flex items-center justify-center flex-col">
+                            <span className="text-xl font-bold text-white">{anomalyScore > 0 ? "ALERTA" : "OK"}</span>
                         </div>
                     </div>
-                </div>
-
-                <div className="p-6 rounded-xl border border-white/10 bg-gradient-to-b from-red-950/10 to-black/40 backdrop-blur-sm">
-                    <h3 className="text-white font-semibold mb-4 flex items-center gap-2">
-                        <BarChart3 className="w-4 h-4 text-red-500" />
-                        Anomaly Detection
-                    </h3>
-                    <div className="flex items-center justify-center py-8">
-                        <div className="relative">
-                            <svg className="w-32 h-32 transform -rotate-90">
-                                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-zinc-800" />
-                                <circle cx="64" cy="64" r="60" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={377} strokeDashoffset={377 - (377 * anomalyScore) / 100} className="text-red-500" />
-                            </svg>
-                            <div className="absolute inset-0 flex items-center justify-center flex-col">
-                                <span className="text-3xl font-bold text-white">{anomalyScore}%</span>
-                                <span className="text-xs text-red-400">RISK LEVEL</span>
-                            </div>
-                        </div>
+                    <div>
+                        <p className="text-sm text-zinc-400">
+                            O sistema monitora serviços críticos.
+                            {anomalyScore > 0
+                                ? " Uma ou mais anomalias detectadas nos serviços."
+                                : " Nenhum comportamento anômalo detectado nos serviços monitorados."}
+                        </p>
                     </div>
                 </div>
             </div>
+
         </div>
     );
 }

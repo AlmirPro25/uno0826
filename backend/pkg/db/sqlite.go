@@ -14,6 +14,7 @@ import (
 	"prost-qs/backend/internal/ads"
 	"prost-qs/backend/internal/agent"
 	"prost-qs/backend/internal/ai"
+	"prost-qs/backend/internal/aihub"
 	"prost-qs/backend/internal/application"
 	"prost-qs/backend/internal/approval"
 	"prost-qs/backend/internal/audit"
@@ -361,6 +362,13 @@ func MigrateSchema(db *gorm.DB) error {
 		// "Testes ativos que vivem em produção"
 		// ========================================
 		&invariants.InvariantCheckRecord{},
+
+		// ========================================
+		// AI HUB - Central Intelligence
+		// "O cérebro central do sistema"
+		// ========================================
+		&aihub.ProviderConfig{},
+		&aihub.AIConversation{},
 	)
 	if err != nil {
 		return fmt.Errorf("falha ao executar migrações: %w", err)

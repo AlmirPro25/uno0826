@@ -10,8 +10,8 @@ import { AdSenseScript } from "@/components/ads/adsense-script";
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
 export const metadata: Metadata = {
-  title: "PROST-QS | Governance Platform",
-  description: "Governance, Audit, and Control for Intelligent Systems.",
+  title: "ProstQS Kernel | Soberania Digital",
+  description: "Governança, Auditoria e Controle Soberano para Sistemas Inteligentes.",
 };
 
 export default function RootLayout({

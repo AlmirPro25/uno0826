@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search, MoreVertical, Shield, User as UserIcon, Loader2, Filter, Download } from "lucide-react";
+import { Search, Shield, User as UserIcon, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 import { User } from "@/types";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 interface PaginatedUsers {
     data: User[];
@@ -19,27 +20,39 @@ interface PaginatedUsers {
 
 export default function AdminUsersPage() {
     const [term, setTerm] = useState("");
+    const [page, setPage] = useState(1);
     const [data, setData] = useState<PaginatedUsers | null>(null);
     const [loading, setLoading] = useState(true);
 
-    const fetchUsers = async () => {
+    const fetchUsers = async (pageToFetch = 1) => {
         setLoading(true);
         try {
-            const res = await api.get(`/admin/users?page=1&limit=50&search=${term}`);
+            // Usa o parâmetro de página dinâmico
+            const res = await api.get(`/admin/users?page=${pageToFetch}&limit=20&search=${term}`);
             setData(res.data);
+            setPage(pageToFetch);
         } catch (error) {
             console.error("Failed to fetch users", error);
+            toast.error("Erro ao carregar lista de usuários");
         } finally {
             setLoading(false);
         }
     };
 
+    // Debounce na busca
     useEffect(() => {
         const timer = setTimeout(() => {
-            fetchUsers();
+            // Resetar para página 1 ao buscar
+            fetchUsers(1);
         }, 500);
         return () => clearTimeout(timer);
     }, [term]);
+
+    const handlePageChange = (newPage: number) => {
+        if (newPage >= 1 && (!data || newPage <= data.total_pages)) {
+            fetchUsers(newPage);
+        }
+    };
 
     return (
         <div className="space-y-10 pb-20">
@@ -50,11 +63,7 @@ export default function AdminUsersPage() {
                     </h1>
                     <p className="text-slate-500 mt-2 font-medium">Controle de acesso e governança de usuários do Kernel.</p>
                 </div>
-                <div className="flex gap-3">
-                    <Button variant="outline" className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl px-6 font-bold uppercase tracking-widest text-[10px]">
-                        <Download className="w-4 h-4 mr-2" /> Exportar Audit Log
-                    </Button>
-                </div>
+                {/* Botão de exportação removido pois não possui endpoint implementado */}
             </div>
 
             <div className="flex flex-col md:flex-row items-center gap-4">
@@ -67,9 +76,7 @@ export default function AdminUsersPage() {
                         onChange={(e) => setTerm(e.target.value)}
                     />
                 </div>
-                <Button variant="outline" className="w-full md:w-auto h-14 px-6 rounded-2xl border-white/5 bg-white/[0.02] text-slate-400 font-black uppercase tracking-widest text-[10px] hover:bg-white/5 hover:text-white transition-all">
-                    <Filter className="w-4 h-4 mr-2" /> Filtros Avançados
-                </Button>
+                {/* Botão de Filtros Avançados removido pois era apenas visual */}
             </div>
 
             <div className="rounded-[32px] border border-white/5 bg-white/[0.01] overflow-hidden">
@@ -81,18 +88,17 @@ export default function AdminUsersPage() {
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Soberania (Role)</th>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Status</th>
                                 <th className="px-8 py-6 text-[10px] font-black text-slate-500 uppercase tracking-[0.2em]">Registro</th>
-                                <th className="px-8 py-6 w-20"></th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             <AnimatePresence mode="popLayout">
-                                {loading ? (
+                                {loading && (!data || data.data.length === 0) ? (
                                     <motion.tr
                                         initial={{ opacity: 0 }}
                                         animate={{ opacity: 1 }}
                                         exit={{ opacity: 0 }}
                                     >
-                                        <td colSpan={5} className="py-24 text-center">
+                                        <td colSpan={4} className="py-24 text-center">
                                             <div className="flex flex-col items-center gap-4">
                                                 <Loader2 className="w-10 h-10 animate-spin text-indigo-500/20" />
                                                 <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Sincronizando com o Kernel...</p>
@@ -144,11 +150,6 @@ export default function AdminUsersPage() {
                                             <td className="px-8 py-6 text-xs text-slate-500 font-medium">
                                                 {new Date(user.created_at).toLocaleDateString()}
                                             </td>
-                                            <td className="px-8 py-6 text-right">
-                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-600 hover:text-white hover:bg-white/5 rounded-xl transition-all">
-                                                    <MoreVertical className="w-4 h-4" />
-                                                </Button>
-                                            </td>
                                         </motion.tr>
                                     ))
                                 )}
@@ -156,9 +157,38 @@ export default function AdminUsersPage() {
                         </tbody>
                     </table>
                 </div>
+
+                {!loading && data && (
+                    <div className="p-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            Página {data.page} de {data.total_pages}
+                        </span>
+                        <div className="flex gap-2">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(data.page - 1)}
+                                disabled={data.page <= 1 || loading}
+                                className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 disabled:opacity-30"
+                            >
+                                <ChevronLeft className="w-4 h-4" />
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(data.page + 1)}
+                                disabled={data.page >= data.total_pages || loading}
+                                className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 disabled:opacity-30"
+                            >
+                                <ChevronRight className="w-4 h-4" />
+                            </Button>
+                        </div>
+                    </div>
+                )}
+
                 {!loading && (!data || data.data.length === 0) && (
                     <div className="py-32 text-center">
-                        <p className="text-slate-600 font-bold uppercase tracking-widest text-[10px]">Nenhuma identidade encontrada no banco do Kernel.</p>
+                        <p className="text-slate-600 font-bold uppercase tracking-widest text-[10px]">Nenhuma identidade encontrada.</p>
                     </div>
                 )}
             </div>

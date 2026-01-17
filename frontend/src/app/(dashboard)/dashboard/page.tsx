@@ -18,13 +18,15 @@ import {
     TrendingUp,
     Ghost,
     Shield,
-    UserCheck
+    UserCheck,
+    Info
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
 import { AppHeader } from "@/components/dashboard/app-header";
 import { SystemStatus } from "@/components/dashboard/system-status";
+import { Tooltip } from "@/components/ui/tooltip"; // New Premium Tooltip
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
@@ -105,8 +107,8 @@ export default function DashboardPage() {
                 api.get(`/events/app/${appId}?limit=1`).catch(() => null)
             ]);
 
-            const data = metricsRes.status === 'fulfilled' && metricsRes.value?.data 
-                ? metricsRes.value.data 
+            const data = metricsRes.status === 'fulfilled' && metricsRes.value?.data
+                ? metricsRes.value.data
                 : {};
 
             // Calcular eventos nos últimos 5 min (events_per_minute * 5)
@@ -233,12 +235,16 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="max-w-xl mx-auto"
                 >
-                    <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-600/10 to-purple-600/5 border border-indigo-500/20 text-center space-y-6">
-                        <div className="w-20 h-20 rounded-2xl bg-indigo-600/20 flex items-center justify-center mx-auto">
+                    <div className="p-8 rounded-3xl bg-gradient-to-br from-indigo-600/10 to-purple-600/5 border border-indigo-500/20 text-center space-y-6 relative overflow-hidden group">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                            <Rocket className="w-40 h-40" />
+                        </div>
+
+                        <div className="w-20 h-20 rounded-2xl bg-indigo-600/20 flex items-center justify-center mx-auto relative z-10">
                             <Rocket className="w-10 h-10 text-indigo-400" />
                         </div>
 
-                        <div>
+                        <div className="relative z-10">
                             <h2 className="text-2xl font-black text-white mb-2">
                                 Crie seu primeiro App
                             </h2>
@@ -248,46 +254,52 @@ export default function DashboardPage() {
                             </p>
                         </div>
 
-                        <Link href="/dashboard/apps">
-                            <Button className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase tracking-widest text-xs">
-                                <Zap className="w-4 h-4 mr-2" />
-                                Criar App Agora
-                            </Button>
+                        <Link href="/dashboard/apps" className="relative z-10 block">
+                            <Tooltip content="Instanciar novo container de aplicação" side="bottom">
+                                <Button className="h-14 px-8 rounded-2xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold uppercase tracking-widest text-xs shadow-xl shadow-indigo-600/20">
+                                    <Zap className="w-4 h-4 mr-2" />
+                                    Criar App Agora
+                                </Button>
+                            </Tooltip>
                         </Link>
                     </div>
                 </motion.div>
 
                 {/* Quick Links */}
                 <div className="grid gap-4 md:grid-cols-2 max-w-xl mx-auto pt-4">
-                    <Link href="/docs" className="group">
-                        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
-                                    <BookOpen className="w-5 h-5" />
+                    <Tooltip content="Guia de integração e referências da API" side="left">
+                        <Link href="/docs" className="group block">
+                            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-400 group-hover:scale-110 transition-transform">
+                                        <BookOpen className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-white text-sm">Documentação</p>
+                                        <p className="text-xs text-slate-500">Aprenda a integrar</p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-white text-sm">Documentação</p>
-                                    <p className="text-xs text-slate-500">Aprenda a integrar</p>
-                                </div>
-                                <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </Tooltip>
 
-                    <Link href="/dashboard/billing" className="group">
-                        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
-                            <div className="flex items-center gap-4">
-                                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
-                                    <Zap className="w-5 h-5" />
+                    <Tooltip content="Gerenciar assinatura e limites" side="right">
+                        <Link href="/dashboard/billing" className="group block">
+                            <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-400 group-hover:scale-110 transition-transform">
+                                        <Zap className="w-5 h-5" />
+                                    </div>
+                                    <div className="flex-1">
+                                        <p className="font-bold text-white text-sm">Planos & Billing</p>
+                                        <p className="text-xs text-slate-500">Ver opções</p>
+                                    </div>
+                                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                 </div>
-                                <div className="flex-1">
-                                    <p className="font-bold text-white text-sm">Planos & Billing</p>
-                                    <p className="text-xs text-slate-500">Ver opções</p>
-                                </div>
-                                <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </Tooltip>
                 </div>
             </div>
         );
@@ -302,8 +314,11 @@ export default function DashboardPage() {
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
+                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none flex items-center gap-3">
                         Visão Geral
+                        <Tooltip content="Panorama de performance e saúde" side="right">
+                            <Info className="w-4 h-4 text-slate-600" />
+                        </Tooltip>
                     </h1>
                     <p className="text-slate-500 mt-1 font-medium">
                         {hasApp && activeApp
@@ -311,12 +326,14 @@ export default function DashboardPage() {
                             : "Selecione um app para começar"}
                     </p>
                 </div>
-                <Link href="/dashboard/apps">
-                    <Button className="bg-indigo-600 text-white hover:bg-indigo-500 rounded-xl px-6 shadow-lg shadow-indigo-600/20">
-                        <Zap className="w-4 h-4 mr-2" />
-                        Novo App
-                    </Button>
-                </Link>
+                <Tooltip content="Adicionar nova aplicação ao Kernel" side="left">
+                    <Link href="/dashboard/apps">
+                        <Button className="bg-indigo-600 text-white hover:bg-indigo-500 rounded-xl px-6 shadow-lg shadow-indigo-600/20 font-bold tracking-wide text-xs h-10">
+                            <Zap className="w-3.5 h-3.5 mr-2" />
+                            NOVO APP
+                        </Button>
+                    </Link>
+                </Tooltip>
             </div>
 
             {/* Active App Card - "O que existe?" */}
@@ -324,15 +341,19 @@ export default function DashboardPage() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="p-6 rounded-3xl bg-gradient-to-br from-emerald-600/10 to-emerald-600/5 border border-emerald-500/20"
+                    className="p-6 rounded-3xl bg-gradient-to-br from-emerald-600/10 to-emerald-600/5 border border-emerald-500/20 relative overflow-hidden"
                 >
-                    <div className="flex items-start gap-4">
+                    <div className="absolute top-0 right-0 p-8 opacity-[0.03]">
+                        <Activity className="w-64 h-64 text-emerald-500 rotate-12" />
+                    </div>
+
+                    <div className="flex items-start gap-4 relative z-10">
                         <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center flex-shrink-0">
                             <CheckCircle2 className="w-7 h-7 text-emerald-400" />
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-1">
-                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-2 py-0.5 bg-emerald-500/20 rounded-full">
+                                <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest px-2 py-0.5 bg-emerald-500/20 rounded-full border border-emerald-500/20">
                                     App Ativo
                                 </span>
                             </div>
@@ -340,24 +361,28 @@ export default function DashboardPage() {
                                 {activeApp.name}
                             </h2>
                             <div className="flex items-center gap-2">
-                                <code className="text-sm text-slate-400 font-mono">{activeApp.slug}</code>
-                                <button
-                                    onClick={() => handleCopySlug(activeApp.slug || "")}
-                                    className="p-1 hover:bg-white/10 rounded transition-colors"
-                                >
-                                    {copied ? (
-                                        <Check className="w-3 h-3 text-emerald-400" />
-                                    ) : (
-                                        <Copy className="w-3 h-3 text-slate-500" />
-                                    )}
-                                </button>
+                                <code className="text-sm text-slate-400 font-mono bg-black/20 px-1.5 rounded">{activeApp.slug}</code>
+                                <Tooltip content={copied ? "Copiado!" : "Copiar ID do App"} side="right">
+                                    <button
+                                        onClick={() => handleCopySlug(activeApp.slug || "")}
+                                        className="p-1.5 hover:bg-white/10 rounded-lg transition-colors border border-transparent hover:border-white/5"
+                                    >
+                                        {copied ? (
+                                            <Check className="w-3 h-3 text-emerald-400" />
+                                        ) : (
+                                            <Copy className="w-3 h-3 text-slate-500" />
+                                        )}
+                                    </button>
+                                </Tooltip>
                             </div>
                         </div>
-                        <Link href={`/dashboard/apps/${activeApp.id}`}>
-                            <Button variant="ghost" size="sm" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10">
-                                Ver detalhes <ExternalLink className="w-3 h-3 ml-1" />
-                            </Button>
-                        </Link>
+                        <Tooltip content="Configurações e Chaves de API" side="left">
+                            <Link href={`/dashboard/apps/${activeApp.id}`}>
+                                <Button variant="ghost" size="sm" className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 font-bold uppercase text-[10px] tracking-widest">
+                                    Gerenciar <ExternalLink className="w-3 h-3 ml-2" />
+                                </Button>
+                            </Link>
+                        </Tooltip>
                     </div>
                 </motion.div>
             )}
@@ -371,64 +396,70 @@ export default function DashboardPage() {
                     className="grid grid-cols-1 md:grid-cols-3 gap-4"
                 >
                     {/* Eventos 24h */}
-                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center">
-                                <TrendingUp className="w-5 h-5 text-indigo-400" />
+                    <Tooltip content="Volume total de requisições hoje" side="top">
+                        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-indigo-500/30 transition-all cursor-default group">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                    <TrendingUp className="w-5 h-5 text-indigo-400" />
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Diário</span>
                             </div>
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">24h</span>
+                            <p className="text-3xl font-black text-white group-hover:text-indigo-300 transition-colors">
+                                {state.pulse?.events_24h?.toLocaleString() || "0"}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">eventos em 24h</p>
                         </div>
-                        <p className="text-3xl font-black text-white">
-                            {state.pulse?.events_24h?.toLocaleString() || "0"}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">eventos nas últimas 24h</p>
-                    </div>
+                    </Tooltip>
 
                     {/* Eventos 5min */}
-                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/30 transition-all">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                                <Activity className="w-5 h-5 text-emerald-400" />
+                    <Tooltip content="Tráfego em tempo real (Janela 5min)" side="top">
+                        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-emerald-500/30 transition-all cursor-default group">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                    <Activity className="w-5 h-5 text-emerald-400" />
+                                </div>
+                                <div className={cn(
+                                    "h-2 w-2 rounded-full ring-2 ring-transparent group-hover:ring-emerald-500/30 transition-all",
+                                    state.pulse?.events_5min && state.pulse.events_5min > 0
+                                        ? "bg-emerald-500 animate-pulse"
+                                        : "bg-slate-600"
+                                )} />
                             </div>
-                            <div className={cn(
-                                "h-2 w-2 rounded-full",
-                                state.pulse?.events_5min && state.pulse.events_5min > 0
-                                    ? "bg-emerald-500 animate-pulse"
-                                    : "bg-slate-600"
-                            )} />
+                            <p className="text-3xl font-black text-white group-hover:text-emerald-300 transition-colors">
+                                {state.pulse?.events_5min?.toLocaleString() || "0"}
+                            </p>
+                            <p className="text-xs text-slate-500 mt-1">eventos recentes</p>
                         </div>
-                        <p className="text-3xl font-black text-white">
-                            {state.pulse?.events_5min?.toLocaleString() || "0"}
-                        </p>
-                        <p className="text-xs text-slate-500 mt-1">eventos nos últimos 5 min</p>
-                    </div>
+                    </Tooltip>
 
                     {/* Último Evento */}
-                    <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/30 transition-all">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center">
-                                <Clock className="w-5 h-5 text-amber-400" />
+                    <Tooltip content="Última interação recebida pelo Kernel" side="top">
+                        <div className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-amber-500/30 transition-all cursor-default group">
+                            <div className="flex items-center gap-3 mb-3">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                    <Clock className="w-5 h-5 text-amber-400" />
+                                </div>
+                                <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Último</span>
                             </div>
-                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">Último</span>
-                        </div>
-                        {state.pulse?.last_event_at ? (
-                            <>
-                                <p className="text-lg font-black text-white truncate">
-                                    {formatRelativeTime(state.pulse.last_event_at)}
-                                </p>
-                                {state.pulse.last_event_type && (
-                                    <p className="text-xs text-slate-400 font-mono truncate mt-1">
-                                        {state.pulse.last_event_type}
+                            {state.pulse?.last_event_at ? (
+                                <>
+                                    <p className="text-lg font-black text-white truncate group-hover:text-amber-300 transition-colors">
+                                        {formatRelativeTime(state.pulse.last_event_at)}
                                     </p>
-                                )}
-                            </>
-                        ) : (
-                            <>
-                                <p className="text-lg font-bold text-slate-600">—</p>
-                                <p className="text-xs text-slate-500 mt-1">nenhum evento ainda</p>
-                            </>
-                        )}
-                    </div>
+                                    {state.pulse.last_event_type && (
+                                        <p className="text-xs text-slate-400 font-mono truncate mt-1 bg-white/5 px-1.5 py-0.5 rounded w-fit">
+                                            {state.pulse.last_event_type}
+                                        </p>
+                                    )}
+                                </>
+                            ) : (
+                                <>
+                                    <p className="text-lg font-bold text-slate-600">—</p>
+                                    <p className="text-xs text-slate-500 mt-1">aguardando...</p>
+                                </>
+                            )}
+                        </div>
+                    </Tooltip>
                 </motion.div>
             )}
 
@@ -439,53 +470,55 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.08 }}
                 >
-                    <Link href="/dashboard/shadow">
-                        <div className={cn(
-                            "p-5 rounded-2xl border transition-all cursor-pointer",
-                            state.shadowStatus.active
-                                ? "bg-gradient-to-r from-violet-600/20 to-purple-600/10 border-violet-500/30 hover:border-violet-500/50"
-                                : "bg-white/[0.02] border-white/5 hover:border-white/10"
-                        )}>
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className={cn(
-                                        "w-12 h-12 rounded-xl flex items-center justify-center",
-                                        state.shadowStatus.active ? "bg-violet-500/20" : "bg-slate-500/10"
-                                    )}>
-                                        {state.shadowStatus.active ? (
-                                            <Ghost className="w-6 h-6 text-violet-400" />
-                                        ) : (
-                                            <Shield className="w-6 h-6 text-slate-500" />
-                                        )}
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className={cn(
-                                                "font-bold",
-                                                state.shadowStatus.active ? "text-violet-400" : "text-slate-400"
-                                            )}>
-                                                {state.shadowStatus.active ? "Shadow Mode Ativo" : "Modo Normal"}
-                                            </h3>
-                                            {state.shadowStatus.active && (
-                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-500/20 text-violet-400 uppercase">
-                                                    Simulando
-                                                </span>
+                    <Tooltip content={state.shadowStatus.active ? "Desativar Modo de Simulação" : "Ativar Modo de Simulação (Seguro)"} side="top">
+                        <Link href="/dashboard/shadow">
+                            <div className={cn(
+                                "p-5 rounded-2xl border transition-all cursor-pointer group",
+                                state.shadowStatus.active
+                                    ? "bg-gradient-to-r from-violet-600/20 to-purple-600/10 border-violet-500/30 hover:border-violet-500/50"
+                                    : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                            )}>
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className={cn(
+                                            "w-12 h-12 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 duration-300",
+                                            state.shadowStatus.active ? "bg-violet-500/20" : "bg-slate-500/10"
+                                        )}>
+                                            {state.shadowStatus.active ? (
+                                                <Ghost className="w-6 h-6 text-violet-400" />
+                                            ) : (
+                                                <Shield className="w-6 h-6 text-slate-500" />
                                             )}
                                         </div>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            {state.shadowStatus.active
-                                                ? `Ações simuladas • ${state.shadowStatus.reason || "Sem motivo"}`
-                                                : "Ações executadas normalmente • Clique para simular"}
-                                        </p>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className={cn(
+                                                    "font-bold",
+                                                    state.shadowStatus.active ? "text-violet-400" : "text-slate-400"
+                                                )}>
+                                                    {state.shadowStatus.active ? "Shadow Mode Ativo" : "Modo Normal"}
+                                                </h3>
+                                                {state.shadowStatus.active && (
+                                                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-violet-500/20 text-violet-400 uppercase tracking-wider">
+                                                        Simulando
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                {state.shadowStatus.active
+                                                    ? `Ações simuladas • ${state.shadowStatus.reason || "Sem motivo"}`
+                                                    : "Ações executadas normalmente • Clique para simular"}
+                                            </p>
+                                        </div>
                                     </div>
+                                    <ArrowRight className={cn(
+                                        "w-5 h-5 transition-transform group-hover:translate-x-1",
+                                        state.shadowStatus.active ? "text-violet-400" : "text-slate-600"
+                                    )} />
                                 </div>
-                                <ArrowRight className={cn(
-                                    "w-5 h-5",
-                                    state.shadowStatus.active ? "text-violet-400" : "text-slate-600"
-                                )} />
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </Tooltip>
                 </motion.div>
             )}
 
@@ -496,31 +529,33 @@ export default function DashboardPage() {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.09 }}
                 >
-                    <Link href="/dashboard/approvals">
-                        <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-600/20 to-orange-600/10 border border-amber-500/30 hover:border-amber-500/50 transition-all cursor-pointer">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center animate-pulse">
-                                        <UserCheck className="w-6 h-6 text-amber-400" />
-                                    </div>
-                                    <div>
-                                        <div className="flex items-center gap-2">
-                                            <h3 className="font-bold text-amber-400">
-                                                {state.pendingApprovals} Aprovação{state.pendingApprovals > 1 ? "ões" : ""} Pendente{state.pendingApprovals > 1 ? "s" : ""}
-                                            </h3>
-                                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 uppercase">
-                                                Ação Requerida
-                                            </span>
+                    <Tooltip content="Resolver pendências de autorização humana" side="bottom">
+                        <Link href="/dashboard/approvals">
+                            <div className="p-5 rounded-2xl bg-gradient-to-r from-amber-600/20 to-orange-600/10 border border-amber-500/30 hover:border-amber-500/50 transition-all cursor-pointer group">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center animate-pulse group-hover:animate-none group-hover:scale-110 transition-transform">
+                                            <UserCheck className="w-6 h-6 text-amber-400" />
                                         </div>
-                                        <p className="text-xs text-slate-500 mt-0.5">
-                                            Decisões aguardando sua confirmação
-                                        </p>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h3 className="font-bold text-amber-400">
+                                                    {state.pendingApprovals} Aprovação{state.pendingApprovals > 1 ? "ões" : ""} Pendente{state.pendingApprovals > 1 ? "s" : ""}
+                                                </h3>
+                                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-400 uppercase tracking-wider">
+                                                    Ação Requerida
+                                                </span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                Decisões aguardando sua confirmação direta
+                                            </p>
+                                        </div>
                                     </div>
+                                    <ArrowRight className="w-5 h-5 text-amber-400 group-hover:translate-x-1 transition-transform" />
                                 </div>
-                                <ArrowRight className="w-5 h-5 text-amber-400" />
                             </div>
-                        </div>
-                    </Link>
+                        </Link>
+                    </Tooltip>
                 </motion.div>
             )}
 
@@ -545,35 +580,39 @@ export default function DashboardPage() {
                                 Atividade {activeApp ? `em ${activeApp.name}` : "Recente"}
                             </h3>
                         </div>
-                        <Link href="/dashboard/events">
-                            <Button variant="ghost" size="sm" className="text-indigo-400 hover:text-indigo-300 text-xs">
-                                Ver todos <ArrowRight className="w-3 h-3 ml-1" />
-                            </Button>
-                        </Link>
+                        <Tooltip content="Ver histórico completo de eventos" side="left">
+                            <Link href="/dashboard/events">
+                                <Button variant="ghost" size="sm" className="text-indigo-400 hover:text-indigo-300 text-xs font-bold uppercase tracking-wider">
+                                    Ver todos <ArrowRight className="w-3 h-3 ml-1" />
+                                </Button>
+                            </Link>
+                        </Tooltip>
                     </div>
 
                     {state.recentEvents.length > 0 ? (
                         <div className="space-y-4">
                             {state.recentEvents.map((event, i) => (
-                                <div key={i} className="flex items-center gap-4 group">
-                                    <div className={cn(
-                                        "w-1 h-8 rounded-full",
-                                        event.status === 'ok' ? 'bg-emerald-500/40' : 'bg-amber-500/40'
-                                    )} />
-                                    <div className="flex-1">
-                                        <div className="text-sm font-bold text-slate-200 font-mono">{event.name}</div>
-                                        <div className="text-[10px] text-slate-500 uppercase font-black">{event.time}</div>
+                                <Tooltip key={i} content={`Status: ${event.status.toUpperCase()}`} side="right">
+                                    <div className="flex items-center gap-4 group cursor-help">
+                                        <div className={cn(
+                                            "w-1 h-8 rounded-full transition-all group-hover:h-10",
+                                            event.status === 'ok' ? 'bg-emerald-500/40 group-hover:bg-emerald-500' : 'bg-amber-500/40 group-hover:bg-amber-500'
+                                        )} />
+                                        <div className="flex-1">
+                                            <div className="text-sm font-bold text-slate-200 font-mono group-hover:text-white transition-colors">{event.name}</div>
+                                            <div className="text-[10px] text-slate-500 uppercase font-black">{event.time}</div>
+                                        </div>
                                     </div>
-                                </div>
+                                </Tooltip>
                             ))}
                         </div>
                     ) : (
                         <div className="text-center py-8">
-                            <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2" />
-                            <p className="text-sm text-slate-500">
+                            <Activity className="w-8 h-8 text-slate-600 mx-auto mb-2 opacity-50" />
+                            <p className="text-sm text-slate-500 font-medium">
                                 {activeApp
-                                    ? `Este app ainda não tem eventos...`
-                                    : "Aguardando eventos..."}
+                                    ? `Este app ainda não reportou eventos.`
+                                    : "Aguardando fluxo de dados..."}
                             </p>
                         </div>
                     )}
@@ -586,53 +625,59 @@ export default function DashboardPage() {
                     transition={{ delay: 0.2 }}
                     className="p-6 rounded-3xl bg-white/[0.02] border border-white/5"
                 >
-                    <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-6">Próximo Passo</h3>
+                    <h3 className="text-lg font-bold text-white uppercase tracking-tight mb-6">Ações Recomendadas</h3>
 
                     <div className="space-y-3">
-                        <Link href="/dashboard/rules" className="block group">
-                            <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/15 transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400">
-                                        <Zap className="w-5 h-5" />
+                        <Tooltip content="Definir lógica de negócio automatizada" side="left">
+                            <Link href="/dashboard/rules" className="block group">
+                                <div className="p-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/15 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center text-purple-400 group-hover:scale-110 transition-transform">
+                                            <Zap className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-white text-sm">Criar Regras</p>
+                                            <p className="text-xs text-slate-400">Automatize decisões</p>
+                                        </div>
+                                        <ArrowRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-bold text-white text-sm">Criar Regras</p>
-                                        <p className="text-xs text-slate-400">Automatize decisões</p>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-purple-400 group-hover:translate-x-1 transition-transform" />
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
+                        </Tooltip>
 
-                        <Link href="/docs" className="block group">
-                            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400">
-                                        <BookOpen className="w-5 h-5" />
+                        <Tooltip content="Aprender a usar o SDK do Kernel" side="left">
+                            <Link href="/docs" className="block group">
+                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
+                                            <BookOpen className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-white text-sm">Integre seu App</p>
+                                            <p className="text-xs text-slate-500">Siga o quickstart</p>
+                                        </div>
+                                        <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-bold text-white text-sm">Integre seu App</p>
-                                        <p className="text-xs text-slate-500">Siga o quickstart</p>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
+                        </Tooltip>
 
-                        <Link href="/dashboard/apps" className="block group">
-                            <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
-                                <div className="flex items-center gap-4">
-                                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400">
-                                        <Box className="w-5 h-5" />
+                        <Tooltip content="Gerenciar configurações de Apps" side="left">
+                            <Link href="/dashboard/apps" className="block group">
+                                <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center text-slate-400 group-hover:scale-110 transition-transform">
+                                            <Box className="w-5 h-5" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="font-bold text-white text-sm">Gerenciar Apps</p>
+                                            <p className="text-xs text-slate-500">{state.apps.length} app{state.apps.length !== 1 ? 's' : ''}</p>
+                                        </div>
+                                        <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="font-bold text-white text-sm">Gerenciar Apps</p>
-                                        <p className="text-xs text-slate-500">{state.apps.length} app{state.apps.length !== 1 ? 's' : ''}</p>
-                                    </div>
-                                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                 </div>
-                            </div>
-                        </Link>
+                            </Link>
+                        </Tooltip>
                     </div>
                 </motion.div>
             </div>
@@ -647,27 +692,31 @@ export default function DashboardPage() {
                 >
                     <div className="flex items-center justify-between mb-4">
                         <h3 className="text-lg font-bold text-white uppercase tracking-tight">Seus Apps</h3>
-                        <Link href="/dashboard/apps">
-                            <Button variant="ghost" size="sm" className="text-indigo-400 hover:text-indigo-300">
-                                Ver todos <ArrowRight className="w-3 h-3 ml-1" />
-                            </Button>
-                        </Link>
+                        <Tooltip content="Ver lista completa de aplicações" side="left">
+                            <Link href="/dashboard/apps">
+                                <Button variant="ghost" size="sm" className="text-indigo-400 hover:text-indigo-300 font-bold uppercase text-xs tracking-wider">
+                                    Ver todos <ArrowRight className="w-3 h-3 ml-1" />
+                                </Button>
+                            </Link>
+                        </Tooltip>
                     </div>
                     <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
                         {state.apps.slice(0, 3).map((app) => (
-                            <Link key={app.id} href={`/dashboard/apps/${app.id}`} className="group">
-                                <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs">
-                                            {app.name.substring(0, 2).toUpperCase()}
-                                        </div>
-                                        <div className="flex-1 min-w-0">
-                                            <p className="font-bold text-white text-sm truncate">{app.name}</p>
-                                            <p className="text-xs text-slate-500 font-mono truncate">{app.slug}</p>
+                            <Tooltip key={app.id} content={`ID: ${app.id}`} side="top">
+                                <Link href={`/dashboard/apps/${app.id}`} className="group">
+                                    <div className="p-4 rounded-xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs group-hover:scale-110 transition-transform">
+                                                {app.name.substring(0, 2).toUpperCase()}
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-bold text-white text-sm truncate">{app.name}</p>
+                                                <p className="text-xs text-slate-500 font-mono truncate">{app.slug}</p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            </Link>
+                                </Link>
+                            </Tooltip>
                         ))}
                     </div>
                 </motion.div>

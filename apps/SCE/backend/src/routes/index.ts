@@ -4,9 +4,14 @@ import { AuthService } from '../services/auth.service.js'; // Apenas para provis
 import { DeploymentService } from '../services/deployment.service.js';
 import { DockerService } from '../services/docker.service.js';
 import { ProjectService } from '../services/project.service.js';
+import { RepoAnalyzerService } from '../services/repo-analyzer.service.js';
+import { AIBuilderService } from '../services/ai-builder.service.js';
 import { kernelAuthMiddleware } from '../middleware/kernel-auth.middleware.js'; // KERNEL ONLY
 import { kernel } from '../lib/kernel-client.js';
 import { PrismaClient } from '@prisma/client';
+import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs/promises';
 
 const prisma = new PrismaClient();
 const projectCtrl = new ProjectController();
@@ -14,6 +19,8 @@ const authService = new AuthService();
 const deployService = new DeploymentService();
 const dockerService = new DockerService();
 const projectService = new ProjectService();
+const repoAnalyzer = new RepoAnalyzerService();
+const aiBuilder = new AIBuilderService();
 
 export async function apiRoutes(fastify: FastifyInstance) {
   // ============================================
@@ -405,6 +412,211 @@ export async function apiRoutes(fastify: FastifyInstance) {
       } catch (error) {
         const msg = error instanceof Error ? error.message : 'Erro ao provisionar';
         res.status(400).send({ error: msg });
+      }
+    });
+
+    // ============================================
+    // REPO ANALYZER — Análise de Repositórios Git
+    // ============================================
+    
+    // Analisar repositório Git
+    protectedRoutes.post('/repo/analyze', async (req, res) => {
+      try {
+        const { repoUrl, branch = 'main' } = req.body as { repoUrl: string; branch?: string };
+        
+        if (!repoUrl) {
+          return res.status(400).send({ error: 'repoUrl é obrigatório' });
+        }
+        
+        console.log(`[Repo] Analisando: ${repoUrl} (branch: ${branch})`);
+        const analysis = await repoAnalyzer.analyzeRepo(repoUrl, branch);
+        
+        return { success: true, data: analysis };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao analisar repositório';
+        console.error('[Repo] Erro:', msg);
+        res.status(500).send({ error: msg });
+      }
+    });
+    
+    // Gerar Dockerfile baseado na análise
+    protectedRoutes.post('/repo/generate-dockerfile', async (req, res) => {
+      try {
+        const { project } = req.body as { project: any };
+        
+        if (!project || !project.framework) {
+          return res.status(400).send({ error: 'Dados do projeto são obrigatórios' });
+        }
+        
+        const dockerfile = repoAnalyzer.generateDockerfile(project);
+        return { success: true, dockerfile };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao gerar Dockerfile';
+        res.status(500).send({ error: msg });
+      }
+    });
+
+    // ============================================
+    // AI BUILDER — IA no Container
+    // ============================================
+    
+    // Status da IA
+    protectedRoutes.get('/ai/status', async () => {
+      return {
+        available: aiBuilder.isAvailable(),
+        model: 'gemini-1.5-flash',
+        features: ['analyze', 'generate', 'complete', 'suggest'],
+      };
+    });
+    
+    // Analisar código de um projeto
+    protectedRoutes.post('/ai/analyze', async (req, res) => {
+      try {
+        const { projectId } = req.body as { projectId: string };
+        
+        if (!projectId) {
+          return res.status(400).send({ error: 'projectId é obrigatório' });
+        }
+        
+        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        if (!project) {
+          return res.status(404).send({ error: 'Projeto não encontrado' });
+        }
+        
+        // Verificar se container está rodando
+        const isRunning = await dockerService.isContainerRunning(project.subdomain);
+        if (!isRunning) {
+          return res.status(400).send({ error: 'Container não está rodando' });
+        }
+        
+        // Copiar arquivos do container para análise
+        const tempDir = path.join(os.tmpdir(), `sce-ai-${projectId}`);
+        await dockerService.copyFromContainer(project.subdomain, '/app', tempDir);
+        
+        // Analisar com IA
+        const framework = project.type === 'FRONTEND' ? 'next' : 'express';
+        const analysis = await aiBuilder.analyzeProject(tempDir, framework);
+        
+        // Limpar temp
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+        
+        return { success: true, data: analysis };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao analisar projeto';
+        console.error('[AI] Erro:', msg);
+        res.status(500).send({ error: msg });
+      }
+    });
+    
+    // Gerar código novo
+    protectedRoutes.post('/ai/generate', async (req, res) => {
+      try {
+        const { projectId, request } = req.body as { projectId: string; request: string };
+        
+        if (!projectId || !request) {
+          return res.status(400).send({ error: 'projectId e request são obrigatórios' });
+        }
+        
+        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        if (!project) {
+          return res.status(404).send({ error: 'Projeto não encontrado' });
+        }
+        
+        // Copiar arquivos do container
+        const tempDir = path.join(os.tmpdir(), `sce-ai-${projectId}`);
+        const isRunning = await dockerService.isContainerRunning(project.subdomain);
+        
+        if (isRunning) {
+          await dockerService.copyFromContainer(project.subdomain, '/app', tempDir);
+        }
+        
+        // Gerar código
+        const framework = project.type === 'FRONTEND' ? 'next' : 'express';
+        const result = await aiBuilder.generateCode(tempDir, framework, request);
+        
+        // Limpar temp
+        await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+        
+        return { success: true, data: result };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao gerar código';
+        console.error('[AI] Erro:', msg);
+        res.status(500).send({ error: msg });
+      }
+    });
+    
+    // Aplicar código gerado no container
+    protectedRoutes.post('/ai/apply', async (req, res) => {
+      try {
+        const { projectId, files } = req.body as { projectId: string; files: any[] };
+        
+        if (!projectId || !files || !Array.isArray(files)) {
+          return res.status(400).send({ error: 'projectId e files são obrigatórios' });
+        }
+        
+        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        if (!project) {
+          return res.status(404).send({ error: 'Projeto não encontrado' });
+        }
+        
+        const isRunning = await dockerService.isContainerRunning(project.subdomain);
+        if (!isRunning) {
+          return res.status(400).send({ error: 'Container não está rodando' });
+        }
+        
+        // Aplicar cada arquivo no container
+        for (const file of files) {
+          if (file.action === 'delete') {
+            await dockerService.execInContainer(project.subdomain, `rm -f /app/${file.path}`);
+          } else {
+            const dir = path.dirname(file.path);
+            if (dir !== '.') {
+              await dockerService.execInContainer(project.subdomain, `mkdir -p /app/${dir}`);
+            }
+            
+            // Escrever arquivo via base64 para evitar problemas de escape
+            const base64Content = Buffer.from(file.content).toString('base64');
+            await dockerService.execInContainer(
+              project.subdomain, 
+              `echo '${base64Content}' | base64 -d > /app/${file.path}`
+            );
+          }
+        }
+        
+        return { success: true, message: `${files.length} arquivo(s) aplicado(s)`, needsRebuild: true };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao aplicar código';
+        console.error('[AI] Erro:', msg);
+        res.status(500).send({ error: msg });
+      }
+    });
+    
+    // Sugerir melhorias para um arquivo
+    protectedRoutes.post('/ai/suggest', async (req, res) => {
+      try {
+        const { projectId, filePath } = req.body as { projectId: string; filePath: string };
+        
+        if (!projectId || !filePath) {
+          return res.status(400).send({ error: 'projectId e filePath são obrigatórios' });
+        }
+        
+        const project = await prisma.project.findUnique({ where: { id: projectId } });
+        if (!project) {
+          return res.status(404).send({ error: 'Projeto não encontrado' });
+        }
+        
+        // Ler arquivo do container
+        const content = await dockerService.execInContainer(project.subdomain, `cat /app/${filePath}`);
+        
+        // Obter sugestões
+        const framework = project.type === 'FRONTEND' ? 'next' : 'express';
+        const suggestions = await aiBuilder.suggestImprovements(filePath, content, framework);
+        
+        return { success: true, data: { file: filePath, suggestions } };
+      } catch (error) {
+        const msg = error instanceof Error ? error.message : 'Erro ao obter sugestões';
+        console.error('[AI] Erro:', msg);
+        res.status(500).send({ error: msg });
       }
     });
   });

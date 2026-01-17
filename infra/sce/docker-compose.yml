@@ -44,6 +44,11 @@ services:
       - ./data:/app/data
     networks:
       - sce-network
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sce-api.rule=Host(`api.${SUPER_DOMAIN}`)"
@@ -61,8 +66,14 @@ services:
     restart: unless-stopped
     environment:
       - NODE_ENV=production
+      - HOSTNAME=0.0.0.0
     networks:
       - sce-network
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.sce-dashboard.rule=Host(`${SUPER_DOMAIN}`)"

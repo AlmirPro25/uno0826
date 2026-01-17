@@ -23,7 +23,12 @@ const start = async () => {
     // Plugins
     await fastify.register(cors, { 
       origin: process.env.NODE_ENV === 'production' 
-        ? [`https://cloud.${process.env.SUPER_DOMAIN}`]
+        ? [
+            `https://${process.env.SUPER_DOMAIN}`,
+            `https://cloud.${process.env.SUPER_DOMAIN}`,
+            `https://api.${process.env.SUPER_DOMAIN}`,
+            'http://localhost:3000'
+          ]
         : true,
       credentials: true
     });
