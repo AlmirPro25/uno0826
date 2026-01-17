@@ -31,21 +31,21 @@ export function AppSwitcher() {
         <div className="relative">
             <button
                 onClick={() => setOpen(!open)}
-                className="flex items-center gap-3 px-4 py-2 bg-white/[0.03] hover:bg-white/[0.06] border border-white/10 rounded-xl transition-all"
+                className="flex items-center gap-3 px-4 py-2 bg-accent/5 hover:bg-accent/10 border border-border rounded-xl transition-all"
             >
-                <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                    <AppWindow className="w-4 h-4 text-indigo-400" />
+                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                    <AppWindow className="w-4 h-4 text-primary" />
                 </div>
                 <div className="text-left">
-                    <p className="text-sm font-bold text-white truncate max-w-[120px]">
+                    <p className="text-sm font-bold text-foreground truncate max-w-[120px]">
                         {activeApp?.name || "Selecionar App"}
                     </p>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest">
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
                         {activeApp?.role || ""}
                     </p>
                 </div>
                 <ChevronDown className={cn(
-                    "w-4 h-4 text-slate-500 transition-transform",
+                    "w-4 h-4 text-muted-foreground transition-transform",
                     open && "rotate-180"
                 )} />
             </button>
@@ -53,13 +53,13 @@ export function AppSwitcher() {
             {/* Dropdown */}
             {open && (
                 <>
-                    <div 
-                        className="fixed inset-0 z-40" 
-                        onClick={() => setOpen(false)} 
+                    <div
+                        className="fixed inset-0 z-40"
+                        onClick={() => setOpen(false)}
                     />
-                    <div className="absolute top-full left-0 mt-2 w-64 bg-[#0a0f1a] border border-white/10 rounded-xl shadow-2xl z-50 overflow-hidden">
-                        <div className="p-2 border-b border-white/5">
-                            <p className="px-2 py-1 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                    <div className="absolute top-full left-0 mt-2 w-64 bg-popover border border-border rounded-xl shadow-2xl z-50 overflow-hidden">
+                        <div className="p-2 border-b border-border">
+                            <p className="px-2 py-1 text-[10px] font-bold text-muted-foreground uppercase tracking-widest">
                                 Seus Apps
                             </p>
                         </div>
@@ -74,28 +74,28 @@ export function AppSwitcher() {
                                     className={cn(
                                         "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors",
                                         activeApp?.id === app.app_id
-                                            ? "bg-indigo-600/20 text-white"
-                                            : "hover:bg-white/5 text-slate-400"
+                                            ? "bg-primary/20 text-foreground"
+                                            : "hover:bg-accent/5 text-muted-foreground"
                                     )}
                                 >
-                                    <div className="w-8 h-8 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400 font-bold text-xs">
+                                    <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary font-bold text-xs">
                                         {app.app_name.substring(0, 2).toUpperCase()}
                                     </div>
                                     <div className="flex-1 text-left">
-                                        <p className="text-sm font-bold truncate">{app.app_name}</p>
-                                        <p className="text-[10px] text-slate-500">{app.role}</p>
+                                        <p className="text-sm font-bold truncate text-foreground">{app.app_name}</p>
+                                        <p className="text-[10px] text-muted-foreground">{app.role}</p>
                                     </div>
                                     {activeApp?.id === app.app_id && (
-                                        <Check className="w-4 h-4 text-indigo-400" />
+                                        <Check className="w-4 h-4 text-primary" />
                                     )}
                                 </button>
                             ))}
                         </div>
-                        <div className="p-2 border-t border-white/5">
+                        <div className="p-2 border-t border-border">
                             <Link href="/dashboard/apps">
-                                <button 
+                                <button
                                     onClick={() => setOpen(false)}
-                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent/5 rounded-lg transition-colors"
                                 >
                                     <Plus className="w-4 h-4" />
                                     Criar novo app

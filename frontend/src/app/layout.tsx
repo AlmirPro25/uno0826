@@ -6,6 +6,7 @@ import { AuthProvider } from "@/contexts/auth-context";
 import { AppProvider } from "@/contexts/app-context";
 import { Toaster } from "@/components/ui/sonner";
 import { AdSenseScript } from "@/components/ads/adsense-script";
+import { ThemeProvider } from "@/components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -31,13 +32,20 @@ export default function RootLayout({
         )}
         suppressHydrationWarning
       >
-        <AuthProvider>
-          <AppProvider>
-            <AdSenseScript />
-            {children}
-            <Toaster />
-          </AppProvider>
-        </AuthProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="dark"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <AuthProvider>
+            <AppProvider>
+              <AdSenseScript />
+              {children}
+              <Toaster />
+            </AppProvider>
+          </AuthProvider>
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -41,6 +41,8 @@ const SECTIONS = {
     ]
 };
 
+import { ModeToggle } from "@/components/mode-toggle";
+
 export function Sidebar() {
     const pathname = usePathname();
     const { logout, user } = useAuth();
@@ -60,13 +62,13 @@ export function Sidebar() {
             className={cn(
                 "group flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200",
                 isActive
-                    ? "bg-white/[0.08] text-white shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset]"
-                    : "text-slate-500 hover:text-slate-200 hover:bg-white/[0.04]"
+                    ? "bg-accent/10 text-foreground shadow-[0_1px_0_0_rgba(255,255,255,0.05)_inset]"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/5"
             )}
         >
             <item.icon className={cn(
                 "w-4 h-4 transition-colors",
-                isActive ? "text-indigo-400" : "text-slate-600 group-hover:text-slate-400"
+                isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
             )} />
             {item.label}
         </Link>
@@ -74,26 +76,27 @@ export function Sidebar() {
 
     const SectionLabel = ({ label }: { label: string }) => (
         <div className="px-3 pt-5 pb-2">
-            <p className="text-[10px] font-bold text-slate-600 uppercase tracking-widest leading-none">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest leading-none">
                 {label}
             </p>
         </div>
     );
 
     return (
-        <aside className="w-64 h-screen sticky top-0 flex flex-col bg-[#050505] border-r border-white/[0.08]">
+        <aside className="w-64 h-screen sticky top-0 flex flex-col bg-card border-r border-border">
             {/* Header */}
-            <div className="h-14 flex items-center px-4 border-b border-white/[0.05]">
+            <div className="h-14 flex items-center justify-between px-4 border-b border-border">
                 <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 bg-indigo-500/10 rounded-lg border border-indigo-500/20 flex items-center justify-center shadow-[0_0_15px_-3px_rgba(99,102,241,0.2)]">
-                        <Shield className="w-4 h-4 text-indigo-400" />
+                    <div className="w-7 h-7 bg-primary/10 rounded-lg border border-primary/20 flex items-center justify-center shadow-[0_0_15px_-3px_rgba(var(--primary),0.2)]">
+                        <Shield className="w-4 h-4 text-primary" />
                     </div>
                     <div>
-                        <span className="block text-sm font-bold text-white tracking-tight leading-none">
-                            ProstQS<span className="text-zinc-500">.KERNEL</span>
+                        <span className="block text-sm font-bold text-foreground tracking-tight leading-none">
+                            ProstQS<span className="text-muted-foreground">.KERNEL</span>
                         </span>
                     </div>
                 </div>
+                <ModeToggle />
             </div>
 
             {/* App Switcher Area */}
@@ -151,12 +154,12 @@ export function Sidebar() {
             </nav>
 
             {/* Footer */}
-            <div className="p-3 border-t border-white/[0.05] bg-[#050505]">
+            <div className="p-3 border-t border-border bg-card">
                 <button
                     onClick={logout}
-                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:text-red-400 hover:bg-red-500/10 transition-colors group"
+                    className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors group"
                 >
-                    <LogOut className="w-3.5 h-3.5 group-hover:stroke-red-400" />
+                    <LogOut className="w-3.5 h-3.5 group-hover:stroke-destructive" />
                     Encerrar Sessão
                 </button>
             </div>

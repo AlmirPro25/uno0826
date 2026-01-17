@@ -56,10 +56,10 @@ const giants = ["Stripe", "Google", "GitHub", "AWS", "OpenAI", "Anthropic", "Mer
 
 export default function Home() {
   return (
-    <div className="flex flex-col min-h-screen bg-[#050505] text-foreground selection:bg-indigo-500/30 font-sans overflow-x-hidden">
+    <div className="flex flex-col min-h-screen bg-background text-foreground selection:bg-primary/30 font-sans overflow-x-hidden">
 
       {/* Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 h-20 px-6 backdrop-blur-xl border-b border-white/5 bg-[#050505]/80">
+      <header className="fixed top-0 left-0 right-0 z-50 h-20 px-6 backdrop-blur-xl border-b border-border bg-background/80">
         <div className="max-w-7xl mx-auto h-full flex items-center justify-between">
           <div className="flex items-center gap-3 cursor-pointer group">
             <div className="h-10 w-10 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center justify-center shadow-[0_0_15px_-3px_rgba(99,102,241,0.3)] group-hover:bg-indigo-500/20 transition-all">
@@ -83,27 +83,17 @@ export default function Home() {
 
       <main>
         {/* HERO SECTION */}
-        <section className="relative min-h-[90vh] flex items-center pt-20">
-          {/* Background Image Layer */}
-          <div className="absolute inset-0 z-0">
-            <Image
-              src="/images/prostqs_hero.png"
-              alt="ProstQS Hero Background"
-              fill
-              className="object-cover opacity-60 mix-blend-screen"
-              priority
-            />
-            {/* Gradient Overlays for Readability */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#050505] via-transparent to-[#050505]" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-transparent to-transparent" />
-          </div>
+        <section className="relative min-h-[95vh] flex items-center pt-20 overflow-hidden">
+          {/* Subtle Global Background Glows */}
+          <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full" />
+          <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-purple-600/10 blur-[120px] rounded-full" />
 
-          <div className="relative z-10 max-w-7xl mx-auto px-6 w-full">
+          <div className="relative z-10 max-w-7xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+            {/* Left Content */}
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
+              initial={{ opacity: 0, x: -30 }}
+              animate={{ opacity: 1, x: 0 }}
               transition={{ duration: 0.8, ease: "easeOut" }}
-              className="max-w-4xl"
             >
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-emerald-500/30 bg-emerald-500/10 backdrop-blur-md text-emerald-400 text-[10px] font-black uppercase tracking-widest mb-6 shadow-[0_0_20px_rgba(16,185,129,0.2)]">
                 <span className="relative flex h-2 w-2">
@@ -113,12 +103,12 @@ export default function Home() {
                 System Online v3.0
               </div>
 
-              <h1 className="text-6xl md:text-8xl lg:text-[100px] font-black text-white leading-[0.9] tracking-tighter mb-8 drop-shadow-2xl">
+              <h1 className="text-6xl md:text-8xl lg:text-[90px] font-black text-white leading-[0.9] tracking-tighter mb-8 drop-shadow-2xl">
                 KERNEL <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-400 to-indigo-400 animate-gradient">SOBERANO.</span>
               </h1>
 
-              <p className="text-xl md:text-2xl text-slate-300 max-w-2xl font-light leading-relaxed mb-10 drop-shadow-md">
+              <p className="text-xl md:text-2xl text-slate-300 max-w-xl font-light leading-relaxed mb-10 drop-shadow-md">
                 Controle absoluto sobre Identidade, Billing e Governança.
                 <strong className="text-white font-bold ml-1">ProstQS</strong> unifica sua infraestrutura fragmentada em um único núcleo inteligente.
               </p>
@@ -132,14 +122,112 @@ export default function Home() {
                 </Button>
               </div>
             </motion.div>
+
+            {/* Right Content: Focused Image with Energy Effects */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.8, x: 30 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+              className="relative flex justify-center lg:justify-end"
+            >
+              {/* Energy Ring / Aura behind the photo */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] z-0">
+                <motion.div
+                  animate={{
+                    rotate: 360,
+                    scale: [1, 1.05, 1],
+                    opacity: [0.3, 0.6, 0.3]
+                  }}
+                  transition={{
+                    rotate: { duration: 10, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 4, repeat: Infinity, ease: "easeInOut" },
+                    opacity: { duration: 4, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                  className="w-full h-full border border-indigo-500/20 rounded-full blur-sm"
+                />
+                <motion.div
+                  animate={{
+                    rotate: -360,
+                    scale: [1, 1.1, 1],
+                  }}
+                  transition={{
+                    rotate: { duration: 15, repeat: Infinity, ease: "linear" },
+                    scale: { duration: 5, repeat: Infinity, ease: "easeInOut" }
+                  }}
+                  className="absolute inset-0 border border-purple-500/10 rounded-full blur-md"
+                />
+              </div>
+
+              {/* Energy Sparks / Particles Container (Layered above and around) */}
+              <div className="absolute inset-0 z-20 pointer-events-none">
+                {[...Array(6)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-1 h-1 bg-indigo-400 rounded-full shadow-[0_0_8px_#818cf8]"
+                    initial={{
+                      x: "50%",
+                      y: "50%",
+                      opacity: 0
+                    }}
+                    animate={{
+                      x: `${50 + (Math.random() - 0.5) * 120}%`,
+                      y: `${50 + (Math.random() - 0.5) * 120}%`,
+                      opacity: [0, 1, 0],
+                      scale: [0, 1.5, 0]
+                    }}
+                    transition={{
+                      duration: 2 + Math.random() * 2,
+                      repeat: Infinity,
+                      delay: i * 0.5,
+                      ease: "easeOut"
+                    }}
+                  />
+                ))}
+              </div>
+
+              {/* The Photo Container with Frame */}
+              <div className="relative z-10 p-2 rounded-[2.5rem] bg-gradient-to-br from-indigo-500/30 via-purple-500/20 to-indigo-500/30 backdrop-blur-xl border border-white/10 shadow-[0_0_50px_-12px_rgba(99,102,241,0.5)]">
+                <div className="relative w-80 h-80 md:w-[400px] md:h-[400px] rounded-[2rem] overflow-hidden border border-white/5 bg-[#0a0a0f]">
+                  <Image
+                    src="/images/prostqs_hero.png"
+                    alt="ProstQS Sovereign Core"
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+
+                  {/* Internal Glow on the photo edges */}
+                  <div className="absolute inset-0 shadow-[inset_0_0_40px_rgba(0,0,0,0.8)]" />
+
+                  {/* Moving Light Overlay (Energy Layer Above Photo) */}
+                  <motion.div
+                    animate={{
+                      x: ['-100%', '200%'],
+                      opacity: [0, 0.3, 0]
+                    }}
+                    transition={{
+                      duration: 3,
+                      repeat: Infinity,
+                      repeatDelay: 2,
+                      ease: "easeInOut"
+                    }}
+                    className="absolute top-0 bottom-0 w-32 bg-gradient-to-r from-transparent via-indigo-400/20 to-transparent skew-x-12 z-20"
+                  />
+                </div>
+              </div>
+
+              {/* Energy Rays exiting the frame */}
+              <div className="absolute -top-10 -right-10 w-40 h-1 bg-gradient-to-r from-indigo-500/50 to-transparent blur-sm rotate-45 z-20" />
+              <div className="absolute -bottom-10 -left-10 w-40 h-1 bg-gradient-to-r from-transparent to-purple-500/50 blur-sm rotate-45 z-20" />
+            </motion.div>
           </div>
         </section>
 
         {/* LOGO STRIP */}
         <div className="border-y border-white/5 bg-white/[0.02] py-10 relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-r from-[#050505] via-transparent to-[#050505] z-10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-background z-10 pointer-events-none" />
           <div className="max-w-7xl mx-auto px-6 text-center">
-            <p className="text-[10px] font-black text-slate-600 uppercase tracking-[0.3em] mb-8">INTEGRAÇÕES NATIVAS</p>
+            <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.3em] mb-8">INTEGRAÇÕES NATIVAS</p>
             <div className="flex flex-wrap justify-center gap-12 md:gap-20 opacity-40 grayscale hover:grayscale-0 transition-all duration-500">
               {giants.map(g => (
                 <span key={g} className="text-xl font-bold text-slate-300">{g}</span>
@@ -149,7 +237,7 @@ export default function Home() {
         </div>
 
         {/* ARCHITECTURE SECTION */}
-        <section className="py-32 px-6 bg-[#08080c]">
+        <section className="py-32 px-6 bg-muted/20">
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -158,7 +246,7 @@ export default function Home() {
               className="relative"
             >
               <div className="absolute -inset-4 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-20 blur-3xl rounded-full" />
-              <div className="relative rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-[#0a0a0f]">
+              <div className="relative rounded-3xl overflow-hidden border border-border shadow-2xl bg-card">
                 <Image
                   src="/images/prostqs_architecture.png"
                   alt="ProstQS Architecture Diagram"
@@ -249,7 +337,7 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="py-20 border-t border-white/5 bg-[#020205] text-slate-500">
+      <footer className="py-20 border-t border-border bg-card text-muted-foreground">
         <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="col-span-1 md:col-span-2 space-y-6">
             <div className="flex items-center gap-3">
