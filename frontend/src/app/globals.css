@@ -30,7 +30,6 @@
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
 
-  /* New Semantic Colors */
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
   --color-warning: var(--warning);
@@ -38,58 +37,47 @@
 }
 
 :root {
-  /* HSL Values for Clean Alpha Composition */
+  /* LIGHT MODE - High Precision / Flat Design */
+  --background: oklch(1 0 0);
+  /* Pure White */
+  --foreground: oklch(0 0 0);
+  /* Absolute Black */
 
-  /* LIGHT MODE (Clean, airy, technical) */
-  --background: oklch(1 1 0);
-  --foreground: oklch(0.145 0 0);
-  /* Zinc 950 */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
 
-  --card: oklch(1 1 0);
-  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0 0 0);
 
-  --popover: oklch(1 1 0);
-  --popover-foreground: oklch(0.145 0 0);
-
-  --primary: oklch(0.145 0 0);
-  /* Zinc 950 */
-  --primary-foreground: oklch(0.985 0 0);
-  /* Zinc 50 */
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
 
   --secondary: oklch(0.97 0 0);
-  /* Zinc 100 */
-  --secondary-foreground: oklch(0.145 0 0);
+  --secondary-foreground: oklch(0 0 0);
 
   --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  /* Zinc 500 */
+  --muted-foreground: oklch(0 0 0);
+  /* Black letters everywhere */
 
   --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.145 0 0);
+  --accent-foreground: oklch(0 0 0);
 
-  --destructive: oklch(0.577 0.245 27.325);
-  /* Red 600 */
-  --destructive-foreground: oklch(0.985 0 0);
-
-  --success: oklch(0.627 0.194 149.214);
-  /* Emerald 600 */
-  --success-foreground: oklch(0.985 0 0);
-
-  --warning: oklch(0.692 0.163 70.339);
-  /* Amber 600 */
-  --warning-foreground: oklch(1 1 0);
-
-  --border: oklch(0.922 0 0);
-  /* Zinc 200 */
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.145 0 0);
+  --border: oklch(0 0 0 / 0.15);
+  /* Solid refined border */
+  --input: oklch(0 0 0 / 0.15);
+  --ring: oklch(0 0 0);
 
   --radius: 0.5rem;
+
+  /* No shadows in light mode to avoid "dirty" look */
+  --glass-bg: #ffffff;
+  --glass-border: oklch(0 0 0 / 0.1);
+  --glass-shadow: none;
+
+  --scrollbar-thumb: oklch(0 0 0 / 0.2);
 }
 
 .dark {
-  /* DARK MODE (Void, deep, premium) */
-  /* Background is pure void for max contrast */
   --background: oklch(0.11 0.01 240);
   --foreground: oklch(0.985 0 0);
 
@@ -102,58 +90,54 @@
   --primary: oklch(0.985 0 0);
   --primary-foreground: oklch(0.145 0 0);
 
-  --secondary: oklch(0.19 0.01 240);
+  --secondary: oklch(0.17 0.01 240);
   --secondary-foreground: oklch(0.985 0 0);
 
-  --muted: oklch(0.19 0.01 240);
-  --muted-foreground: oklch(0.65 0.01 240);
+  --muted: oklch(0.17 0.01 240);
+  --muted-foreground: oklch(0.6 0.01 240);
 
-  --accent: oklch(0.19 0.01 240);
+  --accent: oklch(0.17 0.01 240);
   --accent-foreground: oklch(0.985 0 0);
 
-  --destructive: oklch(0.39 0.15 25);
-  --destructive-foreground: oklch(0.985 0 0);
-
-  --success: oklch(0.40 0.12 150);
-  --success-foreground: oklch(0.985 0 0);
-
-  --warning: oklch(0.45 0.10 70);
-  --warning-foreground: oklch(0.985 0 0);
-
-  /* Borders are extremely subtle in dark mode */
-  --border: oklch(0.25 0.01 240);
-  --input: oklch(0.25 0.01 240);
+  --border: oklch(0.2 0.01 240);
+  --input: oklch(0.2 0.01 240);
   --ring: oklch(0.8 0 0);
+
+  --glass-bg: rgba(0, 0, 0, 0.2);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-shadow: 0 8px 32px -4px rgba(0, 0, 0, 0.4);
+
+  --scrollbar-thumb: rgba(255, 255, 255, 0.08);
 }
 
 body {
-  @apply bg-background text-foreground antialiased;
+  @apply bg-background text-foreground antialiased selection:bg-primary/10;
   font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
-  /* Smart ligatures + geometric alt */
 }
 
-/* 
-  PRECISION UTILITIES 
-  "The details are not the details. They make the design." - Charles Eames
-*/
-
 .glass-panel {
-  @apply bg-white/[0.03] backdrop-blur-xl border border-white/[0.08];
-  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, 0.02);
+  background: var(--glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .glass-card {
-  @apply bg-white/[0.02] backdrop-blur-md border border-white/[0.06] transition-all duration-300 hover:bg-white/[0.04] hover:border-white/[0.1];
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-shadow);
 }
 
 .subtle-border {
-  @apply border border-white/[0.06];
+  border: 1px solid var(--glass-border);
 }
 
-/* Custom Scrollbar for executive feel */
 ::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -161,22 +145,6 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-white/[0.05] rounded-full border-[3px] border-transparent bg-clip-content hover:bg-white/[0.1];
-}
-
-/* Animations */
-@keyframes enter {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-enter {
-  animation: enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  background: var(--scrollbar-thumb);
+  @apply rounded-full;
 }

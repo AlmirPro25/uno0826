@@ -20,7 +20,7 @@
  * - Jobs (background tasks)
  */
 
-const API_BASE = 'https://api.prostqs.com.br/api/v1';
+const API_BASE = window.APP_CONFIG?.API_BASE || 'https://api.prostqs.com.br/api/v1';
 const STORAGE = {
     TOKEN: 'pq_sovereign_token',
     USER: 'pq_sovereign_user'
@@ -37,7 +37,7 @@ function decodeJWT(token) {
     try {
         const base64Url = token.split('.')[1];
         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c => 
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(c =>
             '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2)
         ).join(''));
         return JSON.parse(jsonPayload);
@@ -76,7 +76,7 @@ async function api(endpoint, options = {}, retries = 2) {
         const res = await fetch(`${API_BASE}${endpoint}`, { ...options, headers });
         const text = await res.text();
         const data = text ? JSON.parse(text) : {};
-        
+
         if (!res.ok) {
             // Retry on 502 Bad Gateway (Render cold start)
             if (res.status === 502 && retries > 0) {
@@ -94,7 +94,7 @@ async function api(endpoint, options = {}, retries = 2) {
             }
             throw new Error(data.error || data.message || `Erro ${res.status}`);
         }
-        
+
         return data;
     } catch (err) {
         // Retry on network errors (CORS errors from 502 appear as network errors)
@@ -117,7 +117,7 @@ async function api(endpoint, options = {}, retries = 2) {
 function showPage(pageId) {
     document.getElementById('login-page')?.classList.add('hidden');
     document.getElementById('main-layout')?.classList.add('hidden');
-    
+
     if (pageId === 'main') {
         document.getElementById('main-layout')?.classList.remove('hidden');
     } else {
@@ -133,7 +133,7 @@ function showSection(sectionId) {
             el.classList.add('bg-primary/20', 'text-primary');
         }
     });
-    
+
     // Update title
     const titles = {
         dashboard: 'Dashboard',
@@ -149,9 +149,11 @@ function showSection(sectionId) {
         authority: 'Authority Resolution',
         autonomy: 'Autonomy Matrix',
         shadow: 'Shadow Mode',
+        federation: 'Federation Overview',
         agents: 'Agent Decisions',
         memory: 'Institutional Memory',
         audit: 'Audit Log',
+        activity: 'Activity Log',
         jobs: 'Background Jobs',
         applications: '📦 Applications',
         // Identity & Access - Fase 26.8
@@ -183,10 +185,13 @@ function showSection(sectionId) {
         'invariants': '✅ Invariants',
         'secrets': '🔐 Secrets',
         'risk': '⚠️ Risk Analysis',
-        'capabilities': '🧩 Capabilities'
+        'capabilities': '🧩 Capabilities',
+        'explainability': '🧠 Explainability',
+        'usage': '📊 Resource Usage',
+        'console': '💻 System Console'
     };
     document.getElementById('section-title').textContent = titles[sectionId] || sectionId;
-    
+
     // Load section
     loadSection(sectionId);
 }
@@ -239,12 +244,12 @@ function formatTimeAgo(date) {
     const now = new Date();
     const then = new Date(date);
     const diff = now - then;
-    
+
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
+
     if (days > 0) return `${days}d atrás`;
     if (hours > 0) return `${hours}h atrás`;
     if (minutes > 0) return `${minutes}m atrás`;
@@ -282,7 +287,7 @@ async function handleLogin(e) {
         localStorage.setItem(STORAGE.TOKEN, res.token);
         localStorage.setItem(STORAGE.USER, JSON.stringify(res.user || { username }));
         currentUser = res.user || { username };
-        
+
         initMainLayout();
         toast('Bem-vindo ao Console Soberano!', 'success');
     } catch (err) {
@@ -325,21 +330,21 @@ function loginWithToken() {
     localStorage.setItem(STORAGE.TOKEN, token);
     localStorage.setItem(STORAGE.USER, JSON.stringify({ username: 'Admin', role: claims.role }));
     currentUser = { username: 'Admin', role: claims.role };
-    
+
     initMainLayout();
     toast('Bem-vindo ao Console Soberano!', 'success');
 }
 
 function initMainLayout() {
     showPage('main');
-    
+
     const claims = decodeJWT(localStorage.getItem(STORAGE.TOKEN));
     document.getElementById('admin-name').textContent = currentUser?.username || 'Admin';
     document.getElementById('admin-role').textContent = claims?.role === 'super_admin' ? 'Super Admin' : 'Admin';
-    
+
     // Check kill switch status
     checkKillSwitchStatus();
-    
+
     showSection('dashboard');
 }
 
@@ -353,10 +358,10 @@ async function checkKillSwitchStatus() {
         const status = await api('/admin/kill-switch');
         const switches = status.switches || [];
         const activeSwitches = switches.filter(s => s.active);
-        
+
         if (activeSwitches.length > 0) {
             document.getElementById('killswitch-banner').classList.remove('hidden');
-            document.getElementById('killswitch-banner-text').textContent = 
+            document.getElementById('killswitch-banner-text').textContent =
                 `KILL SWITCH ATIVO: ${activeSwitches.map(s => s.scope).join(', ')}`;
             document.getElementById('ks-badge').classList.remove('hidden');
             document.body.style.paddingTop = '40px';
@@ -378,7 +383,7 @@ async function checkKillSwitchStatus() {
 
 async function loadSection(sectionId) {
     const content = document.getElementById('content-area');
-    
+
     try {
         switch (sectionId) {
             case 'dashboard': await renderDashboard(content); break;
@@ -392,8 +397,9 @@ async function loadSection(sectionId) {
             case 'policies': await renderPolicies(content); break;
             case 'approvals': await renderApprovals(content); break;
             case 'authority': await renderAuthority(content); break;
-            case 'autonomy': await renderAutonomy(content); break;
-            case 'shadow': await renderShadow(content); break;
+            case 'autonomy': await renderAutonomySection(content); break;
+            case 'shadow': await renderShadowSection(content); break;
+            case 'federation': await renderFederationSection(content); break;
             case 'agents': await renderAgents(content); break;
             case 'memory': await renderMemory(content); break;
             case 'audit': await renderAudit(content); break;
@@ -420,6 +426,7 @@ async function loadSection(sectionId) {
             // Onboarding - Primeira experiência
             case 'onboarding': renderOnboarding(content); break;
             // New Modules - Fase 29
+            // New Modules - Fase 29 & 30
             case 'ads': await renderAdsSection(content); break;
             case 'webhooks': await renderWebhooksSection(content); break;
             case 'events': await renderEventsSection(content); break;
@@ -431,6 +438,21 @@ async function loadSection(sectionId) {
             case 'secrets': await renderSecretsSection(content); break;
             case 'risk': await renderRiskSection(content); break;
             case 'capabilities': await renderCapabilitiesSection(content); break;
+            case 'explainability': await renderExplainabilitySection(content); break;
+            case 'usage': await renderUsageSection(content); break;
+            case 'console': await renderSystemConsole(content); break;
+            case 'activity': await renderActivitySection(content); break;
+
+            // Core Modules Modularized
+            case 'federation': await renderFederationSection(content); break;
+            case 'autonomy': await renderAutonomySection(content); break;
+            case 'authority': await renderAuthority(content); break;
+            case 'shadow': await renderShadowSection(content); break;
+            case 'agents': await renderAgents(content); break;
+            case 'memory': await renderMemory(content); break;
+            case 'audit': await renderAudit(content); break;
+            case 'jobs': await renderJobs(content); break;
+
             default: content.innerHTML = '<p class="text-gray-500">Seção não encontrada</p>';
         }
         document.getElementById('last-update').textContent = `Atualizado ${new Date().toLocaleTimeString('pt-BR')}`;
@@ -455,7 +477,7 @@ function refreshData() {
 async function renderSystemHealth(container) {
     // Carregar health endpoint real
     const healthData = await api('/health').catch(() => null);
-    
+
     // Carregar dados adicionais em paralelo
     const [dashboard, audit, decisions, subscriptions] = await Promise.all([
         api('/admin/dashboard').catch(() => ({})),
@@ -682,7 +704,7 @@ async function renderSystemHealth(container) {
 
 async function renderDashboard(container) {
     const stats = await api('/admin/dashboard').catch(() => ({}));
-    
+
     container.innerHTML = `
         <div class="grid grid-cols-4 gap-6 mb-8">
             <div class="card rounded-2xl p-6">
@@ -700,18 +722,46 @@ async function renderDashboard(container) {
                 <p class="text-3xl font-bold">${formatCurrency(stats.total_ledger_balance)}</p>
             </div>
             <div class="card rounded-2xl p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <span class="text-gray-400 text-sm">Jobs Pendentes</span>
-                    <i class="fas fa-cogs text-amber-400"></i>
+                <div class="flex items-center justify-between mb-4 text-amber-400">
+                    <span class="text-gray-400 text-sm">Inteligência</span>
+                    <i class="fas fa-brain"></i>
                 </div>
-                <p class="text-3xl font-bold">${stats.pending_jobs || 0}</p>
+                <button onclick="generateNarrative('summary')" class="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 py-2 rounded-xl text-sm font-bold transition-all">
+                    <i class="fas fa-microphone mr-2"></i> Narrar Status
+                </button>
             </div>
             <div class="card rounded-2xl p-6">
                 <div class="flex items-center justify-between mb-4">
-                    <span class="text-gray-400 text-sm">Jobs Falhos</span>
-                    <i class="fas fa-exclamation-triangle text-rose-400"></i>
+                    <span class="text-gray-400 text-sm">Escudo de Governança</span>
+                    <i class="fas fa-shield-alt text-sovereign"></i>
                 </div>
-                <p class="text-3xl font-bold">${stats.failed_jobs || 0}</p>
+                <div class="flex items-center gap-2">
+                    <div class="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                        <div class="h-full bg-sovereign w-[95%]"></div>
+                    </div>
+                    <span class="text-xs font-bold text-sovereign">95%</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Narrator Output (for Dashboard) -->
+        <div id="narrative-loading" class="hidden card rounded-2xl p-6 mb-8 text-center">
+            <div class="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p class="text-gray-400 text-sm">Gemini está analisando o sistema...</p>
+        </div>
+        <div id="narrative-output" class="hidden card rounded-2xl p-6 mb-8 bg-gradient-to-br from-primary/10 to-transparent border border-primary/20">
+            <div class="flex items-center justify-between mb-4">
+                <div class="flex items-center gap-2 text-primary">
+                    <i class="fas fa-robot"></i>
+                    <span class="font-bold uppercase tracking-wider text-xs">Análise Cognitiva</span>
+                </div>
+                <button onclick="document.getElementById('narrative-output').classList.add('hidden')" class="text-gray-500 hover:text-white">
+                    <i class="fas fa-times text-xs"></i>
+                </button>
+            </div>
+            <div id="narrative-text" class="text-sm leading-relaxed text-gray-300"></div>
+            <div class="mt-4 flex justify-end">
+                <span id="narrative-meta" class="text-[10px] text-gray-600 uppercase"></span>
             </div>
         </div>
 
@@ -788,7 +838,7 @@ async function renderCrisisView(container) {
     const hasPendingDecisions = pendingDecisions?.length > 0;
     const hasFailedJobs = failedJobs?.length > 0;
     const isShadowMode = shadowStatus.enabled;
-    
+
     // Calcular nível de crise
     let crisisLevel = 'green';
     let crisisCount = 0;
@@ -1057,7 +1107,7 @@ async function loadUsersPage(page = 1) {
     currentPage = page;
     const search = document.getElementById('users-search')?.value || '';
     const res = await api(`/admin/users?page=${page}&limit=20&search=${encodeURIComponent(search)}`);
-    
+
     document.getElementById('users-count').textContent = `${res.total || 0} usuários`;
     document.getElementById('users-pagination').textContent = `Página ${page} de ${res.total_pages || 1}`;
     document.getElementById('users-prev').disabled = page <= 1;
@@ -1163,12 +1213,12 @@ async function loadSubscriptions() {
     const status = document.getElementById('sub-filter')?.value || '';
     // Try to get subscriptions from billing endpoint
     const res = await api(`/billing/subscriptions?status=${status}&limit=50`).catch(() => ({ data: [] }));
-    
+
     const list = document.getElementById('subscriptions-list');
     const data = res.data || res || [];
-    
+
     document.getElementById('sub-count').textContent = `${data.length} subscriptions`;
-    
+
     if (data.length) {
         list.innerHTML = data.map(s => `
             <div class="p-4 flex items-center justify-between">
@@ -1233,7 +1283,7 @@ async function renderBilling(container) {
     const payments = await api('/admin/payments?limit=20').catch(() => ({ data: [] }));
     const list = document.getElementById('payments-list');
     const data = payments.data || payments || [];
-    
+
     if (data.length) {
         list.innerHTML = data.map(p => `
             <div class="p-4 flex items-center justify-between">
@@ -1258,7 +1308,7 @@ async function renderBilling(container) {
 
 async function renderLedger(container) {
     const overview = await api('/admin/economy/overview').catch(() => ({}));
-    
+
     container.innerHTML = `
         <div class="grid grid-cols-3 gap-6 mb-6">
             <div class="card rounded-2xl p-6">
@@ -1287,7 +1337,7 @@ async function renderLedger(container) {
     const ledger = await api('/admin/ledger?limit=50').catch(() => ({ data: [] }));
     const list = document.getElementById('ledger-entries');
     const data = ledger.data || ledger || [];
-    
+
     if (data.length) {
         list.innerHTML = data.map(e => `
             <div class="p-4 flex items-center justify-between">
@@ -1464,7 +1514,7 @@ async function activateKillSwitch() {
 
 async function deactivateKillSwitch() {
     if (!confirm('Desativar todos os Kill Switches ativos?')) return;
-    
+
     try {
         await api('/killswitch/deactivate', { method: 'POST' });
         toast('Kill Switch desativado', 'success');
@@ -1476,866 +1526,14 @@ async function deactivateKillSwitch() {
 }
 
 
-// ========================================
-// POLICIES
-// ========================================
+// [REMOVED: Moved to governance.js]
 
-async function renderPolicies(container) {
-    container.innerHTML = `
-        <div class="flex justify-between items-center mb-6">
-            <p class="text-gray-400">Regras que governam o comportamento do sistema</p>
-            <button onclick="showCreatePolicy()" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl">
-                <i class="fas fa-plus mr-2"></i> Nova Policy
-            </button>
-        </div>
+// [REMOVED: Moved to governance.js for Authority Management]
 
-        <div id="create-policy-form" class="card rounded-2xl p-6 mb-6 hidden">
-            <h3 class="font-bold mb-4">Criar Nova Policy</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Nome</label>
-                    <input type="text" id="policy-name" placeholder="ex: max_daily_transactions" 
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Tipo</label>
-                    <select id="policy-type" class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                        <option value="limit">Limite</option>
-                        <option value="threshold">Threshold</option>
-                        <option value="boolean">Boolean</option>
-                        <option value="allowlist">Allowlist</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Escopo</label>
-                    <select id="policy-scope" class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                        <option value="global">Global</option>
-                        <option value="billing">Billing</option>
-                        <option value="agents">Agents</option>
-                        <option value="identity">Identity</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Valor</label>
-                    <input type="text" id="policy-value" placeholder="ex: 1000 ou true" 
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-                <div class="col-span-2">
-                    <label class="block text-sm text-gray-400 mb-2">Descrição</label>
-                    <input type="text" id="policy-description" placeholder="Descrição da policy" 
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-            </div>
-            <div class="flex gap-4 mt-4">
-                <button onclick="createPolicy()" class="flex-1 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl">Criar</button>
-                <button onclick="hideCreatePolicy()" class="px-6 py-3 bg-gray-700 rounded-xl">Cancelar</button>
-            </div>
-        </div>
+// [REMOVED: Moved to governance.js for Authority Management]
 
-        <div class="card rounded-2xl">
-            <div id="policies-list" class="divide-y divide-dark-border">
-                <p class="text-gray-500 text-center py-8">Carregando...</p>
-            </div>
-        </div>
-    `;
 
-    await loadPolicies();
-}
-
-async function loadPolicies() {
-    const policies = await api('/policies').catch(() => []);
-    const list = document.getElementById('policies-list');
-    
-    if (policies?.length) {
-        list.innerHTML = policies.map(p => `
-            <div class="p-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 ${p.is_active ? 'bg-emerald-500/20' : 'bg-gray-500/20'} rounded-xl flex items-center justify-center">
-                        <i class="fas fa-gavel ${p.is_active ? 'text-emerald-400' : 'text-gray-400'}"></i>
-                    </div>
-                    <div>
-                        <p class="font-medium">${p.name}</p>
-                        <p class="text-xs text-gray-500">${p.description || p.scope}</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-4">
-                    <span class="px-3 py-1 bg-primary/20 text-primary rounded-lg text-sm">${p.value}</span>
-                    <span class="px-2 py-1 rounded-full text-xs ${p.is_active ? 'bg-emerald-500/20 text-emerald-400' : 'bg-gray-500/20 text-gray-400'}">${p.is_active ? 'Ativa' : 'Inativa'}</span>
-                    <button onclick="togglePolicy('${p.id}', ${!p.is_active})" class="text-gray-400 hover:text-white">
-                        <i class="fas fa-${p.is_active ? 'pause' : 'play'}"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhuma policy</p>';
-    }
-}
-
-function showCreatePolicy() {
-    document.getElementById('create-policy-form')?.classList.remove('hidden');
-}
-
-function hideCreatePolicy() {
-    document.getElementById('create-policy-form')?.classList.add('hidden');
-}
-
-async function createPolicy() {
-    const name = document.getElementById('policy-name').value;
-    const type = document.getElementById('policy-type').value;
-    const scope = document.getElementById('policy-scope').value;
-    const value = document.getElementById('policy-value').value;
-    const description = document.getElementById('policy-description').value;
-
-    if (!name || !value) {
-        toast('Preencha nome e valor', 'error');
-        return;
-    }
-
-    try {
-        await api('/policies', {
-            method: 'POST',
-            body: JSON.stringify({ name, type, scope, value, description, is_active: true })
-        });
-        toast('Policy criada', 'success');
-        hideCreatePolicy();
-        loadPolicies();
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-async function togglePolicy(id, activate) {
-    try {
-        await api(`/policies/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ is_active: activate })
-        });
-        toast(`Policy ${activate ? 'ativada' : 'desativada'}`, 'success');
-        loadPolicies();
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-// ========================================
-// APPROVALS
-// ========================================
-
-async function renderApprovals(container) {
-    container.innerHTML = `
-        <div class="grid grid-cols-3 gap-6 mb-6">
-            <div class="card rounded-2xl p-6">
-                <p class="text-gray-400 text-sm mb-2">Pendentes</p>
-                <p id="approvals-pending" class="text-3xl font-bold text-amber-400">-</p>
-            </div>
-            <div class="card rounded-2xl p-6">
-                <p class="text-gray-400 text-sm mb-2">Aprovadas (7 dias)</p>
-                <p id="approvals-approved" class="text-3xl font-bold text-emerald-400">-</p>
-            </div>
-            <div class="card rounded-2xl p-6">
-                <p class="text-gray-400 text-sm mb-2">Rejeitadas (7 dias)</p>
-                <p id="approvals-rejected" class="text-3xl font-bold text-rose-400">-</p>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl p-6 mb-6">
-            <h3 class="font-bold mb-4">Aprovações Pendentes</h3>
-            <div id="pending-approvals" class="space-y-4">
-                <p class="text-gray-500 text-center py-4">Carregando...</p>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl p-6">
-            <h3 class="font-bold mb-4">Histórico de Aprovações</h3>
-            <div id="approvals-history" class="space-y-2 max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-4">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    // Load pending
-    const pending = await api('/approvals/pending').catch(() => []);
-    const pendingEl = document.getElementById('pending-approvals');
-    document.getElementById('approvals-pending').textContent = pending?.length || 0;
-    
-    if (pending?.length) {
-        document.getElementById('approvals-badge').textContent = pending.length;
-        document.getElementById('approvals-badge').classList.remove('hidden');
-        
-        pendingEl.innerHTML = pending.map(a => `
-            <div class="card rounded-xl p-4 border-l-4 ${getRiskBorderColor(a.risk_score || 0.5)}">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-medium">${a.action_type || a.type}</span>
-                    <span class="px-2 py-1 rounded-full text-xs ${getRiskColor(a.risk_score || 0.5)}">Risk: ${((a.risk_score || 0.5) * 100).toFixed(0)}%</span>
-                </div>
-                <p class="text-sm text-gray-400 mb-3">${a.description || a.reason || 'Sem descrição'}</p>
-                <div class="flex gap-2">
-                    <button onclick="approveRequest('${a.id}')" class="flex-1 bg-emerald-500/20 text-emerald-400 py-2 rounded-lg text-sm hover:bg-emerald-500/30">
-                        <i class="fas fa-check mr-1"></i> Aprovar
-                    </button>
-                    <button onclick="rejectRequest('${a.id}')" class="flex-1 bg-rose-500/20 text-rose-400 py-2 rounded-lg text-sm hover:bg-rose-500/30">
-                        <i class="fas fa-times mr-1"></i> Rejeitar
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        document.getElementById('approvals-badge').classList.add('hidden');
-        pendingEl.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhuma aprovação pendente</p>';
-    }
-
-    // Load history
-    const history = await api('/approvals?limit=30').catch(() => []);
-    const historyEl = document.getElementById('approvals-history');
-    const approved = history?.filter(h => h.status === 'approved')?.length || 0;
-    const rejected = history?.filter(h => h.status === 'rejected')?.length || 0;
-    
-    document.getElementById('approvals-approved').textContent = approved;
-    document.getElementById('approvals-rejected').textContent = rejected;
-    
-    if (history?.length) {
-        historyEl.innerHTML = history.map(h => `
-            <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5">
-                <div>
-                    <span class="font-medium">${h.action_type || h.type}</span>
-                    <p class="text-xs text-gray-500">${h.approved_by || 'Sistema'}</p>
-                </div>
-                <div class="text-right">
-                    <span class="px-2 py-1 rounded-full text-xs ${getApprovalStatusColor(h.status)}">${h.status}</span>
-                    <p class="text-xs text-gray-500">${formatDate(h.created_at)}</p>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        historyEl.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum histórico</p>';
-    }
-}
-
-async function approveRequest(id) {
-    try {
-        await api(`/approvals/${id}/approve`, { method: 'POST', body: JSON.stringify({ note: 'Approved via Console' }) });
-        toast('Aprovado', 'success');
-        showSection('approvals');
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-async function rejectRequest(id) {
-    const note = prompt('Motivo da rejeição:') || '';
-    try {
-        await api(`/approvals/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) });
-        toast('Rejeitado', 'info');
-        showSection('approvals');
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-// ========================================
-// AUTHORITY
-// ========================================
-
-async function renderAuthority(container) {
-    if (!isSuperAdmin()) {
-        container.innerHTML = `
-            <div class="card rounded-2xl p-8 text-center">
-                <i class="fas fa-lock text-4xl text-gray-500 mb-4"></i>
-                <p class="text-gray-400">Acesso restrito a Super Admin</p>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="flex justify-between items-center mb-6">
-            <p class="text-gray-400">Defina quem pode aprovar o quê no sistema</p>
-            <button onclick="showCreateAuthority()" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl">
-                <i class="fas fa-plus mr-2"></i> Nova Autoridade
-            </button>
-        </div>
-
-        <div id="create-authority-form" class="card rounded-2xl p-6 mb-6 hidden">
-            <h3 class="font-bold mb-4">Criar Nova Autoridade</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">User ID</label>
-                    <input type="text" id="auth-user-id" placeholder="UUID do usuário" 
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Escopo</label>
-                    <select id="auth-scope" class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                        <option value="billing">Billing</option>
-                        <option value="agents">Agents</option>
-                        <option value="identity">Identity</option>
-                        <option value="system">System</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Nível</label>
-                    <select id="auth-level" class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                        <option value="1">1 - Básico</option>
-                        <option value="2">2 - Intermediário</option>
-                        <option value="3">3 - Avançado</option>
-                        <option value="4">4 - Crítico</option>
-                        <option value="5">5 - Supremo</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Limite Diário</label>
-                    <input type="number" id="auth-limit" value="10" min="1"
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-            </div>
-            <div class="flex gap-4 mt-4">
-                <button onclick="createAuthority()" class="flex-1 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl">Criar</button>
-                <button onclick="hideCreateAuthority()" class="px-6 py-3 bg-gray-700 rounded-xl">Cancelar</button>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl">
-            <div id="authority-list" class="divide-y divide-dark-border">
-                <p class="text-gray-500 text-center py-8">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    await loadAuthorities();
-}
-
-async function loadAuthorities() {
-    const authorities = await api('/authority').catch(() => []);
-    const list = document.getElementById('authority-list');
-    
-    if (authorities?.length) {
-        list.innerHTML = authorities.map(a => `
-            <div class="p-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-user-shield text-primary"></i>
-                    </div>
-                    <div>
-                        <p class="font-medium">${a.user_id?.substring(0, 8)}...</p>
-                        <p class="text-xs text-gray-500">Escopo: ${a.scope}</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-4">
-                    <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-sm">Nível ${a.level}</span>
-                    <span class="text-sm text-gray-400">${a.daily_limit}/dia</span>
-                    <button onclick="revokeAuthority('${a.id}')" class="text-rose-400 hover:text-rose-300">
-                        <i class="fas fa-trash"></i>
-                    </button>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhuma autoridade configurada</p>';
-    }
-}
-
-function showCreateAuthority() {
-    document.getElementById('create-authority-form')?.classList.remove('hidden');
-}
-
-function hideCreateAuthority() {
-    document.getElementById('create-authority-form')?.classList.add('hidden');
-}
-
-async function createAuthority() {
-    const user_id = document.getElementById('auth-user-id').value;
-    const scope = document.getElementById('auth-scope').value;
-    const level = parseInt(document.getElementById('auth-level').value);
-    const daily_limit = parseInt(document.getElementById('auth-limit').value);
-
-    if (!user_id) {
-        toast('Informe o User ID', 'error');
-        return;
-    }
-
-    try {
-        await api('/authority', {
-            method: 'POST',
-            body: JSON.stringify({ user_id, scope, level, daily_limit })
-        });
-        toast('Autoridade criada', 'success');
-        hideCreateAuthority();
-        loadAuthorities();
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-async function revokeAuthority(id) {
-    if (!confirm('Revogar esta autoridade?')) return;
-    try {
-        await api(`/authority/${id}`, { method: 'DELETE' });
-        toast('Autoridade revogada', 'success');
-        loadAuthorities();
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-
-// ========================================
-// AUTONOMY MATRIX
-// ========================================
-
-async function renderAutonomy(container) {
-    container.innerHTML = `
-        <div class="flex justify-between items-center mb-6">
-            <p class="text-gray-400">Matriz de autonomia define o que agentes podem fazer automaticamente</p>
-            <button onclick="showCreateAutonomy()" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl">
-                <i class="fas fa-plus mr-2"></i> Novo Perfil
-            </button>
-        </div>
-
-        <div id="create-autonomy-form" class="card rounded-2xl p-6 mb-6 hidden">
-            <h3 class="font-bold mb-4">Criar Perfil de Autonomia</h3>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Nome do Perfil</label>
-                    <input type="text" id="autonomy-name" placeholder="ex: conservative, aggressive" 
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Tipo de Ação</label>
-                    <input type="text" id="autonomy-action" placeholder="ex: billing.charge, agent.execute" 
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Threshold de Risco (0-1)</label>
-                    <input type="number" id="autonomy-threshold" value="0.3" min="0" max="1" step="0.1"
-                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                </div>
-                <div>
-                    <label class="block text-sm text-gray-400 mb-2">Requer Aprovação?</label>
-                    <select id="autonomy-approval" class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
-                        <option value="false">Não</option>
-                        <option value="true">Sim</option>
-                    </select>
-                </div>
-            </div>
-            <div class="flex gap-4 mt-4">
-                <button onclick="createAutonomy()" class="flex-1 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl">Criar</button>
-                <button onclick="hideCreateAutonomy()" class="px-6 py-3 bg-gray-700 rounded-xl">Cancelar</button>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl">
-            <div id="autonomy-list" class="divide-y divide-dark-border">
-                <p class="text-gray-500 text-center py-8">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    await loadAutonomy();
-}
-
-async function loadAutonomy() {
-    const profiles = await api('/autonomy/profiles').catch(() => []);
-    const list = document.getElementById('autonomy-list');
-    
-    if (profiles?.length) {
-        list.innerHTML = profiles.map(p => `
-            <div class="p-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
-                        <i class="fas fa-robot text-primary"></i>
-                    </div>
-                    <div>
-                        <p class="font-medium">${p.name || p.profile_name}</p>
-                        <p class="text-xs text-gray-500">Ação: ${p.action_type}</p>
-                    </div>
-                </div>
-                <div class="flex items-center gap-4">
-                    <span class="px-3 py-1 ${getRiskColor(p.risk_threshold)} rounded-lg text-sm">Threshold: ${(p.risk_threshold * 100).toFixed(0)}%</span>
-                    <span class="px-2 py-1 rounded-full text-xs ${p.requires_approval ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'}">
-                        ${p.requires_approval ? 'Requer Aprovação' : 'Auto'}
-                    </span>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum perfil de autonomia</p>';
-    }
-}
-
-function showCreateAutonomy() {
-    document.getElementById('create-autonomy-form')?.classList.remove('hidden');
-}
-
-function hideCreateAutonomy() {
-    document.getElementById('create-autonomy-form')?.classList.add('hidden');
-}
-
-async function createAutonomy() {
-    const name = document.getElementById('autonomy-name').value;
-    const action_type = document.getElementById('autonomy-action').value;
-    const risk_threshold = parseFloat(document.getElementById('autonomy-threshold').value);
-    const requires_approval = document.getElementById('autonomy-approval').value === 'true';
-
-    if (!name || !action_type) {
-        toast('Preencha nome e tipo de ação', 'error');
-        return;
-    }
-
-    try {
-        await api('/autonomy/profiles', {
-            method: 'POST',
-            body: JSON.stringify({ name, action_type, risk_threshold, requires_approval })
-        });
-        toast('Perfil criado', 'success');
-        hideCreateAutonomy();
-        loadAutonomy();
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-// ========================================
-// SHADOW MODE
-// ========================================
-
-async function renderShadow(container) {
-    const status = await api('/shadow/status').catch(() => ({ enabled: false }));
-    
-    container.innerHTML = `
-        <div class="card rounded-2xl p-6 mb-6">
-            <div class="flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-16 h-16 ${status.enabled ? 'bg-purple-500' : 'bg-gray-700'} rounded-2xl flex items-center justify-center">
-                        <i class="fas fa-ghost text-3xl ${status.enabled ? 'text-white' : 'text-gray-400'}"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-xl font-bold">${status.enabled ? 'Shadow Mode ATIVO' : 'Shadow Mode Desativado'}</h3>
-                        <p class="text-gray-400">${status.enabled ? 'Ações são simuladas, não executadas' : 'Ações são executadas normalmente'}</p>
-                    </div>
-                </div>
-                <button onclick="toggleShadowMode(${!status.enabled})" class="${status.enabled ? 'bg-gray-700 hover:bg-gray-600' : 'bg-purple-500 hover:bg-purple-600'} text-white px-6 py-3 rounded-xl font-bold">
-                    <i class="fas fa-${status.enabled ? 'sun' : 'moon'} mr-2"></i> ${status.enabled ? 'Desativar' : 'Ativar Shadow'}
-                </button>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl p-6">
-            <h3 class="font-bold mb-4">Execuções Shadow (Simuladas)</h3>
-            <div id="shadow-executions" class="space-y-2 max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-4">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    // Load shadow executions
-    const executions = await api('/shadow/executions?limit=50').catch(() => []);
-    const list = document.getElementById('shadow-executions');
-    
-    if (executions?.length) {
-        list.innerHTML = executions.map(e => `
-            <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 border-l-4 border-purple-500">
-                <div>
-                    <span class="font-medium">${e.action_type}</span>
-                    <p class="text-xs text-gray-500">${e.agent_id?.substring(0, 8) || 'Sistema'}...</p>
-                </div>
-                <div class="text-right">
-                    <span class="px-2 py-1 rounded-full text-xs bg-purple-500/20 text-purple-400">Shadow</span>
-                    <p class="text-xs text-gray-500">${formatDate(e.created_at)}</p>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhuma execução shadow</p>';
-    }
-}
-
-async function toggleShadowMode(enable) {
-    try {
-        await api(`/shadow/${enable ? 'enable' : 'disable'}`, { method: 'POST' });
-        toast(`Shadow Mode ${enable ? 'ativado' : 'desativado'}`, enable ? 'warning' : 'success');
-        showSection('shadow');
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-// ========================================
-// AGENTS
-// ========================================
-
-async function renderAgents(container) {
-    container.innerHTML = `
-        <div class="card rounded-2xl p-6 mb-6">
-            <h3 class="font-bold mb-4">Decisões Pendentes</h3>
-            <div id="pending-decisions" class="space-y-4">
-                <p class="text-gray-500 text-center py-4">Carregando...</p>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl p-6">
-            <h3 class="font-bold mb-4">Histórico de Decisões</h3>
-            <div id="decisions-history" class="space-y-2 max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-4">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    // Load pending
-    const pending = await api('/agents/decisions/pending').catch(() => []);
-    const pendingEl = document.getElementById('pending-decisions');
-    
-    if (pending?.length) {
-        pendingEl.innerHTML = pending.map(d => `
-            <div class="card rounded-xl p-4 border-l-4 ${getRiskBorderColor(d.risk_score || 0.5)}">
-                <div class="flex items-center justify-between mb-2">
-                    <span class="font-medium">${d.proposed_action}</span>
-                    <span class="px-2 py-1 rounded-full text-xs ${getRiskColor(d.risk_score || 0.5)}">Risk: ${((d.risk_score || 0.5) * 100).toFixed(0)}%</span>
-                </div>
-                <p class="text-sm text-gray-400 mb-3">${d.reason || 'Sem justificativa'}</p>
-                <div class="flex gap-2">
-                    <button onclick="approveDecision('${d.id}')" class="flex-1 bg-emerald-500/20 text-emerald-400 py-2 rounded-lg text-sm hover:bg-emerald-500/30">Aprovar</button>
-                    <button onclick="rejectDecision('${d.id}')" class="flex-1 bg-rose-500/20 text-rose-400 py-2 rounded-lg text-sm hover:bg-rose-500/30">Rejeitar</button>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        pendingEl.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhuma decisão pendente</p>';
-    }
-
-    // Load history
-    const history = await api('/agents/decisions?limit=30').catch(() => []);
-    const historyEl = document.getElementById('decisions-history');
-    
-    if (history?.length) {
-        historyEl.innerHTML = history.map(d => `
-            <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5">
-                <div>
-                    <span class="font-medium">${d.proposed_action}</span>
-                    <p class="text-xs text-gray-500">${formatDate(d.created_at)}</p>
-                </div>
-                <span class="px-2 py-1 rounded-full text-xs ${getDecisionStatusColor(d.status)}">${d.status}</span>
-            </div>
-        `).join('');
-    } else {
-        historyEl.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum histórico</p>';
-    }
-}
-
-async function approveDecision(id) {
-    try {
-        await api(`/agents/decisions/${id}/approve`, { method: 'POST', body: JSON.stringify({ note: 'Approved via Console' }) });
-        toast('Decisão aprovada', 'success');
-        showSection('agents');
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-async function rejectDecision(id) {
-    const note = prompt('Motivo da rejeição:') || '';
-    try {
-        await api(`/agents/decisions/${id}/reject`, { method: 'POST', body: JSON.stringify({ note }) });
-        toast('Decisão rejeitada', 'info');
-        showSection('agents');
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
-
-// ========================================
-// MEMORY
-// ========================================
-
-async function renderMemory(container) {
-    container.innerHTML = `
-        <div class="flex justify-between items-center mb-6">
-            <p class="text-gray-400">Memória institucional - decisões e precedentes do sistema</p>
-        </div>
-
-        <div class="grid grid-cols-2 gap-6 mb-6">
-            <div class="card rounded-2xl p-6">
-                <p class="text-gray-400 text-sm mb-2">Total de Memórias</p>
-                <p id="memory-total" class="text-3xl font-bold">-</p>
-            </div>
-            <div class="card rounded-2xl p-6">
-                <p class="text-gray-400 text-sm mb-2">Precedentes Ativos</p>
-                <p id="memory-precedents" class="text-3xl font-bold text-primary">-</p>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl p-6">
-            <h3 class="font-bold mb-4">Memórias Recentes</h3>
-            <div id="memory-list" class="space-y-2 max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-4">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    const memories = await api('/memory?limit=50').catch(() => []);
-    const list = document.getElementById('memory-list');
-    
-    document.getElementById('memory-total').textContent = memories?.length || 0;
-    document.getElementById('memory-precedents').textContent = memories?.filter(m => m.is_precedent)?.length || 0;
-    
-    if (memories?.length) {
-        list.innerHTML = memories.map(m => `
-            <div class="flex items-center justify-between p-3 rounded-xl hover:bg-white/5 ${m.is_precedent ? 'border-l-4 border-primary' : ''}">
-                <div>
-                    <span class="font-medium">${m.type || m.action_type}</span>
-                    <p class="text-xs text-gray-500">${m.description || m.context?.substring(0, 50) || '-'}...</p>
-                </div>
-                <div class="text-right">
-                    ${m.is_precedent ? '<span class="px-2 py-1 rounded-full text-xs bg-primary/20 text-primary mr-2">Precedente</span>' : ''}
-                    <p class="text-xs text-gray-500">${formatDate(m.created_at)}</p>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhuma memória</p>';
-    }
-}
-
-// ========================================
-// AUDIT
-// ========================================
-
-async function renderAudit(container) {
-    container.innerHTML = `
-        <div class="card rounded-2xl mb-6">
-            <div class="p-4 border-b border-dark-border flex items-center gap-4">
-                <select id="audit-filter" class="bg-dark border border-dark-border rounded-xl px-4 py-2">
-                    <option value="">Todos os tipos</option>
-                    <option value="auth">Autenticação</option>
-                    <option value="billing">Billing</option>
-                    <option value="agent">Agentes</option>
-                    <option value="admin">Admin</option>
-                    <option value="policy">Políticas</option>
-                    <option value="killswitch">Kill Switch</option>
-                </select>
-                <input type="text" id="audit-search" placeholder="Buscar por user_id ou ação..." 
-                    class="flex-1 bg-dark border border-dark-border rounded-xl px-4 py-2">
-            </div>
-            <div id="audit-list" class="divide-y divide-dark-border max-h-[600px] overflow-y-auto">
-                <p class="text-gray-500 text-center py-8">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('audit-filter')?.addEventListener('change', loadAuditLogs);
-    document.getElementById('audit-search')?.addEventListener('input', debounce(loadAuditLogs, 300));
-    await loadAuditLogs();
-}
-
-async function loadAuditLogs() {
-    const type = document.getElementById('audit-filter')?.value || '';
-    const search = document.getElementById('audit-search')?.value || '';
-    
-    const logs = await api(`/audit?type=${type}&search=${encodeURIComponent(search)}&limit=100`).catch(() => []);
-    const list = document.getElementById('audit-list');
-    
-    if (logs?.length) {
-        list.innerHTML = logs.map(l => `
-            <div class="p-4 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-10 h-10 ${getAuditTypeColor(l.type)} rounded-xl flex items-center justify-center">
-                        <i class="fas ${getAuditTypeIcon(l.type)} text-white"></i>
-                    </div>
-                    <div>
-                        <p class="font-medium">${l.action}</p>
-                        <p class="text-xs text-gray-500">User: ${l.user_id?.substring(0, 8) || 'Sistema'}... | IP: ${l.ip_address || '-'}</p>
-                    </div>
-                </div>
-                <div class="text-right">
-                    <span class="px-2 py-1 rounded-full text-xs ${l.success ? 'bg-emerald-500/20 text-emerald-400' : 'bg-rose-500/20 text-rose-400'}">${l.success ? 'OK' : 'FAIL'}</span>
-                    <p class="text-xs text-gray-500">${formatDate(l.created_at)}</p>
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum log encontrado</p>';
-    }
-}
-
-// ========================================
-// JOBS
-// ========================================
-
-async function renderJobs(container) {
-    const stats = await api('/admin/dashboard').catch(() => ({}));
-    
-    container.innerHTML = `
-        <div class="grid grid-cols-4 gap-4 mb-6">
-            <div class="card rounded-xl p-4 text-center">
-                <p class="text-2xl font-bold" id="jobs-pending">${stats.pending_jobs || 0}</p>
-                <p class="text-gray-400 text-sm">Pendentes</p>
-            </div>
-            <div class="card rounded-xl p-4 text-center">
-                <p class="text-2xl font-bold text-blue-400" id="jobs-processing">0</p>
-                <p class="text-gray-400 text-sm">Processando</p>
-            </div>
-            <div class="card rounded-xl p-4 text-center">
-                <p class="text-2xl font-bold text-emerald-400" id="jobs-completed">0</p>
-                <p class="text-gray-400 text-sm">Completos</p>
-            </div>
-            <div class="card rounded-xl p-4 text-center">
-                <p class="text-2xl font-bold text-rose-400" id="jobs-failed">${stats.failed_jobs || 0}</p>
-                <p class="text-gray-400 text-sm">Falhos</p>
-            </div>
-        </div>
-
-        <div class="card rounded-2xl">
-            <div class="p-4 border-b border-dark-border">
-                <select id="jobs-filter" class="bg-dark border border-dark-border rounded-xl px-4 py-2">
-                    <option value="">Todos</option>
-                    <option value="pending">Pendentes</option>
-                    <option value="processing">Processando</option>
-                    <option value="failed">Falhos</option>
-                    <option value="dead">Dead</option>
-                </select>
-            </div>
-            <div id="jobs-list" class="divide-y divide-dark-border max-h-96 overflow-y-auto">
-                <p class="text-gray-500 text-center py-8">Carregando...</p>
-            </div>
-        </div>
-    `;
-
-    document.getElementById('jobs-filter')?.addEventListener('change', loadJobs);
-    await loadJobs();
-}
-
-async function loadJobs() {
-    const status = document.getElementById('jobs-filter')?.value || '';
-    const jobs = await api(`/admin/jobs?status=${status}&limit=50`).catch(() => []);
-    const list = document.getElementById('jobs-list');
-    
-    if (jobs?.length) {
-        list.innerHTML = jobs.map(j => `
-            <div class="p-4 flex items-center justify-between">
-                <div>
-                    <p class="font-medium">${j.type}</p>
-                    <p class="text-xs text-gray-500">ID: ${j.id?.substring(0, 8)}... | Tentativas: ${j.attempts || 0}</p>
-                </div>
-                <div class="flex items-center gap-4">
-                    <span class="px-2 py-1 rounded-full text-xs ${getJobStatusColor(j.status)}">${j.status}</span>
-                    ${j.status === 'failed' ? `<button onclick="retryJob('${j.id}')" class="text-primary hover:text-primary/80"><i class="fas fa-redo"></i></button>` : ''}
-                </div>
-            </div>
-        `).join('');
-    } else {
-        list.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhum job</p>';
-    }
-}
-
-async function retryJob(id) {
-    try {
-        await api(`/admin/jobs/${id}/retry`, { method: 'POST' });
-        toast('Job reenfileirado', 'success');
-        loadJobs();
-    } catch (err) {
-        toast(err.message, 'error');
-    }
-}
+// [REMOVED: Moved to separate modules (autonomy.js, shadow.js, agents.js, memory.js, audit.js, jobs.js)]
 
 
 // ========================================
@@ -2343,9 +1541,9 @@ async function retryJob(id) {
 // ========================================
 
 function getStatusColor(status) {
-    const colors = { 
-        active: 'bg-emerald-500/20 text-emerald-400', 
-        suspended: 'bg-amber-500/20 text-amber-400', 
+    const colors = {
+        active: 'bg-emerald-500/20 text-emerald-400',
+        suspended: 'bg-amber-500/20 text-amber-400',
         banned: 'bg-rose-500/20 text-rose-400',
         pending: 'bg-amber-500/20 text-amber-400'
     };
@@ -2353,18 +1551,18 @@ function getStatusColor(status) {
 }
 
 function getRoleColor(role) {
-    const colors = { 
-        user: 'bg-gray-500/20 text-gray-400', 
-        admin: 'bg-primary/20 text-primary', 
-        super_admin: 'bg-sovereign/20 text-sovereign' 
+    const colors = {
+        user: 'bg-gray-500/20 text-gray-400',
+        admin: 'bg-primary/20 text-primary',
+        super_admin: 'bg-sovereign/20 text-sovereign'
     };
     return colors[role] || 'bg-gray-500/20 text-gray-400';
 }
 
 function getSubStatusColor(status) {
-    const colors = { 
-        active: 'bg-emerald-500/20 text-emerald-400', 
-        canceled: 'bg-gray-500/20 text-gray-400', 
+    const colors = {
+        active: 'bg-emerald-500/20 text-emerald-400',
+        canceled: 'bg-gray-500/20 text-gray-400',
         past_due: 'bg-rose-500/20 text-rose-400',
         trialing: 'bg-blue-500/20 text-blue-400'
     };
@@ -2372,23 +1570,23 @@ function getSubStatusColor(status) {
 }
 
 function getPaymentStatusColor(status) {
-    const colors = { 
-        pending: 'bg-amber-500/20 text-amber-400', 
-        confirmed: 'bg-emerald-500/20 text-emerald-400', 
+    const colors = {
+        pending: 'bg-amber-500/20 text-amber-400',
+        confirmed: 'bg-emerald-500/20 text-emerald-400',
         completed: 'bg-emerald-500/20 text-emerald-400',
-        failed: 'bg-rose-500/20 text-rose-400', 
-        disputed: 'bg-rose-500/20 text-rose-400' 
+        failed: 'bg-rose-500/20 text-rose-400',
+        disputed: 'bg-rose-500/20 text-rose-400'
     };
     return colors[status] || 'bg-gray-500/20 text-gray-400';
 }
 
 function getJobStatusColor(status) {
-    const colors = { 
-        pending: 'bg-amber-500/20 text-amber-400', 
-        processing: 'bg-blue-500/20 text-blue-400', 
-        completed: 'bg-emerald-500/20 text-emerald-400', 
-        failed: 'bg-rose-500/20 text-rose-400', 
-        dead: 'bg-gray-500/20 text-gray-400' 
+    const colors = {
+        pending: 'bg-amber-500/20 text-amber-400',
+        processing: 'bg-blue-500/20 text-blue-400',
+        completed: 'bg-emerald-500/20 text-emerald-400',
+        failed: 'bg-rose-500/20 text-rose-400',
+        dead: 'bg-gray-500/20 text-gray-400'
     };
     return colors[status] || 'bg-gray-500/20 text-gray-400';
 }
@@ -2406,19 +1604,19 @@ function getRiskBorderColor(score) {
 }
 
 function getDecisionStatusColor(status) {
-    const colors = { 
-        proposed: 'bg-amber-500/20 text-amber-400', 
-        approved: 'bg-emerald-500/20 text-emerald-400', 
-        rejected: 'bg-rose-500/20 text-rose-400', 
-        executed: 'bg-primary/20 text-primary' 
+    const colors = {
+        proposed: 'bg-amber-500/20 text-amber-400',
+        approved: 'bg-emerald-500/20 text-emerald-400',
+        rejected: 'bg-rose-500/20 text-rose-400',
+        executed: 'bg-primary/20 text-primary'
     };
     return colors[status] || 'bg-gray-500/20 text-gray-400';
 }
 
 function getApprovalStatusColor(status) {
-    const colors = { 
-        pending: 'bg-amber-500/20 text-amber-400', 
-        approved: 'bg-emerald-500/20 text-emerald-400', 
+    const colors = {
+        pending: 'bg-amber-500/20 text-amber-400',
+        approved: 'bg-emerald-500/20 text-emerald-400',
         rejected: 'bg-rose-500/20 text-rose-400'
     };
     return colors[status] || 'bg-gray-500/20 text-gray-400';
@@ -2467,11 +1665,11 @@ function debounce(func, wait) {
 document.addEventListener('DOMContentLoaded', () => {
     const token = localStorage.getItem(STORAGE.TOKEN);
     const userData = localStorage.getItem(STORAGE.USER);
-    
+
     if (token && isTokenValid(token)) {
         currentUser = userData ? JSON.parse(userData) : {};
         initMainLayout();
-        
+
         // Iniciar atualização periódica do badge de alertas
         updateAlertsBadge();
         setInterval(updateAlertsBadge, 30000); // A cada 30 segundos
@@ -2554,16 +1752,16 @@ async function showExplainPanel(type, id) {
     const modal = document.getElementById('explain-modal');
     const title = document.getElementById('explain-title');
     const content = document.getElementById('explain-content');
-    
+
     modal.classList.remove('hidden');
     content.innerHTML = '<p class="text-gray-400 text-center py-8"><i class="fas fa-spinner fa-spin mr-2"></i> Carregando...</p>';
-    
+
     try {
         if (type === 'approval') {
             title.textContent = 'Detalhes da Aprovação';
             const approval = await api(`/approvals/${id}`).catch(() => null);
             const audit = await api(`/audit?entity_id=${id}&limit=10`).catch(() => []);
-            
+
             content.innerHTML = `
                 <div class="space-y-6">
                     <!-- Status -->
@@ -2629,7 +1827,7 @@ async function showExplainPanel(type, id) {
         } else if (type === 'decision') {
             title.textContent = 'Detalhes da Decisão do Agente';
             const decision = await api(`/agents/decisions/${id}`).catch(() => null);
-            
+
             content.innerHTML = `
                 <div class="space-y-6">
                     <!-- Status -->
@@ -2693,7 +1891,7 @@ async function showExplainPanel(type, id) {
             title.textContent = 'Detalhes do Usuário';
             const user = await api(`/admin/users/${id}`).catch(() => null);
             const audit = await api(`/audit?user_id=${id}&limit=10`).catch(() => []);
-            
+
             content.innerHTML = `
                 <div class="space-y-6">
                     <!-- User Info -->
@@ -2770,4 +1968,114 @@ async function showExplainPanel(type, id) {
 
 function closeExplainPanel() {
     document.getElementById('explain-modal')?.classList.add('hidden');
+}
+
+// ========================================
+// SYSTEM CONSOLE - Terminal de Comandos
+// ========================================
+
+async function renderSystemConsole(container) {
+    container.innerHTML = `
+        <div class="card rounded-2xl p-6 bg-black border-dark-border">
+            <div class="flex items-center gap-2 mb-4 text-emerald-400 font-mono">
+                <i class="fas fa-terminal"></i>
+                <span>Prost-QS Kernel Console v1.0</span>
+            </div>
+            
+            <div id="console-output" class="bg-black/50 rounded-xl p-4 h-96 overflow-y-auto mb-4 font-mono text-sm space-y-2 border border-white/5">
+                <div class="text-gray-500">Aguardando comandos... Digite 'help' para ver as opções.</div>
+            </div>
+
+            <div class="flex gap-2">
+                <div class="flex-1 relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-mono">></span>
+                    <input type="text" id="console-input" 
+                        class="w-full bg-dark border border-dark-border rounded-xl px-10 py-3 text-white focus:border-emerald-500 outline-none font-mono" 
+                        placeholder="Digite um comando..."
+                        onkeypress="if(event.key === 'Enter') executeConsoleCommand()">
+                </div>
+                <button onclick="executeConsoleCommand()" class="bg-emerald-500 hover:bg-emerald-600 px-6 rounded-xl transition-all">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4 mt-6">
+            <div class="card p-4 rounded-xl text-center hover:bg-white/5 cursor-pointer" onclick="setConsoleCommand('system.status')">
+                <p class="text-xs text-gray-400">Status do sistema</p>
+                <code class="text-emerald-400">system.status</code>
+            </div>
+            <div class="card p-4 rounded-xl text-center hover:bg-white/5 cursor-pointer" onclick="setConsoleCommand('cache.clear')">
+                <p class="text-xs text-gray-400">Limpar cache</p>
+                <code class="text-emerald-400">cache.clear</code>
+            </div>
+            <div class="card p-4 rounded-xl text-center hover:bg-white/5 cursor-pointer" onclick="setConsoleCommand('agents.reboot')">
+                <p class="text-xs text-gray-400">Reiniciar Agentes</p>
+                <code class="text-emerald-400">agents.reboot</code>
+            </div>
+        </div>
+    `;
+}
+
+function setConsoleCommand(cmd) {
+    const input = document.getElementById('console-input');
+    if (input) {
+        input.value = cmd;
+        input.focus();
+    }
+}
+
+async function executeConsoleCommand() {
+    const input = document.getElementById('console-input');
+    const output = document.getElementById('console-output');
+    const cmd = input.value.trim();
+
+    if (!cmd) return;
+
+    // Log local
+    const userLine = document.createElement('div');
+    userLine.innerHTML = `<span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> <span class="text-primary">></span> ${cmd}`;
+    output.appendChild(userLine);
+    input.value = '';
+    output.scrollTop = output.scrollHeight;
+
+    if (cmd === 'help') {
+        const helpLine = document.createElement('div');
+        helpLine.className = 'text-cyan-400 mt-2';
+        helpLine.innerHTML = `Comandos disponíveis:<br>
+          - system.status: Verifica saúde do kernel<br>
+          - cache.clear: Limpa caches persistentes<br>
+          - agents.reboot: Reinicializa loop de agentes<br>
+          - clear: Limpa este terminal`;
+        output.appendChild(helpLine);
+        return;
+    }
+
+    if (cmd === 'clear') {
+        output.innerHTML = '';
+        return;
+    }
+
+    try {
+        const response = await api('/commands', {
+            method: 'POST',
+            body: JSON.stringify({
+                type: cmd,
+                payload: {},
+                metadata: { source: 'admin-console' }
+            })
+        });
+
+        const resLine = document.createElement('div');
+        resLine.className = 'text-emerald-400';
+        resLine.innerHTML = `<span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> <i class="fas fa-check-circle"></i> ${response.message || 'Comando aceito'}<br><span class="text-xs opacity-50 ml-6">EventID: ${response.event_id}</span>`;
+        output.appendChild(resLine);
+    } catch (err) {
+        const errLine = document.createElement('div');
+        errLine.className = 'text-rose-400';
+        errLine.innerHTML = `<span class="text-gray-500">[${new Date().toLocaleTimeString()}]</span> <i class="fas fa-times-circle"></i> Erro: ${err.message}`;
+        output.appendChild(errLine);
+    }
+
+    output.scrollTop = output.scrollHeight;
 }

@@ -21,21 +21,21 @@
 async function renderCognitive(container) {
     try {
         const data = await api('/admin/cognitive/dashboard');
-        
+
         // Determinar status geral
         const hasKillSwitch = data.active_kill_switches?.length > 0;
-        const pendingRate = data.total_suggestions > 0 
-            ? (data.pending_suggestions / data.total_suggestions * 100).toFixed(1) 
+        const pendingRate = data.total_suggestions > 0
+            ? (data.pending_suggestions / data.total_suggestions * 100).toFixed(1)
             : 0;
         const acceptedRate = data.decision_distribution?.find(d => d.decision === 'accepted')?.percentage || 0;
         const ignoredRate = data.decision_distribution?.find(d => d.decision === 'ignored')?.percentage || 0;
-        
+
         // Status do sistema
         let systemStatus = 'healthy';
         let statusColor = 'emerald';
         let statusIcon = 'check-circle';
         let statusText = 'Sistema Saudável';
-        
+
         if (hasKillSwitch) {
             systemStatus = 'critical';
             statusColor = 'red';
@@ -167,7 +167,7 @@ async function renderCognitive(container) {
 async function renderCognitiveAgents(container) {
     try {
         const data = await api('/admin/cognitive/agents');
-        
+
         container.innerHTML = `
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Visão dos Agentes</h2>
@@ -259,7 +259,7 @@ async function renderCognitiveAgents(container) {
 async function renderCognitiveDecisions(container) {
     try {
         const data = await api('/admin/cognitive/decisions');
-        
+
         container.innerHTML = `
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Estatísticas de Decisões</h2>
@@ -336,10 +336,10 @@ async function renderCognitiveDecisions(container) {
 async function renderCognitiveNoise(container) {
     try {
         const data = await api('/admin/cognitive/noise');
-        
+
         const hasNoise = data.patterns?.length > 0;
         const highNoisePatterns = data.patterns?.filter(p => p.ignore_rate > 70) || [];
-        
+
         container.innerHTML = `
             <div class="mb-6">
                 <h2 class="text-xl font-bold mb-2">Padrões de Ruído</h2>
@@ -428,16 +428,16 @@ async function renderCognitiveNoise(container) {
 async function renderCognitiveTrust(container) {
     try {
         const data = await api('/admin/cognitive/trust?days=30');
-        
+
         // Calcular métricas
         const hasDays = data.days?.length > 0;
-        const trendIcon = data.trend_status === 'improving' ? 'arrow-up' : 
-                         data.trend_status === 'declining' ? 'arrow-down' : 'minus';
-        const trendColor = data.trend_status === 'improving' ? 'emerald' : 
-                          data.trend_status === 'declining' ? 'rose' : 'amber';
-        const trendText = data.trend_status === 'improving' ? 'Melhorando' : 
-                         data.trend_status === 'declining' ? 'Declinando' : 
-                         data.trend_status === 'insufficient_data' ? 'Dados Insuficientes' : 'Estável';
+        const trendIcon = data.trend_status === 'improving' ? 'arrow-up' :
+            data.trend_status === 'declining' ? 'arrow-down' : 'minus';
+        const trendColor = data.trend_status === 'improving' ? 'emerald' :
+            data.trend_status === 'declining' ? 'rose' : 'amber';
+        const trendText = data.trend_status === 'improving' ? 'Melhorando' :
+            data.trend_status === 'declining' ? 'Declinando' :
+                data.trend_status === 'insufficient_data' ? 'Dados Insuficientes' : 'Estável';
 
         // Calcular médias
         let avgAcceptance = 0;
@@ -566,8 +566,8 @@ function renderDecisionDistribution(distribution) {
     return `
         <div class="space-y-4">
             ${distribution.map(d => {
-                const c = colors[d.decision] || { bg: 'bg-gray-500', text: 'text-gray-400', icon: 'question' };
-                return `
+        const c = colors[d.decision] || { bg: 'bg-gray-500', text: 'text-gray-400', icon: 'question' };
+        return `
                     <div>
                         <div class="flex justify-between text-sm mb-1">
                             <span class="flex items-center gap-2">
@@ -581,7 +581,7 @@ function renderDecisionDistribution(distribution) {
                         </div>
                     </div>
                 `;
-            }).join('')}
+    }).join('')}
         </div>
     `;
 }
@@ -732,7 +732,7 @@ async function generateNarrative(type, question = '') {
 
         textEl.textContent = response.narrative;
         metaEl.textContent = `${response.type} • ${response.model} • ${new Date(response.generated_at).toLocaleString('pt-BR')}`;
-        
+
         loading.classList.add('hidden');
         output.classList.remove('hidden');
 
@@ -795,9 +795,16 @@ function copyNarrative() {
     }
 }
 
+// Exportar para uso global
+window.generateNarrative = generateNarrative;
+window.showQuestionModal = showQuestionModal;
+window.submitQuestion = submitQuestion;
+window.copyNarrative = copyNarrative;
+window.closeQuestionModal = closeQuestionModal;
+
 // Modificar renderCognitive para incluir narrador
 const originalRenderCognitive = renderCognitive;
-renderCognitive = async function(container) {
+window.renderCognitive = async function (container) {
     await originalRenderCognitive(container);
     addNarratorButton(container);
 };

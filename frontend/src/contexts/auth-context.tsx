@@ -191,18 +191,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
     }, [router]);
 
+    // Estabilizar o valor do contexto para prevenir loops de re-render
+    const contextValue = React.useMemo(() => ({
+        user,
+        loading,
+        login,
+        logout,
+        refreshUser,
+        isAuthenticated: !!user,
+        isHydrated,
+    }), [user, loading, login, logout, refreshUser, isHydrated]);
+
     return (
-        <AuthContext.Provider
-            value={{
-                user,
-                loading,
-                login,
-                logout,
-                refreshUser,
-                isAuthenticated: !!user,
-                isHydrated,
-            }}
-        >
+        <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
     );

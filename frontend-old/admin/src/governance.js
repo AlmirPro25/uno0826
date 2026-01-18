@@ -2,7 +2,7 @@
 // GOVERNANCE - Painel de Governança
 // ========================================
 
-const API_URL = 'https://uno0826.onrender.com/api/v1';
+const API_URL = window.APP_CONFIG?.API_BASE || 'https://api.prostqs.com.br/api/v1';
 
 let governanceInterval = null;
 
@@ -205,7 +205,7 @@ async function renderGovernance(container) {
 
     setupGovernanceEvents();
     loadGovernanceData();
-    
+
     // Atualizar a cada 10s
     governanceInterval = setInterval(loadGovernanceData, 10000);
 }
@@ -223,26 +223,26 @@ function setupGovernanceEvents() {
         document.getElementById('modal-killswitch').classList.remove('hidden');
         document.getElementById('modal-killswitch').classList.add('flex');
     });
-    
+
     document.getElementById('btn-cancel-killswitch').addEventListener('click', () => {
         document.getElementById('modal-killswitch').classList.add('hidden');
         document.getElementById('modal-killswitch').classList.remove('flex');
     });
-    
+
     document.getElementById('btn-confirm-killswitch').addEventListener('click', activateKillSwitch);
     document.getElementById('btn-deactivate-killswitch').addEventListener('click', deactivateKillSwitch);
-    
+
     // Shadow Mode
     document.getElementById('btn-activate-shadow').addEventListener('click', () => {
         document.getElementById('modal-shadow').classList.remove('hidden');
         document.getElementById('modal-shadow').classList.add('flex');
     });
-    
+
     document.getElementById('btn-cancel-shadow').addEventListener('click', () => {
         document.getElementById('modal-shadow').classList.add('hidden');
         document.getElementById('modal-shadow').classList.remove('flex');
     });
-    
+
     document.getElementById('btn-confirm-shadow').addEventListener('click', activateShadowMode);
     document.getElementById('btn-deactivate-shadow').addEventListener('click', deactivateShadowMode);
 }
@@ -250,9 +250,9 @@ function setupGovernanceEvents() {
 async function loadGovernanceData() {
     const token = localStorage.getItem('admin_token');
     if (!token) return;
-    
+
     const headers = { 'Authorization': `Bearer ${token}` };
-    
+
     try {
         // Carregar em paralelo
         const [killswitch, shadow, policies, authority, domains, audit] = await Promise.all([
@@ -263,20 +263,20 @@ async function loadGovernanceData() {
             fetch(`${API_URL}/admin/rules/authority/domains`, { headers }).then(r => r.json()),
             fetch(`${API_URL}/admin/rules/audit?limit=20`, { headers }).then(r => r.json())
         ]);
-        
+
         renderKillSwitchStatus(killswitch);
         renderShadowStatus(shadow);
         renderPolicies(policies);
         renderAuthorityLevels(authority);
         renderActionDomains(domains);
         renderAuditLogs(audit);
-        
+
         // Shadow stats se ativo
         if (shadow.active) {
             const stats = await fetch(`${API_URL}/admin/rules/shadow/stats?since=24h`, { headers }).then(r => r.json());
             renderShadowStats(stats);
         }
-        
+
     } catch (err) {
         console.error('Erro ao carregar governança:', err);
     }
@@ -285,7 +285,7 @@ async function loadGovernanceData() {
 function renderKillSwitchStatus(data) {
     const indicator = document.getElementById('killswitch-indicator');
     const status = document.getElementById('killswitch-status');
-    
+
     if (data.active) {
         indicator.className = 'w-4 h-4 rounded-full bg-red-500 animate-pulse';
         status.innerHTML = `
@@ -304,7 +304,7 @@ function renderShadowStatus(data) {
     const indicator = document.getElementById('shadow-indicator');
     const status = document.getElementById('shadow-status');
     const statsSection = document.getElementById('shadow-stats-section');
-    
+
     if (data.active) {
         indicator.className = 'w-4 h-4 rounded-full bg-yellow-500 animate-pulse';
         status.innerHTML = `
@@ -341,20 +341,20 @@ function renderShadowStats(stats) {
             <div class="text-gray-400 text-sm">Período</div>
         </div>
     `;
-    
+
     document.getElementById('audit-shadow').textContent = stats.total || 0;
 }
 
 function renderPolicies(data) {
     const tbody = document.getElementById('policies-table');
     const policies = data.policies || {};
-    
+
     const permissionColors = {
         'automatic': 'text-green-400',
         'confirmation': 'text-yellow-400',
         'never': 'text-red-400'
     };
-    
+
     tbody.innerHTML = Object.entries(policies).map(([type, policy]) => `
         <tr class="border-b border-gray-700">
             <td class="py-3 font-mono">${type}</td>
@@ -370,7 +370,7 @@ function renderPolicies(data) {
             </td>
         </tr>
     `).join('');
-    
+
     // Prohibited actions
     const prohibited = data.prohibited_actions || [];
     document.getElementById('prohibited-actions').innerHTML = prohibited.map(action => `
@@ -381,7 +381,7 @@ function renderPolicies(data) {
 function renderAuthorityLevels(data) {
     const tbody = document.getElementById('authority-levels');
     const levels = data.levels || [];
-    
+
     const levelColors = {
         'observer': 'text-gray-400',
         'suggestor': 'text-blue-400',
@@ -390,7 +390,7 @@ function renderAuthorityLevels(data) {
         'governor': 'text-orange-400',
         'sovereign': 'text-red-400'
     };
-    
+
     const levelActions = {
         'observer': 'Ver dashboards',
         'suggestor': 'Criar regras em shadow',
@@ -399,7 +399,7 @@ function renderAuthorityLevels(data) {
         'governor': 'Mudar políticas',
         'sovereign': 'Kill switch, shutdown'
     };
-    
+
     tbody.innerHTML = levels.map(level => `
         <tr class="border-b border-gray-700">
             <td class="py-3">
@@ -415,14 +415,14 @@ function renderAuthorityLevels(data) {
 function renderActionDomains(data) {
     const container = document.getElementById('action-domains');
     const domains = data.domains || {};
-    
+
     const domainColors = {
         'tech': 'border-blue-500',
         'business': 'border-purple-500',
         'governance': 'border-orange-500',
         'ops': 'border-green-500'
     };
-    
+
     container.innerHTML = Object.entries(domains).map(([key, domain]) => `
         <div class="bg-gray-900 rounded-lg p-4 border-l-4 ${domainColors[key] || 'border-gray-500'}">
             <h4 class="text-white font-medium mb-2">${key.toUpperCase()}</h4>
@@ -440,12 +440,12 @@ function renderActionDomains(data) {
 function renderAuditLogs(data) {
     const container = document.getElementById('audit-logs');
     const logs = data.logs || [];
-    
+
     if (logs.length === 0) {
         container.innerHTML = '<p class="text-gray-500 text-center py-4">Nenhum log de auditoria</p>';
         return;
     }
-    
+
     // Contadores
     let executed = 0, blocked = 0;
     logs.forEach(log => {
@@ -454,7 +454,7 @@ function renderAuditLogs(data) {
     });
     document.getElementById('audit-executed').textContent = executed;
     document.getElementById('audit-blocked').textContent = blocked;
-    
+
     container.innerHTML = logs.map(log => `
         <div class="bg-gray-900 rounded p-3 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -477,10 +477,10 @@ async function activateKillSwitch() {
         alert('Motivo é obrigatório');
         return;
     }
-    
+
     const duration = document.getElementById('killswitch-duration').value;
     const token = localStorage.getItem('admin_token');
-    
+
     try {
         const res = await fetch(`${API_URL}/admin/rules/killswitch/activate`, {
             method: 'POST',
@@ -493,7 +493,7 @@ async function activateKillSwitch() {
                 auto_resume_after: duration || undefined
             })
         });
-        
+
         if (res.ok) {
             document.getElementById('modal-killswitch').classList.add('hidden');
             document.getElementById('modal-killswitch').classList.remove('flex');
@@ -509,13 +509,13 @@ async function activateKillSwitch() {
 
 async function deactivateKillSwitch() {
     const token = localStorage.getItem('admin_token');
-    
+
     try {
         const res = await fetch(`${API_URL}/admin/rules/killswitch/deactivate`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
             loadGovernanceData();
         }
@@ -530,10 +530,10 @@ async function activateShadowMode() {
         alert('Motivo é obrigatório');
         return;
     }
-    
+
     const duration = document.getElementById('shadow-duration').value;
     const token = localStorage.getItem('admin_token');
-    
+
     try {
         const res = await fetch(`${API_URL}/admin/rules/shadow/activate`, {
             method: 'POST',
@@ -546,7 +546,7 @@ async function activateShadowMode() {
                 duration: duration || undefined
             })
         });
-        
+
         if (res.ok) {
             document.getElementById('modal-shadow').classList.add('hidden');
             document.getElementById('modal-shadow').classList.remove('flex');
@@ -562,13 +562,13 @@ async function activateShadowMode() {
 
 async function deactivateShadowMode() {
     const token = localStorage.getItem('admin_token');
-    
+
     try {
         const res = await fetch(`${API_URL}/admin/rules/shadow/deactivate`, {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` }
         });
-        
+
         if (res.ok) {
             loadGovernanceData();
         }
@@ -578,7 +578,7 @@ async function deactivateShadowMode() {
 }
 
 // Expor para onclick inline
-window.toggleActionPause = async function(actionType) {
+window.toggleActionPause = async function (actionType) {
     const token = localStorage.getItem('admin_token');
     // Toggle pause/resume
     try {
@@ -591,3 +591,157 @@ window.toggleActionPause = async function(actionType) {
         alert('Erro ao pausar ação');
     }
 };
+
+// ========================================
+// AUTHORITY MANAGEMENT
+// ========================================
+
+async function renderAuthority(container) {
+    container.innerHTML = `
+        <div class="flex justify-between items-center mb-6">
+            <h3 class="text-xl font-bold">Gestão de Autoridade</h3>
+            <button onclick="showCreateAuthority()" class="bg-primary hover:bg-primary/80 text-white px-4 py-2 rounded-xl">
+                <i class="fas fa-plus mr-2"></i> Nova Autoridade
+            </button>
+        </div>
+
+        <div id="create-authority-form" class="card rounded-2xl p-6 mb-6 hidden">
+            <h3 class="font-bold mb-4">Conceder Autoridade</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">User ID do Agente/Usuário</label>
+                    <input type="text" id="auth-user-id" placeholder="UUID" 
+                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Escopo (Domain)</label>
+                    <input type="text" id="auth-scope" placeholder="ex: billing, tech, governance" 
+                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Nível de Autoridade (1-5)</label>
+                    <select id="auth-level" class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
+                        <option value="1">1 - Observer</option>
+                        <option value="2">2 - Suggestor</option>
+                        <option value="3">3 - Operator</option>
+                        <option value="4">4 - Manager</option>
+                        <option value="5">5 - Sovereign</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm text-gray-400 mb-2">Limite Diário (Ações)</label>
+                    <input type="number" id="auth-limit" value="100" 
+                        class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3">
+                </div>
+            </div>
+            <div class="flex gap-4 mt-4">
+                <button onclick="createAuthority()" class="flex-1 bg-primary hover:bg-primary/80 text-white py-3 rounded-xl">Conceder</button>
+                <button onclick="hideCreateAuthority()" class="px-6 py-3 bg-gray-700 rounded-xl">Cancelar</button>
+            </div>
+        </div>
+
+        <div class="card rounded-2xl">
+            <div id="authority-list" class="divide-y divide-dark-border">
+                <p class="text-gray-500 text-center py-8">Carregando...</p>
+            </div>
+        </div>
+    `;
+
+    await loadAuthorities();
+}
+
+async function loadAuthorities() {
+    const token = localStorage.getItem('admin_token');
+    const headers = { 'Authorization': `Bearer ${token}` };
+
+    try {
+        const authorities = await fetch(`${API_URL}/authority`, { headers }).then(r => r.json());
+        const list = document.getElementById('authority-list');
+
+        if (authorities?.length) {
+            list.innerHTML = authorities.map(a => `
+                <div class="p-4 flex items-center justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center">
+                            <i class="fas fa-user-shield text-primary"></i>
+                        </div>
+                        <div>
+                            <p class="font-medium">${a.user_id?.substring(0, 8)}...</p>
+                            <p class="text-xs text-gray-500">Escopo: ${a.scope}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <span class="px-3 py-1 bg-amber-500/20 text-amber-400 rounded-lg text-sm">Nível ${a.level}</span>
+                        <span class="text-sm text-gray-400">${a.daily_limit}/dia</span>
+                        <button onclick="revokeAuthority('${a.id}')" class="text-rose-400 hover:text-rose-300">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            list.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhuma autoridade configurada</p>';
+        }
+    } catch (err) {
+        console.error(err);
+    }
+}
+
+function showCreateAuthority() {
+    document.getElementById('create-authority-form')?.classList.remove('hidden');
+}
+
+function hideCreateAuthority() {
+    document.getElementById('create-authority-form')?.classList.add('hidden');
+}
+
+async function createAuthority() {
+    const user_id = document.getElementById('auth-user-id').value;
+    const scope = document.getElementById('auth-scope').value;
+    const level = parseInt(document.getElementById('auth-level').value);
+    const daily_limit = parseInt(document.getElementById('auth-limit').value);
+    const token = localStorage.getItem('admin_token');
+
+    if (!user_id) {
+        alert('Informe o User ID');
+        return;
+    }
+
+    try {
+        await fetch(`${API_URL}/authority`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ user_id, scope, level, daily_limit })
+        });
+        alert('Autoridade criada com sucesso');
+        hideCreateAuthority();
+        loadAuthorities();
+    } catch (err) {
+        alert('Erro ao criar autoridade: ' + err.message);
+    }
+}
+
+async function revokeAuthority(id) {
+    if (!confirm('Revogar esta autoridade?')) return;
+    const token = localStorage.getItem('admin_token');
+
+    try {
+        await fetch(`${API_URL}/authority/${id}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        alert('Autoridade revogada');
+        loadAuthorities();
+    } catch (err) {
+        alert('Erro ao revogar: ' + err.message);
+    }
+}
+
+// Global exports for inline onClick
+window.revokeAuthority = revokeAuthority;
+window.createAuthority = createAuthority;
+window.showCreateAuthority = showCreateAuthority;
+window.hideCreateAuthority = hideCreateAuthority;

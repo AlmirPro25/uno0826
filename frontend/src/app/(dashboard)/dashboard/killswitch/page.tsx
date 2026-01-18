@@ -35,7 +35,7 @@ export default function KillSwitchPage() {
         const diffSec = Math.floor(diffMs / 1000);
         const diffMin = Math.floor(diffSec / 60);
         const diffHour = Math.floor(diffMin / 60);
-        
+
         if (diffSec < 60) return `${diffSec}s atrás`;
         if (diffMin < 60) return `${diffMin}min atrás`;
         if (diffHour < 24) return `${diffHour}h atrás`;
@@ -61,7 +61,7 @@ export default function KillSwitchPage() {
             toast.error("Motivo é obrigatório");
             return;
         }
-        
+
         setActivating(true);
         try {
             await api.post("/admin/rules/killswitch/activate", {
@@ -96,14 +96,14 @@ export default function KillSwitchPage() {
     return (
         <div className="space-y-6 pb-12">
             <AppHeader />
-            
+
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none flex items-center gap-3">
-                        <Power className="w-8 h-8 text-rose-400" />
+                    <h1 className="text-3xl font-black text-foreground uppercase tracking-tighter leading-none flex items-center gap-3">
+                        <Power className="w-8 h-8 text-destructive" />
                         Kill Switch
                     </h1>
-                    <p className="text-slate-500 mt-1 font-medium">
+                    <p className="text-muted-foreground mt-1 font-medium">
                         Controle humano absoluto • Parar todas as ações automáticas
                     </p>
                 </div>
@@ -111,7 +111,7 @@ export default function KillSwitchPage() {
                     <button
                         onClick={fetchStatus}
                         disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 text-white text-sm font-bold rounded-xl transition-colors"
+                        className="flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground text-sm font-bold rounded-xl transition-colors"
                     >
                         <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
                     </button>
@@ -146,9 +146,9 @@ export default function KillSwitchPage() {
                     animate={{ opacity: 1, y: 0 }}
                     className={cn(
                         "p-8 rounded-3xl border",
-                        status?.active 
-                            ? "bg-gradient-to-br from-rose-600/20 to-rose-600/5 border-rose-500/30" 
-                            : "bg-gradient-to-br from-emerald-600/10 to-emerald-600/5 border-emerald-500/20"
+                        status?.active
+                            ? "bg-destructive/10 border-destructive/30"
+                            : "bg-success/10 border-success/20"
                     )}
                 >
                     <div className="flex items-start gap-6">
@@ -165,16 +165,16 @@ export default function KillSwitchPage() {
                         <div className="flex-1">
                             <h2 className={cn(
                                 "text-2xl font-black uppercase tracking-tight",
-                                status?.active ? "text-rose-400" : "text-emerald-400"
+                                status?.active ? "text-destructive" : "text-success"
                             )}>
                                 {status?.active ? "Kill Switch Ativo" : "Sistema Operacional"}
                             </h2>
                             <p className="text-slate-400 mt-2">
-                                {status?.active 
+                                {status?.active
                                     ? "Todas as ações automáticas estão pausadas. Regras continuam sendo avaliadas mas não executam ações."
                                     : "O sistema está operando normalmente. Todas as regras e ações automáticas estão ativas."}
                             </p>
-                            
+
                             {status?.active && (
                                 <div className="mt-4 p-4 rounded-xl bg-black/20 border border-rose-500/20">
                                     <div className="grid grid-cols-2 gap-4 text-sm">
@@ -259,10 +259,10 @@ export default function KillSwitchPage() {
             {/* Activate Modal */}
             {showActivate && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={() => setShowActivate(false)}>
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
-                        className="bg-[#0a0a0f] border border-rose-500/30 rounded-3xl p-8 w-full max-w-lg space-y-6" 
+                        className="bg-[#0a0a0f] border border-rose-500/30 rounded-3xl p-8 w-full max-w-lg space-y-6"
                         onClick={e => e.stopPropagation()}
                     >
                         <div className="flex items-center gap-4">
@@ -295,7 +295,7 @@ export default function KillSwitchPage() {
                                     className="mt-2 w-full h-11 px-4 rounded-xl bg-white/[0.02] border border-white/10 text-white placeholder:text-slate-600 focus:border-rose-500/50 outline-none"
                                 />
                             </div>
-                            
+
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest">
                                     Auto-resume (opcional)

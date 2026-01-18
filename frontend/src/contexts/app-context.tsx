@@ -27,11 +27,11 @@ interface AppContextType {
     apps: AppMembership[];
     activeApp: ActiveApp | null;
     loading: boolean;
-    
+
     // Ações
     setActiveApp: (appId: string) => void;
     refreshApps: () => Promise<void>;
-    
+
     // Helpers
     hasApp: boolean;
     isOwner: boolean;
@@ -43,8 +43,8 @@ const AppContext = createContext<AppContextType>({
     apps: [],
     activeApp: null,
     loading: true,
-    setActiveApp: () => {},
-    refreshApps: async () => {},
+    setActiveApp: () => { },
+    refreshApps: async () => { },
     hasApp: false,
     isOwner: false,
     isAdmin: false,
@@ -69,7 +69,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         try {
             const res = await api.get("/apps/mine");
             const userApps = res.data.apps || [];
-            
+
             // Mapear para memberships (por enquanto, owner de todos os apps que criou)
             const memberships: AppMembership[] = userApps.map((app: { id: string; name: string; slug: string; created_at: string }) => ({
                 app_id: app.id,
@@ -84,7 +84,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             // Restaurar app ativo do localStorage ou selecionar primeiro
             const savedAppId = localStorage.getItem("activeAppId");
             const savedApp = memberships.find(m => m.app_id === savedAppId);
-            
+
             if (savedApp) {
                 // App salvo ainda existe na lista - usar ele
                 setActiveAppState({
@@ -148,20 +148,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // Super admin tem acesso total
     const isSuperAdmin = user?.role === "super_admin";
 
+    // Estabilizar o valor do contexto para evitar re-renders infinitos
+    const contextValue = React.useMemo(() => ({
+        apps,
+        activeApp,
+        loading,
+        setActiveApp,
+        refreshApps: fetchApps,
+        hasApp,
+        isOwner: isSuperAdmin || isOwner,
+        isAdmin: isSuperAdmin || isAdmin,
+        canManage: isSuperAdmin || canManage,
+    }), [
+        apps,
+        activeApp,
+        loading,
+        setActiveApp,
+        fetchApps,
+        hasApp,
+        isSuperAdmin,
+        isOwner,
+        isAdmin,
+        canManage
+    ]);
+
     return (
-        <AppContext.Provider
-            value={{
-                apps,
-                activeApp,
-                loading,
-                setActiveApp,
-                refreshApps: fetchApps,
-                hasApp,
-                isOwner: isSuperAdmin || isOwner,
-                isAdmin: isSuperAdmin || isAdmin,
-                canManage: isSuperAdmin || canManage,
-            }}
-        >
+        <AppContext.Provider value={contextValue}>
             {children}
         </AppContext.Provider>
     );

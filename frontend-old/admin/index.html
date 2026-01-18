@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -23,23 +24,52 @@
         }
     </script>
     <style>
-        body { background: #0a0a12; }
-        .sidebar { background: linear-gradient(180deg, #12121e 0%, #0a0a12 100%); }
-        .card { background: #12121e; border: 1px solid #1e1e2e; }
-        .table-row:hover { background: rgba(99,102,241,0.05); }
-        .nav-group-title { font-size: 10px; letter-spacing: 0.1em; }
-        .killswitch-active { animation: pulse-red 2s infinite; }
+        body {
+            background: #0a0a12;
+        }
+
+        .sidebar {
+            background: linear-gradient(180deg, #12121e 0%, #0a0a12 100%);
+        }
+
+        .card {
+            background: #12121e;
+            border: 1px solid #1e1e2e;
+        }
+
+        .table-row:hover {
+            background: rgba(99, 102, 241, 0.05);
+        }
+
+        .nav-group-title {
+            font-size: 10px;
+            letter-spacing: 0.1em;
+        }
+
+        .killswitch-active {
+            animation: pulse-red 2s infinite;
+        }
+
         @keyframes pulse-red {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
-            50% { box-shadow: 0 0 0 10px rgba(220, 38, 38, 0); }
+
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
+            }
+
+            50% {
+                box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+            }
         }
     </style>
 </head>
+
 <body class="min-h-screen text-white flex">
     <!-- Loader -->
     <div id="loader" class="fixed inset-0 bg-dark z-50 flex items-center justify-center hidden">
         <div class="text-center">
-            <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <div class="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4">
+            </div>
             <p class="text-gray-400">Carregando...</p>
         </div>
     </div>
@@ -48,7 +78,8 @@
     <div id="toast-container" class="fixed top-4 right-4 z-50"></div>
 
     <!-- Kill Switch Global Banner -->
-    <div id="killswitch-banner" class="fixed top-0 left-0 right-0 bg-red-600 text-white py-2 px-4 text-center z-40 hidden">
+    <div id="killswitch-banner"
+        class="fixed top-0 left-0 right-0 bg-red-600 text-white py-2 px-4 text-center z-40 hidden">
         <i class="fas fa-exclamation-triangle mr-2"></i>
         <span id="killswitch-banner-text">KILL SWITCH ATIVO</span>
         <button onclick="showSection('killswitch')" class="ml-4 underline">Ver detalhes</button>
@@ -68,22 +99,24 @@
             <form id="login-form" class="card rounded-2xl p-6">
                 <div class="mb-4">
                     <label class="block text-sm text-gray-400 mb-2">Username</label>
-                    <input type="text" id="username-input" placeholder="admin" 
+                    <input type="text" id="username-input" placeholder="admin"
                         class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3 text-white focus:border-primary outline-none">
                 </div>
                 <div class="mb-4">
                     <label class="block text-sm text-gray-400 mb-2">Password</label>
-                    <input type="password" id="password-input" placeholder="••••••••" 
+                    <input type="password" id="password-input" placeholder="••••••••"
                         class="w-full bg-dark border border-dark-border rounded-xl px-4 py-3 text-white focus:border-primary outline-none">
                 </div>
-                <button type="submit" class="w-full bg-sovereign hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all">
+                <button type="submit"
+                    class="w-full bg-sovereign hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-all">
                     <i class="fas fa-shield-halved mr-2"></i> Acessar Console
                 </button>
                 <div class="mt-4 pt-4 border-t border-dark-border">
                     <p class="text-xs text-gray-500 mb-2">Ou entre com token JWT:</p>
-                    <input type="text" id="token-input" placeholder="Cole seu token JWT aqui" 
+                    <input type="text" id="token-input" placeholder="Cole seu token JWT aqui"
                         class="w-full bg-dark border border-dark-border rounded-xl px-4 py-2 text-white text-xs focus:border-primary outline-none mb-2">
-                    <button type="button" onclick="loginWithToken()" class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-xl text-sm">
+                    <button type="button" onclick="loginWithToken()"
+                        class="w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-xl text-sm">
                         Entrar com Token
                     </button>
                 </div>
@@ -114,18 +147,25 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Overview</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('dashboard')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="dashboard">
+                            <button onclick="showSection('dashboard')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="dashboard">
                                 <i class="fas fa-chart-line w-5 text-gray-400"></i> Dashboard
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('crisis')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="crisis">
+                            <button onclick="showSection('crisis')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="crisis">
                                 <i class="fas fa-exclamation-circle w-5 text-red-400"></i> Crisis View
-                                <span id="crisis-badge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">!</span>
+                                <span id="crisis-badge"
+                                    class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">!</span>
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('health')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="health">
+                            <button onclick="showSection('health')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="health">
                                 <i class="fas fa-heartbeat w-5 text-emerald-400"></i> System Health
                             </button>
                         </li>
@@ -137,12 +177,16 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Identity</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('users')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="users">
+                            <button onclick="showSection('users')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="users">
                                 <i class="fas fa-users w-5 text-gray-400"></i> Usuários
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('subscriptions')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="subscriptions">
+                            <button onclick="showSection('subscriptions')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="subscriptions">
                                 <i class="fas fa-id-card w-5 text-gray-400"></i> Subscriptions
                             </button>
                         </li>
@@ -154,12 +198,16 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Economy</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('billing')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="billing">
+                            <button onclick="showSection('billing')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="billing">
                                 <i class="fas fa-credit-card w-5 text-gray-400"></i> Billing
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('ledger')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="ledger">
+                            <button onclick="showSection('ledger')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="ledger">
                                 <i class="fas fa-coins w-5 text-gray-400"></i> Ledger
                             </button>
                         </li>
@@ -171,25 +219,42 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Governance</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('killswitch')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="killswitch">
+                            <button onclick="showSection('killswitch')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="killswitch">
                                 <i class="fas fa-power-off w-5 text-red-400"></i> Kill Switch
-                                <span id="ks-badge" class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">!</span>
+                                <span id="ks-badge"
+                                    class="ml-auto bg-red-500 text-white text-xs px-2 py-0.5 rounded-full hidden">!</span>
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('policies')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="policies">
+                            <button onclick="showSection('policies')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="policies">
                                 <i class="fas fa-gavel w-5 text-gray-400"></i> Policies
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('approvals')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="approvals">
+                            <button onclick="showSection('approvals')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="approvals">
                                 <i class="fas fa-check-double w-5 text-gray-400"></i> Approvals
-                                <span id="approvals-badge" class="ml-auto bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                                <span id="approvals-badge"
+                                    class="ml-auto bg-amber-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('authority')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="authority">
+                            <button onclick="showSection('authority')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="authority">
                                 <i class="fas fa-user-shield w-5 text-gray-400"></i> Authority
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('autonomy')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="autonomy">
+                                <i class="fas fa-brain w-5 text-purple-400"></i> Autonomy
                             </button>
                         </li>
                     </ul>
@@ -200,28 +265,59 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">🧠 Cognitive</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('cognitive')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="cognitive">
+                            <button onclick="showSection('cognitive')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="cognitive">
                                 <i class="fas fa-eye w-5 text-cyan-400"></i> Dashboard Cognitivo
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('cognitive-agents')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="cognitive-agents">
+                            <button onclick="showSection('cognitive-agents')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="cognitive-agents">
                                 <i class="fas fa-robot w-5 text-purple-400"></i> Agentes
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('cognitive-decisions')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="cognitive-decisions">
+                            <button onclick="showSection('cognitive-decisions')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="cognitive-decisions">
                                 <i class="fas fa-gavel w-5 text-amber-400"></i> Decisões
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('cognitive-noise')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="cognitive-noise">
+                            <button onclick="showSection('cognitive-noise')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="cognitive-noise">
                                 <i class="fas fa-volume-mute w-5 text-rose-400"></i> Ruído
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('cognitive-trust')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="cognitive-trust">
+                            <button onclick="showSection('cognitive-trust')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="cognitive-trust">
                                 <i class="fas fa-chart-line w-5 text-emerald-400"></i> Confiança
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('explainability')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="explainability">
+                                <i class="fas fa-brain w-5 text-amber-400"></i> Explainability
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('usage')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="usage">
+                                <i class="fas fa-chart-pie w-5 text-blue-400"></i> Usage
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('activity')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="activity">
+                                <i class="fas fa-stream w-5 text-gray-400"></i> Activity Log
                             </button>
                         </li>
                     </ul>
@@ -232,17 +328,16 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Agents</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('autonomy')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="autonomy">
-                                <i class="fas fa-robot w-5 text-gray-400"></i> Autonomy Matrix
-                            </button>
-                        </li>
-                        <li>
-                            <button onclick="showSection('shadow')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="shadow">
+                            <button onclick="showSection('shadow')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="shadow">
                                 <i class="fas fa-ghost w-5 text-gray-400"></i> Shadow Mode
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('agents')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="agents">
+                            <button onclick="showSection('agents')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="agents">
                                 <i class="fas fa-brain w-5 text-gray-400"></i> Agent Decisions
                             </button>
                         </li>
@@ -254,12 +349,16 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Memory</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('memory')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="memory">
+                            <button onclick="showSection('memory')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="memory">
                                 <i class="fas fa-database w-5 text-gray-400"></i> Institutional Memory
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('audit')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="audit">
+                            <button onclick="showSection('audit')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="audit">
                                 <i class="fas fa-scroll w-5 text-gray-400"></i> Audit Log
                             </button>
                         </li>
@@ -271,53 +370,88 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">System</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('applications')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="applications">
+                            <button onclick="showSection('applications')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="applications">
                                 <i class="fas fa-cube w-5 text-blue-400"></i> Applications
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('rules')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="rules">
+                            <button onclick="showSection('rules')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="rules">
                                 <i class="fas fa-brain w-5 text-purple-400"></i> Rules Engine
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('login-history')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="login-history">
+                            <button onclick="showSection('login-history')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="login-history">
                                 <i class="fas fa-sign-in-alt w-5 text-emerald-400"></i> Login History
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('financial')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="financial">
+                            <button onclick="showSection('financial')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="financial">
                                 <i class="fas fa-chart-pie w-5 text-emerald-400"></i> Financial
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('reconciliation')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="reconciliation">
+                            <button onclick="showSection('reconciliation')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="reconciliation">
                                 <i class="fas fa-balance-scale w-5 text-cyan-400"></i> Reconciliation
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('alerts')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="alerts">
+                            <button onclick="showSection('alerts')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="alerts">
                                 <i class="fas fa-bell w-5 text-amber-400"></i> Alerts
-                                <span id="alerts-badge" class="ml-auto bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
+                                <span id="alerts-badge"
+                                    class="ml-auto bg-rose-500 text-white text-xs px-2 py-0.5 rounded-full hidden">0</span>
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('governance')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="governance">
+                            <button onclick="showSection('governance')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="governance">
                                 <i class="fas fa-shield-alt w-5 text-purple-400"></i> Governance
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('kernel-billing')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="kernel-billing">
+                            <button onclick="showSection('kernel-billing')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="kernel-billing">
                                 <i class="fas fa-money-bill-wave w-5 text-emerald-400"></i> Kernel Billing
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('onboarding')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="onboarding">
+                            <button onclick="showSection('onboarding')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="onboarding">
                                 <i class="fas fa-rocket w-5 text-blue-400"></i> Onboarding
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('jobs')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="jobs">
+                            <button onclick="showSection('usage')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="usage">
+                                <i class="fas fa-microchip w-5 text-cyan-400"></i> Usage
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('console')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="console">
+                                <i class="fas fa-terminal w-5 text-emerald-400"></i> Console
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('jobs')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="jobs">
                                 <i class="fas fa-cogs w-5 text-gray-400"></i> Jobs
                             </button>
                         </li>
@@ -329,22 +463,37 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Integrations</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('ads')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="ads">
+                            <button onclick="showSection('federation')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="federation">
+                                <i class="fas fa-network-wired w-5 text-blue-400"></i> Federation
+                            </button>
+                        </li>
+                        <li>
+                            <button onclick="showSection('ads')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="ads">
                                 <i class="fas fa-ad w-5 text-purple-400"></i> Ads Manager
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('webhooks')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="webhooks">
+                            <button onclick="showSection('webhooks')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="webhooks">
                                 <i class="fas fa-bolt w-5 text-amber-400"></i> Webhooks
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('events')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="events">
+                            <button onclick="showSection('events')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="events">
                                 <i class="fas fa-broadcast-tower w-5 text-cyan-400"></i> Events
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('apikeys')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="apikeys">
+                            <button onclick="showSection('apikeys')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="apikeys">
                                 <i class="fas fa-key w-5 text-emerald-400"></i> API Keys
                             </button>
                         </li>
@@ -356,37 +505,51 @@
                     <p class="nav-group-title text-gray-500 uppercase mb-2 px-4">Security</p>
                     <ul class="space-y-1">
                         <li>
-                            <button onclick="showSection('security')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="security">
+                            <button onclick="showSection('security')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="security">
                                 <i class="fas fa-lock w-5 text-rose-400"></i> MFA & Sessions
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('immunity')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="immunity">
+                            <button onclick="showSection('immunity')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="immunity">
                                 <i class="fas fa-shield-virus w-5 text-emerald-400"></i> Immunity System
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('secrets')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="secrets">
+                            <button onclick="showSection('secrets')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="secrets">
                                 <i class="fas fa-user-secret w-5 text-amber-400"></i> Secrets
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('risk')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="risk">
+                            <button onclick="showSection('risk')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="risk">
                                 <i class="fas fa-exclamation-triangle w-5 text-rose-400"></i> Risk Analysis
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('invariants')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="invariants">
+                            <button onclick="showSection('invariants')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="invariants">
                                 <i class="fas fa-check-double w-5 text-blue-400"></i> Invariants
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('telemetry')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="telemetry">
+                            <button onclick="showSection('telemetry')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="telemetry">
                                 <i class="fas fa-chart-area w-5 text-cyan-400"></i> Telemetry
                             </button>
                         </li>
                         <li>
-                            <button onclick="showSection('capabilities')" class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm" data-section="capabilities">
+                            <button onclick="showSection('capabilities')"
+                                class="nav-item w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left hover:bg-white/5 transition-all text-sm"
+                                data-section="capabilities">
                                 <i class="fas fa-puzzle-piece w-5 text-purple-400"></i> Capabilities
                             </button>
                         </li>
@@ -404,7 +567,8 @@
                         <p id="admin-role" class="text-xs text-gray-500">Super Admin</p>
                     </div>
                 </div>
-                <button onclick="logout()" class="w-full bg-sovereign/20 text-sovereign py-2 rounded-xl hover:bg-sovereign/30 transition-all text-sm">
+                <button onclick="logout()"
+                    class="w-full bg-sovereign/20 text-sovereign py-2 rounded-xl hover:bg-sovereign/30 transition-all text-sm">
                     <i class="fas fa-sign-out-alt mr-2"></i> Sair
                 </button>
             </div>
@@ -413,11 +577,13 @@
         <!-- Main Content -->
         <main class="flex-1 overflow-auto">
             <!-- Header -->
-            <header class="border-b border-dark-border px-8 py-4 flex items-center justify-between sticky top-0 bg-dark z-10">
+            <header
+                class="border-b border-dark-border px-8 py-4 flex items-center justify-between sticky top-0 bg-dark z-10">
                 <h2 id="section-title" class="text-xl font-bold">Dashboard</h2>
                 <div class="flex items-center gap-4">
                     <span class="text-sm text-gray-400" id="last-update">Atualizado agora</span>
-                    <button onclick="refreshData()" class="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl transition-all">
+                    <button onclick="refreshData()"
+                        class="bg-white/5 hover:bg-white/10 px-4 py-2 rounded-xl transition-all">
                         <i class="fas fa-sync-alt"></i>
                     </button>
                 </div>
@@ -430,6 +596,7 @@
         </main>
     </div>
 
+    <script src="src/config.js"></script>
     <script src="src/main.js"></script>
     <script src="src/cognitive.js"></script>
     <script src="src/applications.js"></script>
@@ -451,5 +618,16 @@
     <script src="src/secrets.js"></script>
     <script src="src/risk.js"></script>
     <script src="src/capabilities.js"></script>
+    <script src="src/activity.js"></script>
+    <script src="src/explainability.js"></script>
+    <script src="src/usage.js"></script>
+    <script src="src/federation.js"></script>
+    <script src="src/autonomy.js"></script>
+    <script src="src/agents.js"></script>
+    <script src="src/memory.js"></script>
+    <script src="src/audit.js"></script>
+    <script src="src/jobs.js"></script>
+    <script src="src/shadow.js"></script>
 </body>
+
 </html>
