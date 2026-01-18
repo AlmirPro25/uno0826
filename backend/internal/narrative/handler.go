@@ -125,8 +125,8 @@ func (h *NarrativeHandler) Resolve(c *gin.Context) {
 		return
 	}
 
-	// Pegar user_id do contexto
-	userID, exists := c.Get("user_id")
+	// Pegar userID do contexto
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return

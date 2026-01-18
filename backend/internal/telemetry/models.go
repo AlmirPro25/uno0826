@@ -215,7 +215,7 @@ const (
 // Diferente de Event (fato), Decision é uma ação deliberada do kernel
 type SystemDecision struct {
 	ID          uuid.UUID  `gorm:"type:uuid;primaryKey" json:"id"`
-	AppID       uuid.UUID  `gorm:"type:uuid;index:idx_decision_app" json:"app_id"`
+	AppID       uuid.UUID  `gorm:"type:uuid;index:idx_telem_decision_app" json:"app_id"`
 	
 	// Tipo de decisão (hierárquico)
 	// Exemplos: payment.blocked, access.denied, rule.triggered, killswitch.activated

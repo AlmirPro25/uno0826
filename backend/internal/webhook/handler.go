@@ -316,7 +316,7 @@ func RegisterWebhookRoutes(r *gin.RouterGroup, service *WebhookService, authMidd
 		// Histórico e estatísticas
 		webhooks.GET("/:id/deliveries", handler.GetDeliveries)
 		webhooks.GET("/:id/stats", handler.GetStats)
-		
+
 		// Estatísticas do sistema (admin)
 		webhooks.GET("/system/stats", adminOnly, func(c *gin.Context) {
 			stats, err := statsService.GetSystemStats()
@@ -326,7 +326,7 @@ func RegisterWebhookRoutes(r *gin.RouterGroup, service *WebhookService, authMidd
 			}
 			c.JSON(http.StatusOK, stats)
 		})
-		
+
 		// Estatísticas de um app
 		webhooks.GET("/app/:app_id/stats", adminOnly, func(c *gin.Context) {
 			appID, err := uuid.Parse(c.Param("app_id"))
@@ -341,7 +341,7 @@ func RegisterWebhookRoutes(r *gin.RouterGroup, service *WebhookService, authMidd
 			}
 			c.JSON(http.StatusOK, stats)
 		})
-		
+
 		// Saúde de um endpoint
 		webhooks.GET("/:id/health", adminOnly, func(c *gin.Context) {
 			endpointID, err := uuid.Parse(c.Param("id"))
@@ -367,7 +367,7 @@ func getAppIDFromContext(c *gin.Context) (uuid.UUID, error) {
 	}
 
 	// Depois tenta do contexto (set pelo middleware)
-	if appID, exists := c.Get("app_id"); exists {
+	if appID, exists := c.Get("appID"); exists {
 		if id, ok := appID.(uuid.UUID); ok {
 			return id, nil
 		}
@@ -376,8 +376,8 @@ func getAppIDFromContext(c *gin.Context) (uuid.UUID, error) {
 		}
 	}
 
-	// Fallback: usa o user_id como app_id (para admin global)
-	if userID, exists := c.Get("user_id"); exists {
+	// Fallback: usa o userID como appID (para admin global)
+	if userID, exists := c.Get("userID"); exists {
 		if id, ok := userID.(uuid.UUID); ok {
 			return id, nil
 		}

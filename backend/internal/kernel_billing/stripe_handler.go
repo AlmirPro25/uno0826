@@ -241,7 +241,7 @@ type ResolveDivergenceRequest struct {
 // POST /admin/kernel/billing/reconciliation/divergences/:id/resolve
 func (h *ReconciliationHandler) ResolveDivergence(c *gin.Context) {
 	divergenceID := c.Param("id")
-	resolvedBy := c.GetString("user_id") // Do middleware de auth
+	resolvedBy := c.GetString("userID") // Do middleware de auth
 
 	var req ResolveDivergenceRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -338,7 +338,7 @@ func (h *AlertHandler) GetCriticalAlerts(c *gin.Context) {
 // POST /admin/kernel/billing/alerts/:id/acknowledge
 func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 	alertID := c.Param("id")
-	acknowledgedBy := c.GetString("user_id")
+	acknowledgedBy := c.GetString("userID")
 
 	if err := h.service.AcknowledgeAlert(alertID, acknowledgedBy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -352,7 +352,7 @@ func (h *AlertHandler) AcknowledgeAlert(c *gin.Context) {
 // POST /admin/kernel/billing/alerts/:id/resolve
 func (h *AlertHandler) ResolveAlert(c *gin.Context) {
 	alertID := c.Param("id")
-	resolvedBy := c.GetString("user_id")
+	resolvedBy := c.GetString("userID")
 
 	if err := h.service.ResolveAlert(alertID, resolvedBy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

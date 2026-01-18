@@ -1,4 +1,3 @@
-
 package middleware
 
 import (
@@ -18,7 +17,7 @@ const (
 	ContextAccountStatusKey = "accountStatus"
 	ContextTokenIDKey       = "tokenID"
 	ContextTokenIssuedAtKey = "tokenIssuedAt"
-	
+
 	// Fase 16: App Context Keys
 	ContextAppIDKey     = "appID"
 	ContextAppUserIDKey = "appUserID"
@@ -33,6 +32,7 @@ func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
+			utils.LogWarn("AuthMiddleware: Missing Authorization header for %s %s", c.Request.Method, c.Request.URL.Path)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token de autenticação não fornecido"})
 			c.Abort()
 			return
@@ -40,6 +40,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		parts := strings.Split(authHeader, " ")
 		if len(parts) != 2 || parts[0] != "Bearer" {
+			utils.LogWarn("AuthMiddleware: Invalid Authorization format: %s", authHeader)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Formato de token inválido"})
 			c.Abort()
 			return
@@ -48,6 +49,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		tokenString := parts[1]
 		claims, err := utils.ParseJWT(tokenString)
 		if err != nil {
+			utils.LogError("AuthMiddleware: JWT Parse failed: %v", err)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token inválido ou expirado"})
 			c.Abort()
 			return
@@ -156,4 +158,3 @@ func RequireSuperAdmin() gin.HandlerFunc {
 func AdminOnly() gin.HandlerFunc {
 	return RequireAdmin()
 }
-

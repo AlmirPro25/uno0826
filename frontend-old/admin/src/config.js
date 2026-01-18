@@ -4,7 +4,7 @@
  */
 const CONFIG = {
     // API_BASE: 'http://localhost:8080/api/v1', // Para rodar local
-    API_BASE: 'https://api.prostqs.com.br/api/v1', // URL de Produção (Oracle)
+    API_BASE: 'http://64.181.175.25:8080/api/v1', // Oracle Cloud VM
     ENV: 'production'
 };
 

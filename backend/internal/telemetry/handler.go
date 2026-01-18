@@ -5,9 +5,10 @@ import (
 	"strconv"
 	"time"
 
+	"prost-qs/backend/internal/application"
+
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"prost-qs/backend/internal/application"
 )
 
 // ========================================
@@ -35,37 +36,37 @@ func (h *TelemetryHandler) IngestEvent(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	// Type assertion para o tipo correto (Application do package application)
 	var appID uuid.UUID
-	
+
 	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
 	}
-	
+
 	var req IngestEventRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	ip := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
-	
+
 	if err := h.service.IngestEvent(appID, &req, ip, userAgent); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusCreated, gin.H{"status": "ok", "message": "Evento registrado"})
 }
 
@@ -77,22 +78,22 @@ func (h *TelemetryHandler) IngestBatch(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	var appID uuid.UUID
-	
+
 	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
 	}
-	
+
 	var req struct {
 		Events []IngestEventRequest `json:"events" binding:"required"`
 	}
@@ -100,10 +101,10 @@ func (h *TelemetryHandler) IngestBatch(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	ip := c.ClientIP()
 	userAgent := c.GetHeader("User-Agent")
-	
+
 	success := 0
 	failed := 0
 	for _, event := range req.Events {
@@ -113,7 +114,7 @@ func (h *TelemetryHandler) IngestBatch(c *gin.Context) {
 			success++
 		}
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "ok",
 		"success": success,
@@ -134,28 +135,28 @@ func (h *TelemetryHandler) GetMetrics(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	var appID uuid.UUID
-	
+
 	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
 	}
-	
+
 	snapshot, err := h.service.GetMetricsSnapshot(appID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, snapshot)
 }
 
@@ -168,13 +169,13 @@ func (h *TelemetryHandler) GetMetricsAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	snapshot, err := h.service.GetMetricsSnapshot(appID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, snapshot)
 }
 
@@ -190,35 +191,35 @@ func (h *TelemetryHandler) GetActiveSessions(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	var appID uuid.UUID
-	
+
 	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
 	}
-	
+
 	limit := 50
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 200 {
 			limit = parsed
 		}
 	}
-	
+
 	sessions, err := h.service.GetActiveSessions(appID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"sessions": sessions,
 		"total":    len(sessions),
@@ -234,20 +235,20 @@ func (h *TelemetryHandler) GetActiveSessionsAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	limit := 50
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 200 {
 			limit = parsed
 		}
 	}
-	
+
 	sessions, err := h.service.GetActiveSessions(appID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"sessions": sessions,
 		"total":    len(sessions),
@@ -266,35 +267,35 @@ func (h *TelemetryHandler) GetRecentEvents(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	var appID uuid.UUID
-	
+
 	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
 	}
-	
+
 	limit := 100
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 500 {
 			limit = parsed
 		}
 	}
-	
+
 	events, err := h.service.GetRecentEvents(appID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"events": events,
 		"total":  len(events),
@@ -309,22 +310,22 @@ func (h *TelemetryHandler) GetEventsByType(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	var appID uuid.UUID
-	
+
 	if app, ok := appInterface.(*application.Application); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
 	}
-	
+
 	// Default: últimas 24h
 	since := 24 * time.Hour
 	if s := c.Query("since"); s != "" {
@@ -332,13 +333,13 @@ func (h *TelemetryHandler) GetEventsByType(c *gin.Context) {
 			since = d
 		}
 	}
-	
+
 	counts, err := h.service.GetEventsByType(appID, since)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"events_by_type": counts,
 		"since":          since.String(),
@@ -352,7 +353,7 @@ func (h *TelemetryHandler) GetEventsByType(c *gin.Context) {
 // RegisterTelemetryRoutes registra rotas de telemetria
 func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService, appContextMiddleware, requireAppContext, authMiddleware, adminMiddleware gin.HandlerFunc) {
 	handler := NewTelemetryHandler(service)
-	
+
 	// Rotas para apps (autenticação via API Key)
 	telemetry := router.Group("/telemetry")
 	telemetry.Use(appContextMiddleware)
@@ -361,14 +362,14 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 		// Ingestão
 		telemetry.POST("/events", handler.IngestEvent)
 		telemetry.POST("/events/batch", handler.IngestBatch)
-		
+
 		// Consultas
 		telemetry.GET("/metrics", handler.GetMetrics)
 		telemetry.GET("/sessions/active", handler.GetActiveSessions)
 		telemetry.GET("/events", handler.GetRecentEvents)
 		telemetry.GET("/events/by-type", handler.GetEventsByType)
 	}
-	
+
 	// Rotas admin
 	adminTelemetry := router.Group("/admin/telemetry")
 	adminTelemetry.Use(authMiddleware)
@@ -378,20 +379,20 @@ func RegisterTelemetryRoutes(router *gin.RouterGroup, service *TelemetryService,
 		adminTelemetry.GET("/apps/:id/sessions", handler.GetActiveSessionsAdmin)
 		adminTelemetry.GET("/apps/:id/alerts", handler.GetAlertsAdmin)
 		adminTelemetry.GET("/alerts", handler.GetAllAlertsAdmin)
-		
+
 		// Alerts Management
 		adminTelemetry.GET("/alerts/filtered", handler.GetAlertsFiltered)
 		adminTelemetry.GET("/alerts/stats", handler.GetAlertStats)
 		adminTelemetry.POST("/alerts/:id/acknowledge", handler.AcknowledgeAlert)
 		adminTelemetry.POST("/alerts/acknowledge-all", handler.AcknowledgeAllAlerts)
-		
+
 		// Analytics
 		adminTelemetry.GET("/apps/:id/retention", handler.GetRetentionAdmin)
 		adminTelemetry.GET("/apps/:id/funnel", handler.GetFunnelAdmin)
 		adminTelemetry.GET("/apps/:id/engagement", handler.GetEngagementAdmin)
 		adminTelemetry.GET("/apps/:id/compare", handler.GetCompareAdmin)
 		adminTelemetry.GET("/apps/:id/top-users", handler.GetTopUsersAdmin)
-		
+
 		// Advanced Analytics
 		adminTelemetry.GET("/apps/:id/heatmap", handler.GetHeatmapAdmin)
 		adminTelemetry.GET("/apps/:id/journey", handler.GetJourneyAdmin)
@@ -413,20 +414,20 @@ func (h *TelemetryHandler) GetAlertsAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	limit := 50
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 200 {
 			limit = parsed
 		}
 	}
-	
+
 	alerts, err := h.service.GetRecentAlerts(appID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"alerts": alerts,
 		"total":  len(alerts),
@@ -442,19 +443,18 @@ func (h *TelemetryHandler) GetAllAlertsAdmin(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	
+
 	alerts, err := h.service.GetAllRecentAlerts(limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"alerts": alerts,
 		"total":  len(alerts),
 	})
 }
-
 
 // ========================================
 // ANALYTICS
@@ -469,20 +469,20 @@ func (h *TelemetryHandler) GetRetentionAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	days := 30
 	if d := c.Query("days"); d != "" {
 		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
 			days = parsed
 		}
 	}
-	
+
 	retention, err := h.service.GetRetention(appID, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"retention": retention,
 		"days":      days,
@@ -498,20 +498,20 @@ func (h *TelemetryHandler) GetFunnelAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	since := 24 * time.Hour
 	if s := c.Query("since"); s != "" {
 		if d, err := time.ParseDuration(s); err == nil {
 			since = d
 		}
 	}
-	
+
 	funnel, err := h.service.GetFunnel(appID, since)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"funnel": funnel,
 		"since":  since.String(),
@@ -527,26 +527,25 @@ func (h *TelemetryHandler) GetEngagementAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	since := 24 * time.Hour
 	if s := c.Query("since"); s != "" {
 		if d, err := time.ParseDuration(s); err == nil {
 			since = d
 		}
 	}
-	
+
 	engagement, err := h.service.GetEngagementMetrics(appID, since)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"engagement": engagement,
 		"since":      since.String(),
 	})
 }
-
 
 // GetCompareAdmin compara métricas entre dois períodos
 // GET /api/v1/admin/telemetry/apps/:id/compare
@@ -557,20 +556,20 @@ func (h *TelemetryHandler) GetCompareAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	days := 7
 	if d := c.Query("days"); d != "" {
 		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
 			days = parsed
 		}
 	}
-	
+
 	comparison, err := h.service.ComparePeriods(appID, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, comparison)
 }
 
@@ -583,27 +582,27 @@ func (h *TelemetryHandler) GetTopUsersAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	limit := 20
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
 			limit = parsed
 		}
 	}
-	
+
 	since := 7 * 24 * time.Hour
 	if s := c.Query("since"); s != "" {
 		if d, err := time.ParseDuration(s); err == nil {
 			since = d
 		}
 	}
-	
+
 	users, err := h.service.GetTopUsers(appID, since, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"users": users,
 		"total": len(users),
@@ -620,20 +619,20 @@ func (h *TelemetryHandler) GetHeatmapAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	days := 30
 	if d := c.Query("days"); d != "" {
 		if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 90 {
 			days = parsed
 		}
 	}
-	
+
 	heatmap, err := h.service.GetActivityHeatmap(appID, days)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, heatmap)
 }
 
@@ -646,20 +645,20 @@ func (h *TelemetryHandler) GetJourneyAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	since := 24 * time.Hour
 	if s := c.Query("since"); s != "" {
 		if d, err := time.ParseDuration(s); err == nil {
 			since = d
 		}
 	}
-	
+
 	journey, err := h.service.GetUserJourney(appID, since)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, journey)
 }
 
@@ -672,27 +671,27 @@ func (h *TelemetryHandler) GetGeoAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	since := 7 * 24 * time.Hour
 	if s := c.Query("since"); s != "" {
 		if d, err := time.ParseDuration(s); err == nil {
 			since = d
 		}
 	}
-	
+
 	limit := 10
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 50 {
 			limit = parsed
 		}
 	}
-	
+
 	geo, err := h.service.GetGeoDistribution(appID, since, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"countries": geo,
 		"total":     len(geo),
@@ -709,20 +708,20 @@ func (h *TelemetryHandler) GetLiveEventsAdmin(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "App ID inválido"})
 		return
 	}
-	
+
 	limit := 20
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
 			limit = parsed
 		}
 	}
-	
+
 	events, err := h.service.GetLiveEvents(appID, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"events": events,
 		"total":  len(events),
@@ -742,18 +741,18 @@ func (h *TelemetryHandler) GetAlertsFiltered(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	
-	severity := c.Query("severity") // info, warning, critical
-	source := c.Query("source")     // system, rule, manual
+
+	severity := c.Query("severity")         // info, warning, critical
+	source := c.Query("source")             // system, rule, manual
 	acknowledged := c.Query("acknowledged") // true, false
 	appIDStr := c.Query("app_id")
-	
+
 	alerts, stats, err := h.service.GetAlertsFiltered(limit, severity, source, acknowledged, appIDStr)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"alerts": alerts,
 		"total":  len(alerts),
@@ -770,20 +769,20 @@ func (h *TelemetryHandler) AcknowledgeAlert(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Alert ID inválido"})
 		return
 	}
-	
+
 	// Pegar usuário do contexto
 	acknowledgedBy := "admin"
 	if user, exists := c.Get("user_email"); exists {
 		acknowledgedBy = user.(string)
 	}
-	
+
 	if err := h.service.AcknowledgeAlert(alertID, acknowledgedBy); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Alerta reconhecido",
+		"message":  "Alerta reconhecido",
 		"alert_id": alertID,
 	})
 }
@@ -798,18 +797,18 @@ func (h *TelemetryHandler) AcknowledgeAllAlerts(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	acknowledgedBy := "admin"
 	if user, exists := c.Get("user_email"); exists {
 		acknowledgedBy = user.(string)
 	}
-	
+
 	count, err := h.service.AcknowledgeAllAlerts(req.AppID, acknowledgedBy)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Alertas reconhecidos",
 		"count":   count,
@@ -824,6 +823,6 @@ func (h *TelemetryHandler) GetAlertStats(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, stats)
 }

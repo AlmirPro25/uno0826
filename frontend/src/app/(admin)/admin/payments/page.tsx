@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Filter, Loader2, CreditCard, ChevronLeft, ChevronRight } from "lucide-react";
+import { Filter, Loader2, CreditCard, ChevronLeft, ChevronRight, Activity, DollarSign, ReceiptText } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface Payment {
     intent_id: string;
@@ -56,116 +57,143 @@ export default function AdminPaymentsPage() {
     };
 
     return (
-        <div className="space-y-6">
-            <div className="flex items-center justify-between">
+        <div className="space-y-8 pb-20 max-w-7xl mx-auto">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-red-900/20 pb-8">
                 <div>
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-amber-500">Financial Ledger</h1>
-                    <p className="text-muted-foreground text-sm mt-1">Histórico global de transações.</p>
+                    <h1 className="text-4xl font-black text-white uppercase tracking-tighter italic bg-clip-text text-transparent bg-gradient-to-r from-red-600 to-white">
+                        Financial <span className="text-red-500">Ledger</span>
+                    </h1>
+                    <p className="text-zinc-500 mt-2 font-mono text-[10px] uppercase tracking-[0.3em]">Monetary Invariants & Transactional Integrity</p>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 bg-zinc-900 p-2 rounded-xl border border-white/5">
+                        <Filter className="w-3 h-3 text-red-500 ml-1" />
+                        <select
+                            className="bg-transparent border-none focus:ring-0 text-zinc-400 text-[10px] font-black uppercase tracking-widest outline-none cursor-pointer"
+                            value={statusFilter}
+                            onChange={(e) => setStatusFilter(e.target.value)}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="confirmed">Confirmed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div className="flex items-center gap-4 bg-zinc-900/50 p-2 rounded-lg border border-white/5 w-fit">
-                <Filter className="w-4 h-4 text-zinc-500 ml-2" />
-                <select
-                    className="bg-transparent border-none focus:ring-0 text-zinc-300 text-sm outline-none cursor-pointer"
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                >
-                    <option value="">Todos os Status</option>
-                    <option value="succeeded">Sucesso</option>
-                    <option value="pending">Pendente</option>
-                    <option value="failed">Falha</option>
-                </select>
-            </div>
-
-            <div className="rounded-xl border border-white/10 bg-black/40 overflow-hidden">
-                <table className="w-full text-sm text-left">
-                    <thead className="bg-white/5 text-zinc-400 font-medium">
-                        <tr>
-                            <th className="px-6 py-4">Transação</th>
-                            <th className="px-6 py-4">Valor</th>
-                            <th className="px-6 py-4">Status</th>
-                            <th className="px-6 py-4">Data</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-white/5">
-                        {loading ? (
-                            <tr>
-                                <td colSpan={4} className="py-20 text-center text-zinc-500">
-                                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
-                                    Carregando ledger...
-                                </td>
+            <div className="rounded-[40px] border border-white/5 bg-zinc-900/20 backdrop-blur-md overflow-hidden shadow-2xl">
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="border-b border-white/5 bg-white/[0.02]">
+                                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Transaction / IntentID</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Monetary Value</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Sovereign Status</th>
+                                <th className="px-8 py-6 text-[10px] font-black text-zinc-500 uppercase tracking-[0.2em]">Sync_Time</th>
                             </tr>
-                        ) : !data || data.data.length === 0 ? (
-                            <tr>
-                                <td colSpan={4} className="py-20 text-center text-zinc-500 italic">
-                                    Nenhuma transação encontrada.
-                                </td>
-                            </tr>
-                        ) : (
-                            data.data.map((payment) => (
-                                <motion.tr
-                                    key={payment.intent_id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    className="hover:bg-white/5 transition-colors group"
-                                >
-                                    <td className="px-6 py-4 font-medium text-zinc-300">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 rounded bg-zinc-800 text-zinc-400">
-                                                <CreditCard className="w-4 h-4" />
+                        </thead>
+                        <tbody className="divide-y divide-white/5">
+                            <AnimatePresence mode="popLayout">
+                                {loading && (!data || data.data.length === 0) ? (
+                                    <tr>
+                                        <td colSpan={4} className="py-24 text-center">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <Loader2 className="w-10 h-10 animate-spin text-red-500/20" />
+                                                <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.4em] animate-pulse">Auditing Monetary Flows...</p>
                                             </div>
-                                            <div>
-                                                <div className="text-white font-mono text-xs">{payment.description || "Pagamento"}</div>
-                                                <div className="text-xs text-zinc-500 font-mono text-[10px] opacity-60">{payment.intent_id}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-4 font-mono text-white">
-                                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: payment.currency }).format(payment.amount)}
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${payment.status === 'confirmed' || payment.status === 'succeeded'
-                                            ? 'bg-green-500/10 text-green-500 border border-green-500/20'
-                                            : payment.status === 'failed'
-                                                ? 'bg-red-500/10 text-red-500 border border-red-500/20'
-                                                : 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20'
-                                            }`}>
-                                            {payment.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4 text-zinc-500 text-xs">
-                                        {new Date(payment.created_at).toLocaleString()}
-                                    </td>
-                                </motion.tr>
-                            ))
-                        )}
-                    </tbody>
-                </table>
+                                        </td>
+                                    </tr>
+                                ) : !data || data.data.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={4} className="py-24 text-center">
+                                            <p className="text-[10px] font-black text-zinc-700 uppercase tracking-[0.3em]">No transactional data in current buffer.</p>
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    data.data.map((payment, idx) => (
+                                        <motion.tr
+                                            key={payment.intent_id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: idx * 0.02 }}
+                                            className="hover:bg-red-500/[0.02] transition-colors group cursor-crosshair"
+                                        >
+                                            <td className="px-8 py-6">
+                                                <div className="flex items-center gap-4">
+                                                    <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/5 flex items-center justify-center text-emerald-500 font-black text-lg group-hover:bg-red-950/20 group-hover:border-red-500/20 transition-all shadow-xl">
+                                                        <ReceiptText className="w-6 h-6" />
+                                                    </div>
+                                                    <div className="space-y-0.5">
+                                                        <div className="text-white font-black text-sm tracking-tight uppercase group-hover:text-red-400 transition-colors">
+                                                            {payment.description || "SUBSCRIPTION_INTENT"}
+                                                        </div>
+                                                        <div className="text-[10px] text-zinc-600 font-mono tracking-tighter uppercase italic">
+                                                            UID: {payment.intent_id}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="text-lg font-black text-white tracking-tighter">
+                                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: payment.currency }).format(payment.amount)}
+                                                </div>
+                                                <div className="text-[8px] font-black text-zinc-600 uppercase tracking-widest">
+                                                    Verified by Stripe_API
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <span className={cn(
+                                                    "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                                                    payment.status === 'confirmed' || payment.status === 'succeeded'
+                                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                        : payment.status === 'failed'
+                                                            ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                )}>
+                                                    <div className={cn("h-1 w-1 rounded-full mr-2 shadow-[0_0_8px_currentColor]", (payment.status === 'confirmed' || payment.status === 'succeeded') ? 'bg-emerald-500 animate-pulse' : 'bg-red-500')} />
+                                                    {payment.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-6">
+                                                <div className="text-[10px] text-zinc-600 font-mono font-black uppercase">
+                                                    {new Date(payment.created_at).toLocaleDateString()}
+                                                </div>
+                                                <div className="text-[8px] text-zinc-700 font-mono uppercase tracking-tighter">
+                                                    {new Date(payment.created_at).toLocaleTimeString()} UTC
+                                                </div>
+                                            </td>
+                                        </motion.tr>
+                                    ))
+                                )}
+                            </AnimatePresence>
+                        </tbody>
+                    </table>
+                </div>
 
                 {!loading && data && (
-                    <div className="p-4 border-t border-white/5 flex items-center justify-between bg-white/[0.01]">
-                        <span className="text-xs font-medium text-zinc-500">
-                            Página {data.page} de {data.total_pages}
+                    <div className="p-6 border-t border-white/5 flex items-center justify-between bg-black/40">
+                        <span className="text-[9px] font-black text-zinc-500 uppercase tracking-[0.3em]">
+                            Ledger_Page <span className="text-red-500">{data.page}</span> / {data.total_pages}
                         </span>
-                        <div className="flex gap-2">
+                        <div className="flex gap-4">
                             <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handlePageChange(data.page - 1)}
                                 disabled={data.page <= 1 || loading}
-                                className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 disabled:opacity-30"
+                                className="h-8 text-[9px] font-black text-zinc-500 hover:text-red-400 uppercase tracking-widest disabled:opacity-30"
                             >
-                                <ChevronLeft className="w-4 h-4" />
+                                <ChevronLeft className="w-4 h-4 mr-1" /> Back
                             </Button>
                             <Button
-                                variant="outline"
+                                variant="ghost"
                                 size="sm"
                                 onClick={() => handlePageChange(data.page + 1)}
                                 disabled={data.page >= data.total_pages || loading}
-                                className="h-8 w-8 p-0 border-white/10 hover:bg-white/5 disabled:opacity-30"
+                                className="h-8 text-[9px] font-black text-zinc-500 hover:text-red-400 uppercase tracking-widest disabled:opacity-30"
                             >
-                                <ChevronRight className="w-4 h-4" />
+                                Next <ChevronRight className="w-4 h-4 ml-1" />
                             </Button>
                         </div>
                     </div>

@@ -85,7 +85,7 @@ func (h *AlertsHandler) ResolveAlert(c *gin.Context) {
 
 	// Obter usuário do contexto
 	resolvedBy := "admin"
-	if userID, exists := c.Get("user_id"); exists {
+	if userID, exists := c.Get("userID"); exists {
 		resolvedBy = userID.(string)
 	}
 

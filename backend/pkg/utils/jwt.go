@@ -1,8 +1,8 @@
-
 package utils
 
 import (
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -21,10 +21,11 @@ func SetJWTSecret(secret string) {
 // FASE INTEGRAÇÃO: Adicionado aud (audience) para validação de destino
 // SEGURANÇA: Adicionado jti (JWT ID) para suporte a revogação
 type JWTClaims struct {
-	UserID        string   `json:"user_id"`
-	Role          string   `json:"role"`           // user, admin, super_admin
-	AccountStatus string   `json:"account_status"` // active, suspended, banned
-	Audience      []string `json:"aud,omitempty"`  // serviços autorizados: ["ospedagem", "api"]
+	UserID        string `json:"user_id"`
+	Role          string `json:"role"`           // user, admin, super_admin
+	AccountStatus string `json:"account_status"` // active, suspended, banned
+	// Removido Audience explícito pois conflita com StandardClaims em dgrijalva/jwt-go
+	// O StandardClaims já tem o campo Audience (json: "aud")
 	jwt.StandardClaims
 }
 
@@ -55,21 +56,27 @@ func GenerateJWTWithAudience(userID, role, accountStatus string, audience []stri
 
 	now := time.Now()
 	expirationTime := now.Add(24 * time.Hour) // Token expira em 24 horas
-	
+
 	// SEGURANÇA: Gerar ID único para o token (jti) para suporte a revogação
 	tokenID := uuid.New().String()
-	
+
+	// Join audience into a single string for StandardClaims
+	audStr := ""
+	if len(audience) > 0 {
+		audStr = strings.Join(audience, ",")
+	}
+
 	claims := &JWTClaims{
 		UserID:        userID,
 		Role:          role,
 		AccountStatus: accountStatus,
-		Audience:      audience,
 		StandardClaims: jwt.StandardClaims{
 			Id:        tokenID, // jti - JWT ID para revogação
 			ExpiresAt: expirationTime.Unix(),
 			IssuedAt:  now.Unix(),
 			Issuer:    "prost-qs-kernel",
 			Subject:   userID,
+			Audience:  audStr,
 		},
 	}
 
@@ -138,7 +145,7 @@ func GenerateRefreshToken(userID, role, accountStatus string) (string, error) {
 	now := time.Now()
 	expirationTime := now.Add(7 * 24 * time.Hour)
 	tokenID := uuid.New().String()
-	
+
 	claims := &RefreshClaims{
 		UserID:        userID,
 		Role:          role,
@@ -185,4 +192,3 @@ func ParseRefreshToken(tokenString string) (*RefreshClaims, error) {
 
 	return claims, nil
 }
-

@@ -35,7 +35,7 @@ func (h *SecretsHandler) Create(c *gin.Context) {
 	}
 
 	// Pegar user ID do contexto (setado pelo middleware de auth)
-	userID, exists := c.Get("user_id")
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "não autenticado"})
 		return
@@ -82,7 +82,7 @@ func (h *SecretsHandler) Update(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID, _ := c.Get("userID")
 	updatedBy := h.parseUserID(userID)
 
 	secret, err := h.service.Update(id, req, updatedBy)
@@ -104,7 +104,7 @@ func (h *SecretsHandler) Revoke(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID, _ := c.Get("userID")
 	revokedBy := h.parseUserID(userID)
 
 	if err := h.service.Revoke(id, revokedBy); err != nil {
@@ -156,7 +156,6 @@ func (h *SecretsHandler) List(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-
 // ========================================
 // ROTAÇÃO E EXPIRAÇÃO
 // ========================================
@@ -179,7 +178,7 @@ func (h *SecretsHandler) Rotate(c *gin.Context) {
 		return
 	}
 
-	userID, _ := c.Get("user_id")
+	userID, _ := c.Get("userID")
 	rotatedBy := h.parseUserID(userID)
 
 	secret, err := h.service.Rotate(id, req.Value, rotatedBy)

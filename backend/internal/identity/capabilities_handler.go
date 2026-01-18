@@ -20,23 +20,23 @@ import (
 
 // ImplicitUser representa um usuário criado implicitamente por um app
 type ImplicitUser struct {
-	ID              uuid.UUID  `json:"id" gorm:"type:uuid;primaryKey"`
-	AppID           uuid.UUID  `json:"app_id" gorm:"type:uuid;index"`
-	ExternalRef     string     `json:"external_ref" gorm:"index"`          // Hash único do usuário
-	Name            string     `json:"name"`
-	Email           string     `json:"email" gorm:"index"`
-	Metadata        string     `json:"metadata" gorm:"type:text"`          // JSON com dados extras
-	FirstSeenAt     time.Time  `json:"first_seen_at"`
-	LastSeenAt      time.Time  `json:"last_seen_at"`
-	SessionCount    int        `json:"session_count" gorm:"default:0"`
-	TotalDurationMs int64      `json:"total_duration_ms" gorm:"default:0"`
-	CreatedAt       time.Time  `json:"created_at"`
-	UpdatedAt       time.Time  `json:"updated_at"`
+	ID              uuid.UUID `json:"id" gorm:"type:uuid;primaryKey"`
+	AppID           uuid.UUID `json:"app_id" gorm:"type:uuid;index"`
+	ExternalRef     string    `json:"external_ref" gorm:"index"` // Hash único do usuário
+	Name            string    `json:"name"`
+	Email           string    `json:"email" gorm:"index"`
+	Metadata        string    `json:"metadata" gorm:"type:text"` // JSON com dados extras
+	FirstSeenAt     time.Time `json:"first_seen_at"`
+	LastSeenAt      time.Time `json:"last_seen_at"`
+	SessionCount    int       `json:"session_count" gorm:"default:0"`
+	TotalDurationMs int64     `json:"total_duration_ms" gorm:"default:0"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
 }
 
 // ImplicitLoginRequest payload do login implícito
 type ImplicitLoginRequest struct {
-	ExternalRef string            `json:"external_ref"`           // Referência única (opcional, será gerado)
+	ExternalRef string            `json:"external_ref"` // Referência única (opcional, será gerado)
 	Name        string            `json:"name" binding:"required"`
 	Email       string            `json:"email"`
 	Age         int               `json:"age"`
@@ -65,10 +65,10 @@ func NewCapabilitiesHandler(db *gorm.DB) *CapabilitiesHandler {
 
 // EntitlementsResponse resposta do endpoint /me/entitlements
 type EntitlementsResponse struct {
-	Plan         PlanInfo           `json:"plan"`
-	Capabilities []string           `json:"capabilities"`
-	Limits       LimitsInfo         `json:"limits"`
-	Usage        UsageInfo          `json:"usage"`
+	Plan         PlanInfo   `json:"plan"`
+	Capabilities []string   `json:"capabilities"`
+	Limits       LimitsInfo `json:"limits"`
+	Usage        UsageInfo  `json:"usage"`
 }
 
 // PlanInfo informações do plano
@@ -108,7 +108,7 @@ func (h *CapabilitiesHandler) GetEntitlements(c *gin.Context) {
 
 	// Buscar plano e status
 	plan, status := h.getUserPlanAndStatus(userID)
-	
+
 	// Converter capacidades para strings
 	caps := make([]string, len(plan.Capabilities))
 	for i, cap := range plan.Capabilities {
@@ -235,7 +235,7 @@ func (h *CapabilitiesHandler) getUserPlanAndStatus(userID uuid.UUID) (*capabilit
 // countResources conta recursos do usuário
 func (h *CapabilitiesHandler) countResources(userID uuid.UUID, resourceType string) int {
 	var count int64
-	
+
 	switch resourceType {
 	case "app":
 		h.db.Table("applications").Where("owner_id = ?", userID).Count(&count)
@@ -245,7 +245,7 @@ func (h *CapabilitiesHandler) countResources(userID uuid.UUID, resourceType stri
 			Where("applications.owner_id = ?", userID).
 			Count(&count)
 	}
-	
+
 	return int(count)
 }
 
@@ -272,10 +272,10 @@ func RegisterCapabilitiesRoutes(router *gin.RouterGroup, db *gorm.DB, authMiddle
 	{
 		// Entitlements completos
 		me.GET("/entitlements", handler.GetEntitlements)
-		
+
 		// Verificar capacidade específica
 		me.GET("/capabilities/:capability", handler.CheckCapability)
-		
+
 		// Verificar limite específico
 		me.GET("/limits/:resource", handler.CheckLimit)
 	}
@@ -307,22 +307,22 @@ func (h *ImplicitLoginHandler) ImplicitLogin(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
 	}
-	
+
 	// Type assertion segura
 	type AppInfo struct {
 		ID uuid.UUID
 	}
 	var appID uuid.UUID
-	
+
 	// Tentar diferentes formas de obter o app ID
 	if app, ok := appInterface.(*AppInfo); ok {
 		appID = app.ID
-	} else if appIDStr, ok := c.Get("app_id"); ok {
+	} else if appIDStr, ok := c.Get("appID"); ok {
 		if id, err := uuid.Parse(appIDStr.(string)); err == nil {
 			appID = id
 		}
 	}
-	
+
 	if appID == uuid.Nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App ID não encontrado"})
 		return
@@ -346,9 +346,9 @@ func (h *ImplicitLoginHandler) ImplicitLogin(c *gin.Context) {
 	// Buscar ou criar usuário
 	var user ImplicitUser
 	isNewUser := false
-	
+
 	result := h.db.Where("app_id = ? AND external_ref = ?", appID, externalRef).First(&user)
-	
+
 	if result.Error == gorm.ErrRecordNotFound {
 		// Criar novo usuário
 		isNewUser = true
@@ -364,7 +364,7 @@ func (h *ImplicitLoginHandler) ImplicitLogin(c *gin.Context) {
 			CreatedAt:    time.Now(),
 			UpdatedAt:    time.Now(),
 		}
-		
+
 		// Serializar metadata
 		if req.Metadata != nil {
 			metaJSON := "{"
@@ -393,7 +393,7 @@ func (h *ImplicitLoginHandler) ImplicitLogin(c *gin.Context) {
 			metaJSON += "}"
 			user.Metadata = metaJSON
 		}
-		
+
 		if err := h.db.Create(&user).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao criar usuário"})
 			return
@@ -404,21 +404,21 @@ func (h *ImplicitLoginHandler) ImplicitLogin(c *gin.Context) {
 	} else {
 		// Atualizar last seen e session count
 		h.db.Model(&user).Updates(map[string]interface{}{
-			"last_seen_at":   time.Now(),
-			"session_count":  gorm.Expr("session_count + 1"),
-			"updated_at":     time.Now(),
+			"last_seen_at":  time.Now(),
+			"session_count": gorm.Expr("session_count + 1"),
+			"updated_at":    time.Now(),
 		})
 	}
 
 	// Gerar JWT
 	expiresAt := time.Now().Add(24 * time.Hour)
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub":      user.ID.String(),
-		"app_id":   appID.String(),
-		"name":     user.Name,
-		"type":     "implicit_user",
-		"exp":      expiresAt.Unix(),
-		"iat":      time.Now().Unix(),
+		"sub":    user.ID.String(),
+		"app_id": appID.String(),
+		"name":   user.Name,
+		"type":   "implicit_user",
+		"exp":    expiresAt.Unix(),
+		"iat":    time.Now().Unix(),
 	})
 
 	tokenString, err := token.SignedString([]byte(h.jwtSecret))
@@ -458,7 +458,7 @@ func (h *ImplicitLoginHandler) GetImplicitUser(c *gin.Context) {
 // ListImplicitUsers lista usuários implícitos de um app
 // GET /api/v1/identity/users
 func (h *ImplicitLoginHandler) ListImplicitUsers(c *gin.Context) {
-	appIDStr, exists := c.Get("app_id")
+	appIDStr, exists := c.Get("appID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "App context obrigatório"})
 		return
@@ -485,10 +485,10 @@ func RegisterImplicitLoginRoutes(router *gin.RouterGroup, db *gorm.DB, jwtSecret
 	{
 		// Login implícito - cria ou recupera usuário
 		identity.POST("/implicit-login", handler.ImplicitLogin)
-		
+
 		// Listar usuários do app
 		identity.GET("/users", handler.ListImplicitUsers)
-		
+
 		// Buscar usuário específico
 		identity.GET("/users/:id", handler.GetImplicitUser)
 	}

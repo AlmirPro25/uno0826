@@ -191,7 +191,7 @@ func getAppIDFromContext(c *gin.Context) (uuid.UUID, error) {
 	if appIDStr := c.Query("app_id"); appIDStr != "" {
 		return uuid.Parse(appIDStr)
 	}
-	if appID, exists := c.Get("app_id"); exists {
+	if appID, exists := c.Get("appID"); exists {
 		if id, ok := appID.(uuid.UUID); ok {
 			return id, nil
 		}
@@ -199,7 +199,7 @@ func getAppIDFromContext(c *gin.Context) (uuid.UUID, error) {
 			return uuid.Parse(idStr)
 		}
 	}
-	if userID, exists := c.Get("user_id"); exists {
+	if userID, exists := c.Get("userID"); exists {
 		if id, ok := userID.(uuid.UUID); ok {
 			return id, nil
 		}
@@ -211,7 +211,7 @@ func getAppIDFromContext(c *gin.Context) (uuid.UUID, error) {
 }
 
 func getUserIDFromContext(c *gin.Context) (uuid.UUID, error) {
-	if userID, exists := c.Get("user_id"); exists {
+	if userID, exists := c.Get("userID"); exists {
 		if id, ok := userID.(uuid.UUID); ok {
 			return id, nil
 		}

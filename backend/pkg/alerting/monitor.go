@@ -16,12 +16,12 @@ import (
 
 // AlertMonitor continuously monitors system health and fires alerts
 type AlertMonitor struct {
-	engine       *AlertEngine
-	warObs       *warobs.WarObservability
-	interval     time.Duration
-	stopChan     chan struct{}
-	running      bool
-	mu           sync.Mutex
+	engine   *AlertEngine
+	warObs   *warobs.WarObservability
+	interval time.Duration
+	stopChan chan struct{}
+	running  bool
+	mu       sync.Mutex
 }
 
 // MonitorConfig holds monitor configuration
@@ -171,20 +171,23 @@ func (m *AlertMonitor) checkErrorRate(stats *warobs.GlobalStats) {
 	}
 
 	errorRate := stats.ErrorRate
+	errorRate5xx := stats.ErrorRate5xx
 
-	// Check high error rate
-	if errorRate >= 10 {
+	// Check total error rate (Client + System)
+	// Less sensitive now - alerts at 20% total error rate
+	if errorRate >= 20 {
 		m.engine.FireFromRule("high_error_rate", errorRate, "monitor", map[string]string{
 			"total_requests": formatInt64(stats.TotalRequests),
 			"total_errors":   formatInt64(stats.TotalErrors),
 		})
 	}
 
-	// Check critical error rate
-	if errorRate >= 25 {
-		m.engine.FireFromRule("critical_error_rate", errorRate, "monitor", map[string]string{
+	// Check system error rate (5xx)
+	// Much more sensitive as this indicates real backend failure
+	if errorRate5xx >= 10 {
+		m.engine.FireFromRule("critical_error_rate", errorRate5xx, "monitor", map[string]string{
 			"total_requests": formatInt64(stats.TotalRequests),
-			"total_errors":   formatInt64(stats.TotalErrors),
+			"total_5xx":      formatInt64(stats.TotalErrors5xx),
 		})
 	}
 }
@@ -309,9 +312,9 @@ type AttackMonitor struct {
 	mu       sync.Mutex
 
 	// Attack detection state
-	recentBlocks     []time.Time
-	blockThreshold   int
-	blockWindow      time.Duration
+	recentBlocks   []time.Time
+	blockThreshold int
+	blockWindow    time.Duration
 }
 
 // NewAttackMonitor creates a new attack monitor
@@ -320,8 +323,8 @@ func NewAttackMonitor(engine *AlertEngine) *AttackMonitor {
 		engine:         engine,
 		stopChan:       make(chan struct{}),
 		recentBlocks:   make([]time.Time, 0),
-		blockThreshold: 10,           // 10 blocks
-		blockWindow:    time.Minute,  // in 1 minute
+		blockThreshold: 10,          // 10 blocks
+		blockWindow:    time.Minute, // in 1 minute
 	}
 }
 

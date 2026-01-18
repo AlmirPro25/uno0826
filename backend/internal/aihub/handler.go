@@ -24,17 +24,17 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 		ai.POST("/chat", h.Chat)
 		ai.POST("/chat/stream", h.ChatStream)
 		ai.POST("/configure", h.ConfigureFromChat)
-		
+
 		// Conversations
 		ai.GET("/conversations", h.ListConversations)
 		ai.GET("/conversations/:id", h.GetConversation)
 		ai.DELETE("/conversations/:id", h.DeleteConversation)
-		
+
 		// Providers
 		ai.GET("/providers", h.ListProviders)
 		ai.POST("/providers", h.ConfigureProvider)
 		ai.DELETE("/providers/:provider", h.RemoveProvider)
-		
+
 		// Actions
 		ai.GET("/actions", h.ListActions)
 	}
@@ -42,8 +42,8 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup) {
 
 // Chat handles chat requests
 func (h *Handler) Chat(c *gin.Context) {
-	appID := c.GetString("app_id")
-	userID := c.GetString("user_id")
+	appID := c.GetString("appID")
+	userID := c.GetString("userID")
 
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -62,8 +62,8 @@ func (h *Handler) Chat(c *gin.Context) {
 
 // ChatStream handles streaming chat requests
 func (h *Handler) ChatStream(c *gin.Context) {
-	appID := c.GetString("app_id")
-	userID := c.GetString("user_id")
+	appID := c.GetString("appID")
+	userID := c.GetString("userID")
 
 	var req ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -101,7 +101,7 @@ func (h *Handler) ChatStream(c *gin.Context) {
 
 	// Stream response
 	systemPrompt := h.service.buildSystemPrompt(appID, userID, req.SystemPrompt)
-	
+
 	response, err := p.ChatStream(c.Request.Context(), messages, systemPrompt, func(chunk string) {
 		c.SSEvent("chunk", gin.H{"content": chunk})
 		c.Writer.Flush()
@@ -259,7 +259,7 @@ func (h *Handler) ConfigureFromChat(c *gin.Context) {
 	// Parse command: "configure <provider> <api_key> [model]"
 	var provider, apiKey, model string
 	parts := splitCommand(req.Command)
-	
+
 	if len(parts) < 3 || parts[0] != "configure" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid command. Use: configure <provider> <api_key> [model]"})
 		return
@@ -277,9 +277,9 @@ func (h *Handler) ConfigureFromChat(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message": "Provider " + provider + " configurado com sucesso!",
+		"message":  "Provider " + provider + " configurado com sucesso!",
 		"provider": provider,
-		"model": model,
+		"model":    model,
 	})
 }
 
@@ -287,7 +287,7 @@ func splitCommand(cmd string) []string {
 	var parts []string
 	var current string
 	inQuote := false
-	
+
 	for _, r := range cmd {
 		if r == '"' {
 			inQuote = !inQuote
@@ -310,10 +310,10 @@ func splitCommand(cmd string) []string {
 func (h *Handler) InjectDefaultProvider() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		appID := c.GetString("app_id")
-		
+
 		// Try to load providers for this app
 		h.service.LoadProviders(appID)
-		
+
 		c.Next()
 	}
 }

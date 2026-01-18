@@ -4,19 +4,20 @@ import (
 	"net/http"
 	"time"
 
+	"prost-qs/backend/internal/events"
+	"prost-qs/backend/pkg/invariants"
+
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
-	"prost-qs/backend/internal/events"
-	"prost-qs/backend/pkg/invariants"
 )
 
 // ========================================
 // MULTI-APP IDENTITY MODELS
 // "Usuário ≠ Conta de App"
-// 
+//
 // Princípios:
 // 1. User é único no PROST-QS
 // 2. UserOrigin é a "certidão de nascimento" (nunca muda)
@@ -142,7 +143,7 @@ func (h *MultiAppIdentityHandler) Register(c *gin.Context) {
 	var originAppID uuid.UUID
 	if req.OriginAppID != "" {
 		originAppID, _ = uuid.Parse(req.OriginAppID)
-	} else if appIDStr, exists := c.Get("app_id"); exists {
+	} else if appIDStr, exists := c.Get("appID"); exists {
 		originAppID, _ = uuid.Parse(appIDStr.(string))
 	}
 
@@ -233,7 +234,7 @@ func (h *MultiAppIdentityHandler) Login(c *gin.Context) {
 	var requestingAppID uuid.UUID
 	if req.RequestingAppID != "" {
 		requestingAppID, _ = uuid.Parse(req.RequestingAppID)
-	} else if appIDStr, exists := c.Get("app_id"); exists {
+	} else if appIDStr, exists := c.Get("appID"); exists {
 		requestingAppID, _ = uuid.Parse(appIDStr.(string))
 	}
 
@@ -417,7 +418,8 @@ func (h *MultiAppIdentityHandler) getCapabilities(plan string) []string {
 }
 
 func (h *MultiAppIdentityHandler) generateJWT(userID uuid.UUID, email, name, role string, originAppID uuid.UUID, memberships []MembershipInfo) (string, time.Time) {
-	expiresAt := time.Now().Add(24 * time.Hour)
+	now := time.Now()
+	expiresAt := now.Add(24 * time.Hour)
 	appIDs := make([]string, len(memberships))
 	for i, m := range memberships {
 		appIDs[i] = m.AppID
@@ -431,9 +433,10 @@ func (h *MultiAppIdentityHandler) generateJWT(userID uuid.UUID, email, name, rol
 		map[string]interface{}{"email": email},
 	)
 
-	// IMPORTANTE: usar "user_id" (não "sub") para compatibilidade com AuthMiddleware
+	// IMPORTANTE: usar "user_id" e "jti" para compatibilidade com AuthMiddleware
 	claims := jwt.MapClaims{
 		"user_id":        userID.String(),
+		"jti":            uuid.New().String(), // JWT ID para revogação
 		"email":          email,
 		"name":           name,
 		"role":           role,
@@ -442,7 +445,7 @@ func (h *MultiAppIdentityHandler) generateJWT(userID uuid.UUID, email, name, rol
 		"memberships":    appIDs,
 		"type":           "global_user",
 		"exp":            expiresAt.Unix(),
-		"iat":            time.Now().Unix(),
+		"iat":            now.Unix(),
 	}
 
 	// INVARIANT: senha NUNCA pode estar no JWT

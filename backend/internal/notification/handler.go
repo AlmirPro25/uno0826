@@ -34,7 +34,7 @@ func RegisterNotificationRoutes(r *gin.RouterGroup, service *NotificationService
 
 // List retorna notificações do usuário
 func (h *NotificationHandler) List(c *gin.Context) {
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -75,7 +75,7 @@ func (h *NotificationHandler) List(c *gin.Context) {
 
 // ListUnread retorna notificações não lidas
 func (h *NotificationHandler) ListUnread(c *gin.Context) {
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -98,7 +98,7 @@ func (h *NotificationHandler) ListUnread(c *gin.Context) {
 
 // UnreadCount retorna contagem de não lidas
 func (h *NotificationHandler) UnreadCount(c *gin.Context) {
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -138,7 +138,7 @@ func (h *NotificationHandler) MarkAsRead(c *gin.Context) {
 
 // MarkAllAsRead marca todas como lidas
 func (h *NotificationHandler) MarkAllAsRead(c *gin.Context) {
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -160,7 +160,7 @@ func (h *NotificationHandler) MarkAllAsRead(c *gin.Context) {
 
 // GetPreferences retorna preferências
 func (h *NotificationHandler) GetPreferences(c *gin.Context) {
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return
@@ -183,7 +183,7 @@ func (h *NotificationHandler) GetPreferences(c *gin.Context) {
 
 // UpdatePreference atualiza preferência
 func (h *NotificationHandler) UpdatePreference(c *gin.Context) {
-	userIDStr, exists := c.Get("user_id")
+	userIDStr, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 		return

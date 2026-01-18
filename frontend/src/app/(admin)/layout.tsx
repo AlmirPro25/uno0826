@@ -18,11 +18,12 @@ import {
 import { Button } from "@/components/ui/button";
 
 const adminNav = [
-    { name: "Cognitive View", href: "/admin", icon: BrainCircuit },
+    { name: "War Dashboard", href: "/admin", icon: Activity },
+    { name: "Cognitive View", href: "/admin/intelligence", icon: BrainCircuit },
     { name: "User Management", href: "/admin/users", icon: Users },
     { name: "Financial Ledger", href: "/admin/payments", icon: DollarSign },
+    { name: "Governance", href: "/admin/governance", icon: ShieldAlert },
     { name: "System Health", href: "/admin/health", icon: Activity },
-    { name: "Security & Risk", href: "/admin/security", icon: ShieldAlert },
     { name: "Platform Settings", href: "/admin/settings", icon: Settings },
 ];
 

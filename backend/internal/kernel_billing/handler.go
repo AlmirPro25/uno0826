@@ -53,7 +53,7 @@ func (h *KernelBillingHandler) GetPlan(c *gin.Context) {
 // GET /api/v1/apps/:id/billing/subscription
 func (h *KernelBillingHandler) GetMySubscription(c *gin.Context) {
 	appID := c.Param("id")
-	
+
 	sub, err := h.service.GetOrCreateSubscription(appID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -66,7 +66,7 @@ func (h *KernelBillingHandler) GetMySubscription(c *gin.Context) {
 // POST /api/v1/apps/:id/billing/change-plan
 func (h *KernelBillingHandler) ChangePlan(c *gin.Context) {
 	appID := c.Param("id")
-	
+
 	var req struct {
 		PlanID string `json:"plan_id" binding:"required"`
 	}
@@ -91,7 +91,7 @@ func (h *KernelBillingHandler) ChangePlan(c *gin.Context) {
 // POST /api/v1/apps/:id/billing/cancel
 func (h *KernelBillingHandler) CancelSubscription(c *gin.Context) {
 	appID := c.Param("id")
-	
+
 	sub, err := h.service.CancelSubscription(appID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -112,7 +112,7 @@ func (h *KernelBillingHandler) CancelSubscription(c *gin.Context) {
 // GET /api/v1/apps/:id/billing/usage
 func (h *KernelBillingHandler) GetMyUsage(c *gin.Context) {
 	appID := c.Param("id")
-	
+
 	usage, err := h.service.GetOrCreateUsage(appID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -138,7 +138,7 @@ func (h *KernelBillingHandler) GetMyUsage(c *gin.Context) {
 // GET /api/v1/apps/:id/billing/usage/history
 func (h *KernelBillingHandler) GetUsageHistory(c *gin.Context) {
 	appID := c.Param("id")
-	
+
 	usages, err := h.service.GetUsageHistory(appID, 12) // Últimos 12 meses
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -156,7 +156,7 @@ func (h *KernelBillingHandler) GetUsageHistory(c *gin.Context) {
 // GET /api/v1/apps/:id/billing/invoices
 func (h *KernelBillingHandler) GetMyInvoices(c *gin.Context) {
 	appID := c.Param("id")
-	
+
 	invoices, err := h.service.GetInvoices(appID, 24) // Últimas 24 invoices
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
@@ -170,7 +170,7 @@ func (h *KernelBillingHandler) GetMyInvoices(c *gin.Context) {
 // GET /api/v1/apps/:app_id/billing/invoices/:invoice_id
 func (h *KernelBillingHandler) GetInvoice(c *gin.Context) {
 	invoiceID := c.Param("invoice_id")
-	
+
 	invoice, err := h.service.GetInvoiceByID(invoiceID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "invoice not found"})
@@ -214,7 +214,7 @@ func (h *KernelBillingHandler) GetAllSubscriptions(c *gin.Context) {
 // GET /api/v1/admin/kernel/billing/invoices
 func (h *KernelBillingHandler) GetAllInvoices(c *gin.Context) {
 	status := c.Query("status")
-	
+
 	query := h.service.db.Model(&KernelInvoice{}).Order("created_at DESC")
 	if status != "" {
 		query = query.Where("status = ?", status)
@@ -233,10 +233,10 @@ func (h *KernelBillingHandler) GetAllInvoices(c *gin.Context) {
 // POST /api/v1/admin/kernel/billing/invoices/:id/pay
 func (h *KernelBillingHandler) MarkInvoicePaid(c *gin.Context) {
 	invoiceID := c.Param("id")
-	
+
 	// Pegar admin do contexto
-	adminID, _ := c.Get("user_id")
-	
+	adminID, _ := c.Get("userID")
+
 	var req struct {
 		Note string `json:"note"`
 	}
@@ -258,7 +258,7 @@ func (h *KernelBillingHandler) MarkInvoicePaid(c *gin.Context) {
 // POST /api/v1/admin/kernel/billing/invoices/:id/void
 func (h *KernelBillingHandler) VoidInvoice(c *gin.Context) {
 	invoiceID := c.Param("id")
-	
+
 	var req struct {
 		Reason string `json:"reason" binding:"required"`
 	}

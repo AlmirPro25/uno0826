@@ -101,7 +101,7 @@ type AgentDecision struct {
 	ID             uuid.UUID  `gorm:"type:text;primaryKey" json:"id"`
 	AgentID        uuid.UUID  `gorm:"type:text;not null;index:idx_decision_agent" json:"agent_id"`
 	TenantID       uuid.UUID  `gorm:"type:text;not null;index:idx_decision_tenant" json:"tenant_id"`
-	AppID          *uuid.UUID `gorm:"type:text;index:idx_decision_app" json:"app_id,omitempty"`       // Fase 16: qual app originou
+	AppID          *uuid.UUID `gorm:"type:text;index:idx_agent_decision_app" json:"app_id,omitempty"`       // Fase 16: qual app originou
 	OriginApp      string     `gorm:"type:text" json:"origin_app,omitempty"`                          // Fase 16: nome do app para referência
 	Domain         string     `gorm:"type:text;not null" json:"domain"`
 	ProposedAction string     `gorm:"type:text;not null" json:"proposed_action"`

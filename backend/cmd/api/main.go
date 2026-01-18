@@ -14,11 +14,15 @@ import (
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 
+	"prost-qs/backend/docs"
+	"prost-qs/backend/internal/activity"
 	legacyad "prost-qs/backend/internal/ad"
 	"prost-qs/backend/internal/admin"
 	"prost-qs/backend/internal/ads"
 	"prost-qs/backend/internal/agent"
 	"prost-qs/backend/internal/ai"
+	"prost-qs/backend/internal/aihub"
+	"prost-qs/backend/internal/apikey"
 	"prost-qs/backend/internal/application"
 	"prost-qs/backend/internal/approval"
 	"prost-qs/backend/internal/audit"
@@ -29,6 +33,7 @@ import (
 	"prost-qs/backend/internal/command"
 	"prost-qs/backend/internal/decision"
 	"prost-qs/backend/internal/event"
+	"prost-qs/backend/internal/events"
 	"prost-qs/backend/internal/explainability"
 	"prost-qs/backend/internal/federation"
 	"prost-qs/backend/internal/financial"
@@ -39,25 +44,20 @@ import (
 	"prost-qs/backend/internal/killswitch"
 	"prost-qs/backend/internal/lighthouse"
 	"prost-qs/backend/internal/memory"
+	"prost-qs/backend/internal/narrative"
+	"prost-qs/backend/internal/notification"
 	"prost-qs/backend/internal/observability"
 	"prost-qs/backend/internal/observer"
 	"prost-qs/backend/internal/payment"
 	"prost-qs/backend/internal/policy"
 	"prost-qs/backend/internal/replication"
 	"prost-qs/backend/internal/risk"
+	"prost-qs/backend/internal/rules"
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
 	"prost-qs/backend/internal/telemetry"
-	"prost-qs/backend/internal/narrative"
-	"prost-qs/backend/internal/notification"
 	"prost-qs/backend/internal/usage"
-	"prost-qs/backend/internal/rules"
-	"prost-qs/backend/internal/activity"
-	"prost-qs/backend/internal/aihub"
 	"prost-qs/backend/internal/webhook"
-	"prost-qs/backend/internal/apikey"
-	"prost-qs/backend/internal/events"
-	"prost-qs/backend/docs"
 	"prost-qs/backend/pkg/alerting"
 	"prost-qs/backend/pkg/apigate"
 	"prost-qs/backend/pkg/capabilities"
@@ -90,6 +90,7 @@ func main() {
 	health.BuildTime = buildTime
 	health.GitCommit = gitCommit
 	log.Printf("🚀 PROST-QS %s (build: %s, commit: %s)", version, buildTime, gitCommit)
+	log.Println("DEBUG: MAIN STARTING NOW - VERSION 2.0.1 - FIX CONTEXT KEYS ENABLED")
 
 	// Carregar variáveis de ambiente do arquivo .env (se existir)
 	// Em produção, as variáveis vêm do ambiente do container
@@ -173,34 +174,20 @@ func main() {
 	// ========================================
 	r.Use(cors.New(cors.Config{
 		AllowOriginFunc: func(origin string) bool {
-			// Permitir localhost em qualquer porta
+			// Permitir localhost e IPs locais
 			if strings.HasPrefix(origin, "http://localhost:") || strings.HasPrefix(origin, "http://127.0.0.1:") {
 				return true
 			}
-			// Permitir qualquer subdomínio do Vercel
-			if strings.HasSuffix(origin, ".vercel.app") {
+			// Permitir qualquer subdomínio de prostqs.com.br e vercel.app
+			if strings.HasSuffix(origin, ".prostqs.com.br") || origin == "https://prostqs.com.br" ||
+				strings.HasSuffix(origin, ".vercel.app") || origin == "https://uno0826.onrender.com" {
 				return true
-			}
-			// Permitir domínios específicos
-			allowedOrigins := []string{
-				"https://uno0826.onrender.com",
-				"https://vox-bridge-api.onrender.com",
-				"https://frontend-prost.vercel.app",
-				"https://prostqs.com.br",
-				"https://www.prostqs.com.br",
-				"https://sce.prostqs.com.br",
-				"https://api.sce.prostqs.com.br",
-			}
-			for _, allowed := range allowedOrigins {
-				if origin == allowed {
-					return true
-				}
 			}
 			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "X-Requested-With", "X-HTTP-Method-Override", "Cache-Control", "X-Verification-ID", "X-Prost-App-Key", "X-Prost-App-Secret", "X-App-Key", "X-App-Secret"},
-		ExposeHeaders:    []string{"Content-Length"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Authorization", "Accept", "User-Agent", "X-Requested-With", "X-HTTP-Method-Override", "Cache-Control", "X-Verification-ID", "X-Prost-App-Key", "X-Prost-App-Secret", "X-App-Key", "X-App-Secret", "X-Admin-Token"},
+		ExposeHeaders:    []string{"Content-Length", "Access-Control-Allow-Origin"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
@@ -256,7 +243,7 @@ func main() {
 	// JOB SERVICE - Fila Interna
 	// ========================================
 	jobService := jobs.NewJobService(gormDB)
-	
+
 	// Iniciar worker de jobs em background
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -269,7 +256,7 @@ func main() {
 	invariantsRunner := invariants.NewRunner(gormDB, invariants.RunnerConfig{
 		Interval: 5 * time.Minute,
 		OnViolation: func(result invariants.InvariantResult) {
-			log.Printf("🚨 [INVARIANT VIOLATION] %s: %s (violations: %d)", 
+			log.Printf("🚨 [INVARIANT VIOLATION] %s: %s (violations: %d)",
 				result.Name, result.Category, result.Violations)
 		},
 	})
@@ -299,7 +286,7 @@ func main() {
 	// POLICY ENGINE - Fase 11
 	// ========================================
 	policyService := policy.NewPolicyService(gormDB)
-	
+
 	// Criar políticas padrão (idempotente)
 	if err := policyService.SeedDefaultPolicies(); err != nil {
 		log.Fatalf("❌ FATAL: Falha ao criar políticas padrão: %v", err)
@@ -365,7 +352,7 @@ func main() {
 	// ========================================
 	governedBillingService := billing.NewGovernedBillingService(billingService, policyService, killSwitchService, auditService)
 	governedAgentService := agent.NewGovernedAgentService(agentService, policyService, killSwitchService, auditService)
-	
+
 	// Fase 12: Integrar Autonomy Service
 	governedAgentService.SetAutonomyService(autonomyService)
 	// Fase 12.2: Integrar Shadow Service
@@ -488,18 +475,18 @@ func main() {
 	// ========================================
 	alertEngine := alerting.GetAlertEngine()
 	alerting.SetupDefaultChannels(alertEngine)
-	
+
 	// Configure from environment
 	alertConfig := alerting.GetConfig()
 	alertConfig.ApplyToEngine(alertEngine)
-	
+
 	// Setup persistence (optional, requires DB)
 	alertPersistence := alerting.NewAlertPersistence(gormDB)
 	alertEngine.SetPersistence(alertPersistence)
-	
+
 	// Connect API Gate to Alerting (attack detection)
 	apigate.SetBlockNotifier(alerting.RecordAPIGateBlock)
-	
+
 	// Start monitor
 	alerting.StartGlobalMonitor(ctx)
 	log.Println("✅ Alerting System inicializado (FASE 4)")
@@ -518,12 +505,12 @@ func main() {
 	log.Println("✅ Lighthouse Service inicializado (Farol P2P)")
 
 	// Middlewares globais
-	r.Use(middleware.SecurityHeaders())                            // Security Headers - PRIMEIRO
-	r.Use(apiGate.GateMiddleware())                                // API Gate (FASE 2)
-	r.Use(warobs.WarObsMiddleware(warObservability))               // War Observability (FASE 3)
-	r.Use(immunity.ProtectionMiddleware())                         // Proteção do sistema imunológico
+	r.Use(middleware.SecurityHeaders())                               // Security Headers - PRIMEIRO
+	r.Use(apiGate.GateMiddleware())                                   // API Gate (FASE 2)
+	r.Use(warobs.WarObsMiddleware(warObservability))                  // War Observability (FASE 3)
+	r.Use(immunity.ProtectionMiddleware())                            // Proteção do sistema imunológico
 	r.Use(middleware.AdvancedRateLimitMiddleware(100, 1*time.Minute)) // Rate limit avançado por endpoint
-	r.Use(middleware.RequestIDMiddleware())                        // Request ID para tracing
+	r.Use(middleware.RequestIDMiddleware())                           // Request ID para tracing
 
 	// ========================================
 	// OBSERVABILITY - Fase 22
@@ -532,7 +519,7 @@ func main() {
 	r.Use(observability.RequestIDMiddleware())
 	r.Use(observability.MetricsMiddleware())
 	// Note: LoggingMiddleware disabled to avoid duplicate logs with Gin default
-	
+
 	// Ready checker for /ready endpoint
 	readyChecker := &ReadyChecker{db: gormDB, secretsService: secretsService}
 	observability.RegisterObservabilityRoutes(r, readyChecker)
@@ -542,7 +529,7 @@ func main() {
 	// OBSERVER AGENTS - Fase 23
 	// "Agentes apenas observam, analisam e sugerem"
 	// ========================================
-	
+
 	// Agent Memory Service - Fase 24
 	agentMemoryService := observer.NewAgentMemoryService(gormDB)
 	observer.RegisterMemoryRoutes(r, agentMemoryService)
@@ -551,7 +538,7 @@ func main() {
 	} else {
 		log.Println("⚠️  Agent Memory desabilitada (AGENT_MEMORY_ENABLED != true)")
 	}
-	
+
 	// Observer Service (com memória integrada)
 	observerService := observer.NewObserverService(readyChecker, agentMemoryService)
 	observer.RegisterObserverRoutes(r, observerService)
@@ -855,7 +842,7 @@ func main() {
 		alertsHandler := financial.NewAlertsHandler(alertService)
 		idempotencyHandler := financial.NewIdempotencyHandler(idempotencyService)
 		rateLimitHandler := financial.NewRateLimitHandler(rateLimiter)
-		
+
 		// Rotas de alertas financeiros
 		adminFinancial := v1.Group("/admin/financial")
 		adminFinancial.Use(middleware.AuthMiddleware(), middleware.RequireSuperAdmin())
@@ -867,11 +854,11 @@ func main() {
 			adminFinancial.GET("/alerts/thresholds", alertsHandler.GetThresholds)
 			adminFinancial.PUT("/alerts/thresholds/:type", alertsHandler.UpdateThreshold)
 			adminFinancial.POST("/alerts/check", alertsHandler.RunAlertChecks)
-			
+
 			// Idempotência
 			adminFinancial.GET("/idempotency/stats", idempotencyHandler.GetIdempotencyStats)
 			adminFinancial.GET("/idempotency/webhooks", idempotencyHandler.GetRecentWebhooks)
-			
+
 			// Rate Limit
 			adminFinancial.GET("/ratelimit/stats", rateLimitHandler.GetRateLimitStats)
 		}
@@ -958,7 +945,7 @@ func main() {
 		// "Observação → Condição → Ação"
 		// ========================================
 		rulesService := rules.NewRulesService(gormDB)
-		
+
 		// Conectar rules ao telemetry para alertas
 		rulesService.SetAlertCallback(func(appID uuid.UUID, alertType, message string, data map[string]interface{}) {
 			// Extrair severidade do data se existir
@@ -966,7 +953,7 @@ func main() {
 			if sev, ok := data["severity"].(string); ok {
 				severity = sev
 			}
-			
+
 			// Extrair rule info
 			var ruleID *uuid.UUID
 			ruleName := ""
@@ -978,12 +965,12 @@ func main() {
 			if rn, ok := data["rule_name"].(string); ok {
 				ruleName = rn
 			}
-			
+
 			// Criar alerta no sistema de telemetria
 			telemetryService.CreateAlert(appID, alertType, severity, alertType, message, data, ruleID, ruleName)
 			log.Printf("🎯 [RULE ALERT] app=%s type=%s severity=%s msg=%s", appID, alertType, severity, message)
 		})
-		
+
 		rules.RegisterRulesRoutes(v1, rulesService, middleware.AuthMiddleware(), middleware.AdminOnly())
 		log.Println("✅ Rules Engine routes registradas (/admin/rules/*)")
 
@@ -991,13 +978,13 @@ func main() {
 		// ADD-ONS - Capabilities como SKUs
 		// "Capability primeiro. Preço depois. Agora: preço."
 		// ========================================
-		
+
 		// FAIL FAST: Validar catálogo de add-ons antes de aceitar tráfego
 		// Em produção, add-on sem Price ID = sistema não sobe
 		if err := capabilities.ValidateAddOnCatalog(); err != nil {
 			log.Fatalf("🚨 FATAL: %v", err)
 		}
-		
+
 		capabilities.RegisterAddOnRoutes(v1, gormDB, middleware.AuthMiddleware())
 		capabilities.RegisterAddOnAdminRoutes(v1, gormDB, middleware.AuthMiddleware(), middleware.AdminOnly())
 

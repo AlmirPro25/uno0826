@@ -94,7 +94,7 @@ func (h *InventoryHandler) CreateAdAccount(c *gin.Context) {
 	}
 
 	// Get user from context
-	userID, exists := c.Get("user_id")
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
@@ -125,7 +125,7 @@ func (h *InventoryHandler) CreateAdAccount(c *gin.Context) {
 // GetMyAdAccount retorna conta do usuário
 // GET /ads/accounts/me
 func (h *InventoryHandler) GetMyAdAccount(c *gin.Context) {
-	userID, exists := c.Get("user_id")
+	userID, exists := c.Get("userID")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not authenticated"})
 		return
@@ -583,7 +583,7 @@ func RegisterInventoryRoutes(router *gin.RouterGroup, service *AdsService, engin
 	ads.Use(authMiddleware)
 	{
 		// Rotas adicionais que não existem no handler.go
-		
+
 		// Campaigns - rotas extras
 		ads.GET("/campaigns", handler.ListCampaigns)
 		ads.PUT("/campaigns/:campaignId", handler.UpdateCampaign)

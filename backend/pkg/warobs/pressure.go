@@ -24,26 +24,26 @@ const (
 // PressureIndicator tracks system pressure
 type PressureIndicator struct {
 	redMetrics *REDMetrics
-	
+
 	// Thresholds
-	errorRateElevated  float64 // 5%
-	errorRateHigh      float64 // 15%
-	errorRateCritical  float64 // 30%
-	
-	latencyElevated    time.Duration // 500ms
-	latencyHigh        time.Duration // 1s
-	latencyCritical    time.Duration // 3s
-	
+	errorRateElevated float64 // 5%
+	errorRateHigh     float64 // 15%
+	errorRateCritical float64 // 30%
+
+	latencyElevated time.Duration // 500ms
+	latencyHigh     time.Duration // 1s
+	latencyCritical time.Duration // 3s
+
 	// Memory thresholds (percentage)
-	memoryElevated  float64 // 70%
-	memoryHigh      float64 // 85%
-	memoryCritical  float64 // 95%
-	
+	memoryElevated float64 // 70%
+	memoryHigh     float64 // 85%
+	memoryCritical float64 // 95%
+
 	// Goroutine thresholds
-	goroutineElevated  int // 1000
-	goroutineHigh      int // 5000
-	goroutineCritical  int // 10000
-	
+	goroutineElevated int // 1000
+	goroutineHigh     int // 5000
+	goroutineCritical int // 10000
+
 	// History for trend detection
 	history     []PressureSnapshot
 	historySize int
@@ -63,20 +63,20 @@ type PressureSnapshot struct {
 // NewPressureIndicator creates a new pressure indicator
 func NewPressureIndicator(redMetrics *REDMetrics) *PressureIndicator {
 	return &PressureIndicator{
-		redMetrics:         redMetrics,
-		errorRateElevated:  5.0,
-		errorRateHigh:      15.0,
-		errorRateCritical:  30.0,
-		latencyElevated:    500 * time.Millisecond,
-		latencyHigh:        1 * time.Second,
-		latencyCritical:    3 * time.Second,
-		memoryElevated:     70.0,
-		memoryHigh:         85.0,
-		memoryCritical:     95.0,
-		goroutineElevated:  1000,
-		goroutineHigh:      5000,
-		goroutineCritical:  10000,
-		historySize:        60, // 1 minute of snapshots
+		redMetrics:        redMetrics,
+		errorRateElevated: 5.0,
+		errorRateHigh:     15.0,
+		errorRateCritical: 30.0,
+		latencyElevated:   500 * time.Millisecond,
+		latencyHigh:       1 * time.Second,
+		latencyCritical:   3 * time.Second,
+		memoryElevated:    70.0,
+		memoryHigh:        85.0,
+		memoryCritical:    95.0,
+		goroutineElevated: 1000,
+		goroutineHigh:     5000,
+		goroutineCritical: 10000,
+		historySize:       60, // 1 minute of snapshots
 	}
 }
 
@@ -86,16 +86,24 @@ func (p *PressureIndicator) GetCurrentPressure() *PressureReport {
 		Timestamp:  time.Now(),
 		Components: make(map[string]ComponentPressure),
 	}
-	
-	// Error rate pressure
+
+	// Error rate pressure (5xx - System health)
 	globalStats := p.redMetrics.GetGlobalStats()
-	errorPressure := p.calculateErrorPressure(globalStats.ErrorRate)
+	errorPressure := p.calculateErrorPressure(globalStats.ErrorRate5xx)
 	report.Components["error_rate"] = ComponentPressure{
 		Level:   errorPressure,
-		Value:   globalStats.ErrorRate,
-		Message: p.getErrorMessage(globalStats.ErrorRate, errorPressure),
+		Value:   globalStats.ErrorRate5xx,
+		Message: "System (5xx) " + p.getErrorMessage(globalStats.ErrorRate5xx, errorPressure),
 	}
-	
+
+	// Total error rate (Client + System)
+	errorAllPressure := p.calculateErrorPressure(globalStats.ErrorRate)
+	report.Components["error_rate_all"] = ComponentPressure{
+		Level:   errorAllPressure,
+		Value:   globalStats.ErrorRate,
+		Message: "Total (4xx+5xx) " + p.getErrorMessage(globalStats.ErrorRate, errorAllPressure),
+	}
+
 	// Latency pressure (from slowest endpoints)
 	slowest := p.redMetrics.GetSlowestEndpoints(5)
 	var avgLatency time.Duration
@@ -112,7 +120,7 @@ func (p *PressureIndicator) GetCurrentPressure() *PressureReport {
 		Value:   float64(avgLatency.Milliseconds()),
 		Message: p.getLatencyMessage(avgLatency, latencyPressure),
 	}
-	
+
 	// Memory pressure
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -123,7 +131,7 @@ func (p *PressureIndicator) GetCurrentPressure() *PressureReport {
 		Value:   memoryPercent,
 		Message: p.getMemoryMessage(memoryPercent, memoryPressure),
 	}
-	
+
 	// Goroutine pressure
 	goroutineCount := runtime.NumGoroutine()
 	goroutinePressure := p.calculateGoroutinePressure(goroutineCount)
@@ -132,25 +140,24 @@ func (p *PressureIndicator) GetCurrentPressure() *PressureReport {
 		Value:   float64(goroutineCount),
 		Message: p.getGoroutineMessage(goroutineCount, goroutinePressure),
 	}
-	
+
 	// Calculate overall pressure (worst of all)
 	report.OverallLevel = p.calculateOverallPressure(report.Components)
 	report.OverallMessage = p.getOverallMessage(report.OverallLevel)
-	
+
 	// Store snapshot
 	p.storeSnapshot(report, globalStats.ErrorRate, avgLatency, memoryPercent, goroutineCount)
-	
+
 	return report
 }
 
-
 // PressureReport contains full pressure analysis
 type PressureReport struct {
-	Timestamp      time.Time                     `json:"timestamp"`
-	OverallLevel   PressureLevel                 `json:"overall_level"`
-	OverallMessage string                        `json:"overall_message"`
-	Components     map[string]ComponentPressure  `json:"components"`
-	Trend          string                        `json:"trend"` // improving, stable, degrading
+	Timestamp      time.Time                    `json:"timestamp"`
+	OverallLevel   PressureLevel                `json:"overall_level"`
+	OverallMessage string                       `json:"overall_message"`
+	Components     map[string]ComponentPressure `json:"components"`
+	Trend          string                       `json:"trend"` // improving, stable, degrading
 }
 
 // ComponentPressure holds pressure for a single component
@@ -215,20 +222,20 @@ func (p *PressureIndicator) calculateGoroutinePressure(count int) PressureLevel 
 
 func (p *PressureIndicator) calculateOverallPressure(components map[string]ComponentPressure) PressureLevel {
 	worst := PressureNormal
-	
+
 	levelOrder := map[PressureLevel]int{
 		PressureNormal:   0,
 		PressureElevated: 1,
 		PressureHigh:     2,
 		PressureCritical: 3,
 	}
-	
+
 	for _, comp := range components {
 		if levelOrder[comp.Level] > levelOrder[worst] {
 			worst = comp.Level
 		}
 	}
-	
+
 	return worst
 }
 
@@ -301,7 +308,7 @@ func (p *PressureIndicator) getOverallMessage(level PressureLevel) string {
 func (p *PressureIndicator) storeSnapshot(report *PressureReport, errorRate float64, latency time.Duration, memory float64, goroutines int) {
 	p.historyMu.Lock()
 	defer p.historyMu.Unlock()
-	
+
 	snapshot := PressureSnapshot{
 		Timestamp:      report.Timestamp,
 		ErrorRate:      errorRate,
@@ -310,7 +317,7 @@ func (p *PressureIndicator) storeSnapshot(report *PressureReport, errorRate floa
 		GoroutineCount: goroutines,
 		Level:          report.OverallLevel,
 	}
-	
+
 	p.history = append(p.history, snapshot)
 	if len(p.history) > p.historySize {
 		p.history = p.history[1:]
@@ -321,14 +328,14 @@ func (p *PressureIndicator) storeSnapshot(report *PressureReport, errorRate floa
 func (p *PressureIndicator) GetTrend() string {
 	p.historyMu.Lock()
 	defer p.historyMu.Unlock()
-	
+
 	if len(p.history) < 5 {
 		return "insufficient_data"
 	}
-	
+
 	// Compare first half vs second half
 	mid := len(p.history) / 2
-	
+
 	var firstHalfErrors, secondHalfErrors float64
 	for i := 0; i < mid; i++ {
 		firstHalfErrors += p.history[i].ErrorRate
@@ -336,10 +343,10 @@ func (p *PressureIndicator) GetTrend() string {
 	for i := mid; i < len(p.history); i++ {
 		secondHalfErrors += p.history[i].ErrorRate
 	}
-	
+
 	firstAvg := firstHalfErrors / float64(mid)
 	secondAvg := secondHalfErrors / float64(len(p.history)-mid)
-	
+
 	diff := secondAvg - firstAvg
 	if diff > 2 {
 		return "degrading"
@@ -354,7 +361,7 @@ func (p *PressureIndicator) GetTrend() string {
 func (p *PressureIndicator) GetHistory() []PressureSnapshot {
 	p.historyMu.Lock()
 	defer p.historyMu.Unlock()
-	
+
 	result := make([]PressureSnapshot, len(p.history))
 	copy(result, p.history)
 	return result
