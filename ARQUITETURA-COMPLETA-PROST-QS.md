@@ -242,8 +242,8 @@
 │  └─ X-Prost-App-Secret                                                      │
 │                                                                             │
 │  CREDENCIAIS:                                                               │
-│  ├─ Key: pq_pk_c5f3a308b7fd081b33d72fcc04284662                             │
-│  └─ Secret: pq_sk_031cdd53c49f43bba255bbb86d9cf6a819930f4dfba632804...      │
+│  ├─ Key: pq_pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx                             │
+│  └─ Secret: pq_sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx      │
 │                                                                             │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```

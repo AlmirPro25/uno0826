@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -138,9 +138,9 @@ func TestActivityService_GetSecurityActivities(t *testing.T) {
 	userID := uuid.New()
 
 	// Criar atividades de diferentes severidades
-	service.LogActivity(userID, nil, ActivityLogin, "Login", nil, "1.1.1.1", "UA", true)           // info
-	service.LogActivity(userID, nil, ActivityLoginFailed, "Falha", nil, "1.1.1.1", "UA", false)    // warning
-	service.LogActivity(userID, nil, ActivityKillSwitch, "Kill", nil, "1.1.1.1", "UA", true)       // critical
+	service.LogActivity(userID, nil, ActivityLogin, "Login", nil, "1.1.1.1", "UA", true)        // info
+	service.LogActivity(userID, nil, ActivityLoginFailed, "Falha", nil, "1.1.1.1", "UA", false) // warning
+	service.LogActivity(userID, nil, ActivityKillSwitch, "Kill", nil, "1.1.1.1", "UA", true)    // critical
 
 	activities, err := service.GetSecurityActivities(10)
 	require.NoError(t, err)

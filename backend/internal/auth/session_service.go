@@ -79,11 +79,11 @@ func (s *SessionService) CreateSession(userID uuid.UUID, token, deviceInfo, ipAd
 // GetUserSessions retorna todas as sessões ativas de um usuário
 func (s *SessionService) GetUserSessions(userID uuid.UUID, currentToken string) ([]Session, error) {
 	var sessions []Session
-	
+
 	err := s.db.Where("user_id = ? AND revoked_at IS NULL AND expires_at > ?", userID, time.Now()).
 		Order("last_activity DESC").
 		Find(&sessions).Error
-	
+
 	if err != nil {
 		return nil, fmt.Errorf("erro ao buscar sessões: %w", err)
 	}
@@ -102,15 +102,15 @@ func (s *SessionService) GetUserSessions(userID uuid.UUID, currentToken string) 
 // RevokeSession revoga uma sessão específica
 func (s *SessionService) RevokeSession(userID, sessionID uuid.UUID) error {
 	now := time.Now()
-	
+
 	result := s.db.Model(&Session{}).
 		Where("id = ? AND user_id = ? AND revoked_at IS NULL", sessionID, userID).
 		Update("revoked_at", now)
-	
+
 	if result.Error != nil {
 		return fmt.Errorf("erro ao revogar sessão: %w", result.Error)
 	}
-	
+
 	if result.RowsAffected == 0 {
 		return fmt.Errorf("sessão não encontrada ou já revogada")
 	}
@@ -122,11 +122,11 @@ func (s *SessionService) RevokeSession(userID, sessionID uuid.UUID) error {
 func (s *SessionService) RevokeAllSessions(userID uuid.UUID, exceptToken string) (int64, error) {
 	now := time.Now()
 	exceptHash := hashToken(exceptToken)
-	
+
 	result := s.db.Model(&Session{}).
 		Where("user_id = ? AND revoked_at IS NULL AND token_hash != ?", userID, exceptHash).
 		Update("revoked_at", now)
-	
+
 	if result.Error != nil {
 		return 0, fmt.Errorf("erro ao revogar sessões: %w", result.Error)
 	}
@@ -137,11 +137,11 @@ func (s *SessionService) RevokeAllSessions(userID uuid.UUID, exceptToken string)
 // RevokeAllUserSessions revoga TODAS as sessões de um usuário (admin)
 func (s *SessionService) RevokeAllUserSessions(userID uuid.UUID) (int64, error) {
 	now := time.Now()
-	
+
 	result := s.db.Model(&Session{}).
 		Where("user_id = ? AND revoked_at IS NULL", userID).
 		Update("revoked_at", now)
-	
+
 	if result.Error != nil {
 		return 0, fmt.Errorf("erro ao revogar sessões: %w", result.Error)
 	}
@@ -152,7 +152,7 @@ func (s *SessionService) RevokeAllUserSessions(userID uuid.UUID) (int64, error) 
 // UpdateActivity atualiza última atividade da sessão
 func (s *SessionService) UpdateActivity(token string) error {
 	tokenHash := hashToken(token)
-	
+
 	return s.db.Model(&Session{}).
 		Where("token_hash = ? AND revoked_at IS NULL", tokenHash).
 		Update("last_activity", time.Now()).Error
@@ -161,12 +161,12 @@ func (s *SessionService) UpdateActivity(token string) error {
 // IsSessionValid verifica se uma sessão é válida
 func (s *SessionService) IsSessionValid(token string) bool {
 	tokenHash := hashToken(token)
-	
+
 	var count int64
 	s.db.Model(&Session{}).
 		Where("token_hash = ? AND revoked_at IS NULL AND expires_at > ?", tokenHash, time.Now()).
 		Count(&count)
-	
+
 	return count > 0
 }
 
@@ -174,30 +174,30 @@ func (s *SessionService) IsSessionValid(token string) bool {
 func (s *SessionService) CleanupExpiredSessions() (int64, error) {
 	result := s.db.Where("expires_at < ? OR revoked_at IS NOT NULL", time.Now().Add(-24*time.Hour)).
 		Delete(&Session{})
-	
+
 	return result.RowsAffected, result.Error
 }
 
 // GetSessionStats retorna estatísticas de sessões
 func (s *SessionService) GetSessionStats(userID uuid.UUID) (*SessionStats, error) {
 	var stats SessionStats
-	
+
 	// Total de sessões ativas
 	s.db.Model(&Session{}).
 		Where("user_id = ? AND revoked_at IS NULL AND expires_at > ?", userID, time.Now()).
 		Count(&stats.ActiveSessions)
-	
+
 	// Sessões nos últimos 7 dias
 	s.db.Model(&Session{}).
 		Where("user_id = ? AND created_at > ?", userID, time.Now().Add(-7*24*time.Hour)).
 		Count(&stats.SessionsLast7Days)
-	
+
 	// Última atividade
 	var lastSession Session
 	if err := s.db.Where("user_id = ?", userID).Order("last_activity DESC").First(&lastSession).Error; err == nil {
 		stats.LastActivity = lastSession.LastActivity
 	}
-	
+
 	// IPs únicos
 	var ips []string
 	s.db.Model(&Session{}).
@@ -226,7 +226,7 @@ func hashToken(token string) string {
 // parseDeviceInfo extrai informações do dispositivo do User-Agent
 func parseDeviceInfo(userAgent string) string {
 	ua := strings.ToLower(userAgent)
-	
+
 	// Detectar SO
 	var os string
 	switch {
@@ -234,16 +234,16 @@ func parseDeviceInfo(userAgent string) string {
 		os = "Windows"
 	case strings.Contains(ua, "mac"):
 		os = "macOS"
-	case strings.Contains(ua, "linux"):
-		os = "Linux"
 	case strings.Contains(ua, "android"):
 		os = "Android"
 	case strings.Contains(ua, "iphone") || strings.Contains(ua, "ipad"):
 		os = "iOS"
+	case strings.Contains(ua, "linux"):
+		os = "Linux"
 	default:
 		os = "Unknown"
 	}
-	
+
 	// Detectar navegador
 	var browser string
 	switch {
@@ -258,6 +258,6 @@ func parseDeviceInfo(userAgent string) string {
 	default:
 		browser = "Unknown"
 	}
-	
+
 	return fmt.Sprintf("%s • %s", browser, os)
 }

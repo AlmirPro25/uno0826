@@ -4,10 +4,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
 
@@ -101,7 +101,7 @@ func TestAPIKeyService_ExpiredKey(t *testing.T) {
 
 	appID := uuid.New()
 	userID := uuid.New()
-	
+
 	// Criar key que já expirou
 	expiredAt := time.Now().Add(-1 * time.Hour)
 	_, rawKey, _ := service.CreateKey(appID, userID, "Expired Key", []APIKeyScope{ScopeRead}, "", &expiredAt)

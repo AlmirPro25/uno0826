@@ -11,6 +11,18 @@
 *.exe
 *.exe~
 
+# Linux binaries (NUNCA commitar - muito grandes)
+prost-qs-linux
+prost-qs-linux-new
+/backend/prost-qs-linux
+/backend/prost-qs-linux-new
+/backend/api.exe
+/backend/main.exe
+
+# Zip/Archives (NUNCA commitar - usar releases)
+*.zip
+backend.zip
+
 # Database (NUNCA commitar banco de dados)
 /backend/data/
 *.db

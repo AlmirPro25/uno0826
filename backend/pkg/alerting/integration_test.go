@@ -18,7 +18,7 @@ import (
 func TestIntegration_MonitorToAlert(t *testing.T) {
 	// Create fresh instances
 	engine := NewAlertEngine()
-	warObs := warobs.NewWarObservability()
+	warObs := warobs.NewWarObservability(nil, nil)
 
 	// Create a test channel to capture alerts
 	var receivedAlerts []*Alert

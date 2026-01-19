@@ -77,7 +77,7 @@ print_step "Buildando aplicação..."
 BUILD_TIME=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
 GIT_COMMIT=$(git rev-parse --short HEAD)
 
-go build \
+CGO_ENABLED=0 go build \
     -ldflags="-X main.Version=${GIT_COMMIT} -X main.BuildTime=${BUILD_TIME}" \
     -o "$BINARY_NAME" \
     cmd/api/main.go

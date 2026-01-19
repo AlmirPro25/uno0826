@@ -75,8 +75,14 @@ func (w *WarObservability) StartDefenseWorker(interval time.Duration) {
 
 // GetDashboard returns a complete dashboard view
 func (w *WarObservability) GetDashboard() *Dashboard {
-	recentIncidents, _ := w.Persistence.GetRecentIncidents(24) // Last 24h
-	recentEvents, _ := w.Persistence.GetRecentKernelEvents(10)
+	var recentIncidents []Incident
+	var recentEvents []KernelEvent
+
+	// Only fetch from persistence if available
+	if w.Persistence != nil {
+		recentIncidents, _ = w.Persistence.GetRecentIncidents(24) // Last 24h
+		recentEvents, _ = w.Persistence.GetRecentKernelEvents(10)
+	}
 
 	return &Dashboard{
 		GlobalStats:      w.RED.GetGlobalStats(),

@@ -252,16 +252,30 @@ func (p *PressureIndicator) isSustained(now time.Time, component string, minLeve
 
 	// Check recent history
 	matchCount := 0
-	for i := len(p.history) - 1; i >= 0 && len(p.history)-i < count; i-- {
+	// Bug fix: use <= count to check all requested snapshots
+	for i := len(p.history) - 1; i >= 0 && len(p.history)-i <= count; i-- {
 		snap := p.history[i]
 		if level, ok := snap.ComponentLevels[component]; ok {
-			if level >= minLevel {
+			// Compare severity using the same logic as calculateOverallPressure
+			if p.comparePressureLevels(level, minLevel) >= 0 {
 				matchCount++
 			}
 		}
 	}
 
 	return matchCount >= count
+}
+
+// comparePressureLevels compares two pressure levels. Returns >0 if a > b, 0 if a == b, <0 if a < b
+func (p *PressureIndicator) comparePressureLevels(a, b PressureLevel) int {
+	levelOrder := map[PressureLevel]int{
+		PressureNormal:   0,
+		PressureElevated: 1,
+		PressureHigh:     2,
+		PressureCritical: 3,
+	}
+
+	return levelOrder[a] - levelOrder[b]
 }
 
 // PressureReport contains full pressure analysis

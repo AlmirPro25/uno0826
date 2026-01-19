@@ -513,8 +513,8 @@ GET  /api/v1/identity/profile    → Perfil completo com memberships
 ```env
 PROSTQS_URL=https://uno0826.onrender.com
 PROSTQS_APP_ID=011c6e88-9556-43ff-ad4e-27e20a5f5ea5
-PROSTQS_APP_KEY=pq_pk_c5f3a308b7fd081b33d72fcc04284662
-PROSTQS_APP_SECRET=pq_sk_031cdd53c49f43bba255bbb86d9cf6a819930f4dfba632804eeb007df064ec50
+PROSTQS_APP_KEY=pq_pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+PROSTQS_APP_SECRET=pq_sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ---

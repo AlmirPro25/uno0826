@@ -36,24 +36,24 @@ const (
 	ActivityPasswordChanged ActivityType = "auth.password_changed"
 	ActivitySessionRevoked  ActivityType = "auth.session_revoked"
 
-	ActivityAppCreated     ActivityType = "app.created"
-	ActivityAppUpdated     ActivityType = "app.updated"
-	ActivityAppDeleted     ActivityType = "app.deleted"
-	ActivityAppSuspended   ActivityType = "app.suspended"
-	ActivityAPIKeyCreated  ActivityType = "app.api_key_created"
-	ActivityAPIKeyRevoked  ActivityType = "app.api_key_revoked"
+	ActivityAppCreated    ActivityType = "app.created"
+	ActivityAppUpdated    ActivityType = "app.updated"
+	ActivityAppDeleted    ActivityType = "app.deleted"
+	ActivityAppSuspended  ActivityType = "app.suspended"
+	ActivityAPIKeyCreated ActivityType = "app.api_key_created"
+	ActivityAPIKeyRevoked ActivityType = "app.api_key_revoked"
 
 	ActivityBillingUpgrade   ActivityType = "billing.upgrade"
 	ActivityBillingDowngrade ActivityType = "billing.downgrade"
 	ActivityBillingCanceled  ActivityType = "billing.canceled"
 	ActivityPaymentFailed    ActivityType = "billing.payment_failed"
 
-	ActivityRuleCreated  ActivityType = "rule.created"
-	ActivityRuleUpdated  ActivityType = "rule.updated"
-	ActivityRuleDeleted  ActivityType = "rule.deleted"
+	ActivityRuleCreated   ActivityType = "rule.created"
+	ActivityRuleUpdated   ActivityType = "rule.updated"
+	ActivityRuleDeleted   ActivityType = "rule.deleted"
 	ActivityRuleTriggered ActivityType = "rule.triggered"
 
-	ActivitySecretCreated ActivityType = "secret.created"
+	ActivitySecretCreated  ActivityType = "secret.created"
 	ActivitySecretAccessed ActivityType = "secret.accessed"
 	ActivitySecretDeleted  ActivityType = "secret.deleted"
 
@@ -82,7 +82,7 @@ type Activity struct {
 	IPAddress   string           `gorm:"size:45" json:"ip_address"`
 	UserAgent   string           `gorm:"size:500" json:"user_agent"`
 	Location    string           `gorm:"size:100" json:"location,omitempty"`
-	Success     bool             `gorm:"default:true" json:"success"`
+	Success     bool             `json:"success"`
 	CreatedAt   time.Time        `gorm:"index" json:"created_at"`
 }
 
@@ -108,7 +108,7 @@ func (s *ActivityService) LogActivity(
 	success bool,
 ) (*Activity, error) {
 	severity := getSeverity(activityType, success)
-	
+
 	metadataJSON := ""
 	if metadata != nil {
 		if data, err := json.Marshal(metadata); err == nil {
@@ -244,13 +244,13 @@ func (s *ActivityService) GetActivityStats(userID uuid.UUID) (*ActivityStats, er
 
 // ActivityStats estatísticas de atividades
 type ActivityStats struct {
-	UserID                uuid.UUID               `json:"user_id"`
-	TotalActivities       int64                   `json:"total_activities"`
-	ActivitiesLast7Days   int64                   `json:"activities_last_7_days"`
-	LoginsLast30Days      int64                   `json:"logins_last_30_days"`
+	UserID                 uuid.UUID              `json:"user_id"`
+	TotalActivities        int64                  `json:"total_activities"`
+	ActivitiesLast7Days    int64                  `json:"activities_last_7_days"`
+	LoginsLast30Days       int64                  `json:"logins_last_30_days"`
 	FailedLoginsLast30Days int64                  `json:"failed_logins_last_30_days"`
-	LastActivity          time.Time               `json:"last_activity"`
-	ByType                map[ActivityType]int64  `json:"by_type"`
+	LastActivity           time.Time              `json:"last_activity"`
+	ByType                 map[ActivityType]int64 `json:"by_type"`
 }
 
 // CleanupOldActivities remove atividades antigas (job de limpeza)

@@ -187,5 +187,5 @@ X-App-Secret: pq_sk_xxx
 - Slug: `meu-primeiro-app`
 
 **Credential**: Production
-- Public Key: `pq_pk_91eb3bac7a53b6222630a6660882f6b2`
-- Secret: `pq_sk_d0d353f2e10d7cf21d6d078622c7f996390a8d9a52a9896e0ea1bfa0237394e9`
+- Public Key: `pq_pk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`
+- Secret: `pq_sk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx`

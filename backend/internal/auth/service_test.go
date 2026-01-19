@@ -4,12 +4,13 @@ import (
 	"os"
 	"testing"
 
+	"prost-qs/backend/internal/identity"
+
 	"github.com/glebarez/sqlite"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
-	"prost-qs/backend/internal/identity"
 )
 
 func init() {
@@ -67,9 +68,11 @@ func TestRegisterUserSuperAdmin(t *testing.T) {
 	db := setupAuthTestDB(t)
 	service := createAuthTestService(t, db)
 
-	// Definir email de super admin
+	// Definir email de super admin e token de bootstrap
 	os.Setenv("SUPER_ADMIN_EMAIL", "admin@example.com")
+	os.Setenv("SUPER_ADMIN_BOOTSTRAP_TOKEN", "test-token-123")
 	defer os.Unsetenv("SUPER_ADMIN_EMAIL")
+	defer os.Unsetenv("SUPER_ADMIN_BOOTSTRAP_TOKEN")
 
 	user, err := service.RegisterUser("admin", "password123", "admin@example.com")
 
@@ -107,7 +110,7 @@ func TestLoginUserInvalidPassword(t *testing.T) {
 	_, _, _, err = service.LoginUser("testuser", "wrongpassword", "")
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "senha inválida")
+	assert.Contains(t, err.Error(), "credenciais inválidas")
 }
 
 func TestLoginUserNotFound(t *testing.T) {
@@ -118,7 +121,7 @@ func TestLoginUserNotFound(t *testing.T) {
 	_, _, _, err := service.LoginUser("nonexistent", "password123", "")
 
 	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "não encontrado")
+	assert.Contains(t, err.Error(), "credenciais inválidas")
 }
 
 // ===========================================
