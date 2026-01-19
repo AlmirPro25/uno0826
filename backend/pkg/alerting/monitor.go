@@ -2,6 +2,7 @@ package alerting
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"sync"
 	"time"
@@ -415,11 +416,11 @@ func QuarantineAlert(engine *AlertEngine, entityType, entityID, reason string) {
 // ========================================
 
 func formatInt64(n int64) string {
-	return string(rune(n))
+	return fmt.Sprintf("%d", n)
 }
 
 func formatFloat(f float64) string {
-	return string(rune(int(f * 100)))
+	return fmt.Sprintf("%.2f", f)
 }
 
 // ========================================

@@ -13,13 +13,15 @@ import {
     LogOut,
     BrainCircuit,
     Settings,
-    DollarSign
+    DollarSign,
+    Cpu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const adminNav = [
     { name: "War Dashboard", href: "/admin", icon: Activity },
     { name: "Cognitive View", href: "/admin/intelligence", icon: BrainCircuit },
+    { name: "Sovereign Framework", href: "/admin/sovereign", icon: Cpu },
     { name: "User Management", href: "/admin/users", icon: Users },
     { name: "Financial Ledger", href: "/admin/payments", icon: DollarSign },
     { name: "Governance", href: "/admin/governance", icon: ShieldAlert },

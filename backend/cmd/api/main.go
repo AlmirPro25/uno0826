@@ -20,7 +20,16 @@ import (
 	"prost-qs/backend/internal/admin"
 	"prost-qs/backend/internal/ads"
 	"prost-qs/backend/internal/agent"
+	billing_agent "prost-qs/backend/internal/agents/billing"
+	content_agent "prost-qs/backend/internal/agents/content"
+	identity_agent "prost-qs/backend/internal/agents/identity"
+	memory_agent "prost-qs/backend/internal/agents/memory"
+	policy_agent "prost-qs/backend/internal/agents/policy"
+	"prost-qs/backend/internal/agents/procurement"
+	sales_agent "prost-qs/backend/internal/agents/sales"
+	"prost-qs/backend/internal/agents/sales_negotiator"
 	"prost-qs/backend/internal/ai"
+	"prost-qs/backend/internal/ai/cognitive"
 	"prost-qs/backend/internal/aihub"
 	"prost-qs/backend/internal/apikey"
 	"prost-qs/backend/internal/application"
@@ -53,9 +62,11 @@ import (
 	"prost-qs/backend/internal/replication"
 	"prost-qs/backend/internal/risk"
 	"prost-qs/backend/internal/rules"
+	"prost-qs/backend/internal/sales"
 	"prost-qs/backend/internal/secrets"
 	"prost-qs/backend/internal/shadow"
 	"prost-qs/backend/internal/telemetry"
+	"prost-qs/backend/internal/ucp"
 	"prost-qs/backend/internal/usage"
 	"prost-qs/backend/internal/webhook"
 	"prost-qs/backend/pkg/alerting"
@@ -66,6 +77,7 @@ import (
 	"prost-qs/backend/pkg/immunity"
 	"prost-qs/backend/pkg/invariants"
 	"prost-qs/backend/pkg/localstore"
+	"prost-qs/backend/pkg/mcp"
 	"prost-qs/backend/pkg/middleware"
 	distobs "prost-qs/backend/pkg/observability"
 	"prost-qs/backend/pkg/utils"
@@ -162,8 +174,30 @@ func main() {
 	// LOCAL STORE - SQLite local + sync assíncrono
 	// "Escreve local primeiro, sync depois"
 	// ========================================
-	if err := localstore.InitFromEnv(gormDB); err != nil {
-		log.Printf("⚠️  LocalStore não inicializado: %v", err)
+
+	// Determine remote sync DB (Neon)
+	// Priority: SYNC_DATABASE_URL > DATABASE_URL (if remote)
+	var remoteSyncDB *gorm.DB
+	syncURL := os.Getenv("SYNC_DATABASE_URL")
+	if syncURL != "" {
+		var errSync error
+		remoteSyncDB, errSync = db.InitPostgres(syncURL)
+		if errSync != nil {
+			log.Printf("⚠️  Falha ao conectar ao SYNC_DATABASE_URL: %v", errSync)
+		} else {
+			log.Println("✅ Remote Sync DB conectado via SYNC_DATABASE_URL")
+		}
+	} else if databaseURL != "" {
+		remoteSyncDB = gormDB // Use main DB if it is remote
+	}
+
+	// Initialize LocalStore if we have a remote target
+	if remoteSyncDB != nil {
+		if err := localstore.InitFromEnv(remoteSyncDB); err != nil {
+			log.Printf("⚠️  LocalStore não inicializado: %v", err)
+		}
+	} else {
+		log.Println("ℹ️  LocalStore ignorado (sem configuração remota via SYNC_DATABASE_URL ou DATABASE_URL)")
 	}
 	defer localstore.StopGlobalStore()
 
@@ -273,6 +307,7 @@ func main() {
 	// ========================================
 	stripeService := billing.NewStripeService()
 	billingService := billing.NewBillingService(gormDB, stripeService)
+	salesService := sales.NewSalesService(gormDB)
 
 	// ========================================
 	// JOB SERVICE - Fila Interna
@@ -1067,11 +1102,113 @@ func main() {
 		log.Println("✅ War Observability routes registradas (/warobs/*)")
 
 		// ========================================
+		// MCP - MODEL CONTEXT PROTOCOL (WATCHER)
+		// "O Kernel de Orquestração de Agentes Soberanos"
+		// Zero Trust + Auditoria Imutável + TraceID
+		// ========================================
+		mcpKernel := mcp.InitMCPKernel(mcp.MCPInitConfig{
+			DB:             gormDB, // Injetar conexão Postgres
+			InMemoryAudit:  false,  // False = Tentar persistência no banco
+			MaxAuditEvents: 10000,
+			StrictMode:     false,
+			LogToConsole:   true,
+			WarObs:         warObservability,
+			Memory:         memoryService,
+		})
+		mcpKernel.RegisterRoutes(v1.Group("/mcp"))
+
+		// Registrar Agentes de Domínio
+		identityOpsAgent := identity_agent.NewIdentityOpsAgent(userService)
+		if err := mcpKernel.RegisterAgent(identityOpsAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar IdentityOpsAgent: %v", err)
+		} else {
+			log.Println("✅ [MCP] IdentityOpsAgent registrado")
+		}
+
+		billingOpsAgent := billing_agent.NewBillingOpsAgent(billingService)
+		if err := mcpKernel.RegisterAgent(billingOpsAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar BillingOpsAgent: %v", err)
+		} else {
+			log.Println("✅ [MCP] BillingOpsAgent registrado")
+		}
+
+		contentOpsAgent := content_agent.NewContentOpsAgent(adsService)
+		if err := mcpKernel.RegisterAgent(contentOpsAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar ContentOpsAgent: %v", err)
+		} else {
+			log.Println("✅ [MCP] ContentOpsAgent registrado")
+		}
+
+		policyOpsAgent := policy_agent.NewPolicyOpsAgent(mcpKernel.Dispatcher, warObservability, mcpKernel.Defcon)
+		if err := mcpKernel.RegisterAgent(policyOpsAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar PolicyOpsAgent: %v", err)
+		} else {
+			log.Println("✅ [MCP] PolicyOpsAgent registrado")
+		}
+
+		salesOpsAgent := sales_agent.NewSalesOpsAgent(salesService, mcpKernel.Dispatcher)
+		if err := mcpKernel.RegisterAgent(salesOpsAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar SalesOpsAgent: %v", err)
+		} else {
+			log.Println("✅ [MCP] SalesOpsAgent registrado")
+		}
+
+		memoryOpsAgent := memory_agent.NewMemoryOpsAgent(mcpKernel.Memory)
+		if err := mcpKernel.RegisterAgent(memoryOpsAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar MemoryOpsAgent: %v", err)
+		}
+
+		// ========================================
+		// COGNITIVE LAYER (GEMINI)
+		// ========================================
+		geminiKey := os.Getenv("GEMINI_API_KEY")
+		geminiBrain := cognitive.NewGeminiAdapter(geminiKey, "gemini-pro")
+
+		// Create Cognitive Guard (Validator) - Minimum 70% confidence required
+		cognitiveGuard := cognitive.NewStandardValidator(0.70)
+
+		negotiatorAgent := sales_negotiator.NewSalesNegotiatorAgent(geminiBrain, cognitiveGuard)
+		if err := mcpKernel.RegisterAgent(negotiatorAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar SalesNegotiatorAgent: %v", err)
+			log.Println("✅ [MCP] SalesNegotiatorAgent (Cognitive + Governed) registrado")
+		}
+
+		// ========================================
+		// PROCUREMENT AGENT (UCP CLIENT)
+		// ========================================
+		ucpClient := ucp.NewClient()
+		procurementAgent := procurement.NewProcurementOpsAgent(ucpClient, geminiBrain, cognitiveGuard)
+		if err := mcpKernel.RegisterAgent(procurementAgent); err != nil {
+			log.Printf("⚠️  [MCP] Falha ao registrar ProcurementOpsAgent: %v", err)
+		} else {
+			log.Println("✅ [MCP] ProcurementOpsAgent (UCP Client) registrado")
+		}
+
+		log.Println("✅ MCP Sovereign Agent Framework inicializado")
+
+		// ========================================
 		// ALERTING SYSTEM - FASE 4: Alertas Reais
 		// "Alertas inteligentes, não spam"
 		// ========================================
 		alerting.RegisterAlertRoutes(v1, alertEngine, middleware.AuthMiddleware(), middleware.AdminOnly())
+
 		log.Println("✅ Alerting System routes registradas (/alerts/*)")
+
+		// ========================================
+		// UCP - UNIVERSAL COMMERCE PROTOCOL
+		// "A internet comercial dos agentes"
+		// ========================================
+		ucpService := ucp.NewUCPService(mcpKernel.Dispatcher, "uno.kernel.network")
+		ucpHandler := ucp.NewHandler(ucpService)
+
+		// Register .well-known/ucp at root
+		ucpHandler.RegisterWellKnown(r)
+
+		// Register API endpoints (public, no auth for agents)
+		// Em produção, isso usaria mTLS ou assinaturas UCP
+		ucpHandler.RegisterRoutes(v1)
+
+		log.Println("✅ UCP Protocol ativado (/.well-known/ucp)")
 
 		// ========================================
 		// LIGHTHOUSE - Farol P2P Discovery

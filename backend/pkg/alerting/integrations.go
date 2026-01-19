@@ -1,6 +1,7 @@
 package alerting
 
 import (
+	"fmt"
 	"sync"
 )
 
@@ -159,6 +160,76 @@ func AlertInvariantViolation(invariantName, message string, severity AlertSeveri
 		0,
 		0,
 		context,
+	)
+}
+
+// ========================================
+// MCP SOVEREIGN KERNEL INTEGRATION
+// ========================================
+
+// AlertDefconChanged fires alert when DEFCON level changes
+func AlertDefconChanged(level int, levelName, reason string) {
+	severity := SeverityWarning
+	if level <= 2 {
+		severity = SeverityCritical
+	} else if level == 1 {
+		severity = SeverityEmergency
+	}
+
+	GetAlertEngine().Fire(
+		AlertTypeCustom,
+		severity,
+		"defcon_level_changed",
+		fmt.Sprintf("DEFCON Level changed to %d (%s)", level, levelName),
+		"mcp/kernel",
+		float64(level),
+		5,
+		map[string]string{
+			"level":      fmt.Sprintf("%d", level),
+			"level_name": levelName,
+			"reason":     reason,
+		},
+	)
+}
+
+// AlertKillSwitchStatus fires alert when kill switch is activated or deactivated
+func AlertKillSwitchStatus(active bool, reason string) {
+	title := "KILL SWITCH ACTIVATED"
+	severity := SeverityEmergency
+	if !active {
+		title = "KILL SWITCH DEACTIVATED"
+		severity = SeverityWarning
+	}
+
+	GetAlertEngine().Fire(
+		AlertTypeCustom,
+		severity,
+		title,
+		reason,
+		"mcp/kernel",
+		1,
+		0,
+		map[string]string{
+			"status": fmt.Sprintf("%v", active),
+			"reason": reason,
+		},
+	)
+}
+
+// AlertAgentBreakerOpened fires alert when an agent's circuit breaker opens
+func AlertAgentBreakerOpened(agentID, reason string) {
+	GetAlertEngine().Fire(
+		AlertTypeCustom,
+		SeverityCritical,
+		"agent_breaker_opened",
+		fmt.Sprintf("Circuit breaker opened for agent: %s", agentID),
+		"mcp/dispatcher",
+		1,
+		0,
+		map[string]string{
+			"agent_id": agentID,
+			"reason":   reason,
+		},
 	)
 }
 

@@ -118,6 +118,19 @@ func (w *WarObservability) GetHealthSummary() *HealthSummary {
 	errorBudget := w.SLO.GetErrorBudgetSummary()
 	globalStats := w.RED.GetGlobalStats()
 
+	// Derive pressure score from level
+	pressureScore := 0.0
+	switch pressure.OverallLevel {
+	case PressureNormal:
+		pressureScore = 0
+	case PressureElevated:
+		pressureScore = 25
+	case PressureHigh:
+		pressureScore = 50
+	case PressureCritical:
+		pressureScore = 100
+	}
+
 	return &HealthSummary{
 		Status:        string(pressure.OverallLevel),
 		Message:       pressure.OverallMessage,
@@ -125,6 +138,17 @@ func (w *WarObservability) GetHealthSummary() *HealthSummary {
 		ErrorBudget:   errorBudget.AverageBudget,
 		Trend:         w.Pressure.GetTrend(),
 		RequestsTotal: globalStats.TotalRequests,
+		Metrics: struct {
+			Rate     float64 `json:"rate"`
+			Errors   float64 `json:"errors"`
+			Duration float64 `json:"duration"`
+		}{
+			Rate:     0.0,                           // TODO: Calculate real requests/second
+			Errors:   globalStats.ErrorRate / 100.0, // Convert to fraction for frontend
+			Duration: globalStats.AverageDuration,
+		},
+		PressureScore:  pressureScore,
+		ActiveDefenses: []string{},
 	}
 }
 
@@ -136,6 +160,13 @@ type HealthSummary struct {
 	ErrorBudget   float64 `json:"error_budget_percent"`
 	Trend         string  `json:"trend"`
 	RequestsTotal int64   `json:"requests_total"`
+	Metrics       struct {
+		Rate     float64 `json:"rate"`
+		Errors   float64 `json:"errors"`
+		Duration float64 `json:"duration"`
+	} `json:"metrics"`
+	PressureScore  float64  `json:"pressure_score"`
+	ActiveDefenses []string `json:"active_defenses"`
 }
 
 // Reset resets all metrics (for testing)

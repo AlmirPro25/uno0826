@@ -1,43 +1,189 @@
-
 version: '3.8'
 
+# ========================================
+# UNO SOVEREIGN KERNEL - PRODUCTION STACK
+# ========================================
+# Full observability + caching + database
+# ========================================
+
 services:
-  backend:
-    build:
-      context: .
-      dockerfile: ./backend/Dockerfile
+  # ==========================================
+  # DATABASE (PostgreSQL)
+  # ==========================================
+  postgres:
+    image: postgres:14-alpine
+    container_name: prostqs-postgres
+    environment:
+      POSTGRES_DB: prostqs
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: prostqs_secret_2026
+      POSTGRES_INITDB_ARGS: "-E UTF8 --locale=C"
     ports:
-      - "${SERVER_PORT:-8080}:8080"
+      - "5432:5432"
     volumes:
-      - backend_data:/app/data # Volume persistente para o arquivo SQLite
-    env_file:
-      - ./.env
-    # Adicionar um healthcheck para o backend
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      test: ["CMD-SHELL", "pg_isready -U admin -d prostqs"]
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
-      - prostqs_network
+      - kernel-network
 
+  # ==========================================
+  # CACHE (Redis)
+  # ==========================================
+  redis:
+    image: redis:7-alpine
+    container_name: prostqs-redis
+    command: redis-server --appendonly yes --requirepass redis_secret_2026
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - kernel-network
+
+  # ==========================================
+  # OBSERVABILITY (Jaeger All-in-One)
+  # ==========================================
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: prostqs-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: true
+      COLLECTOR_ZIPKIN_HOST_PORT: :9411
+      SPAN_STORAGE_TYPE: memory
+      QUERY_BASE_PATH: /jaeger
+    ports:
+      - "16686:16686"  # Jaeger UI
+      - "14268:14268"  # Jaeger collector HTTP
+      - "4317:4317"    # OTLP gRPC
+      - "4318:4318"    # OTLP HTTP
+      - "9411:9411"    # Zipkin compatible endpoint
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:16686"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - kernel-network
+
+  # ==========================================
+  # UNO SOVEREIGN KERNEL (Backend)
+  # ==========================================
+  kernel:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: prostqs-kernel
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      jaeger:
+        condition: service_healthy
+    environment:
+      # Database
+      DATABASE_URL: postgres://admin:prostqs_secret_2026@postgres:5432/prostqs?sslmode=disable
+      
+      # Redis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: redis_secret_2026
+      REDIS_DB: 0
+      
+      # OpenTelemetry
+      OTEL_ENABLED: true
+      OTEL_ENDPOINT: jaeger:4318
+      OTEL_SAMPLE_RATE: 0.1
+      
+      # Cognitive Budget
+      AI_GLOBAL_DAILY_LIMIT_USD: 50.00
+      AI_DEFAULT_AGENT_DAILY_USD: 5.00
+      AI_COST_PER_THINK_USD: 0.005
+      
+      # Security
+      SESSION_SECRET: change_me_in_production_64_chars_random
+      ALLOWED_ORIGINS: http://localhost:3000,http://localhost:8080
+      
+      # Gemini API (optional - uses mock if not set)
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      
+      # Server
+      PORT: 8080
+      GIN_MODE: release
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - kernel-network
+
+  # ==========================================
+  # FRONTEND (Next.js - Optional)
+  # ==========================================
   frontend:
     build:
-      context: .
-      dockerfile: ./frontend/Dockerfile
-    ports:
-      - "${FRONTEND_PORT:-3000}:80" # Frontend rodará na porta 80 dentro do container
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: prostqs-frontend
     depends_on:
-      backend:
-        condition: service_healthy # Garante que o backend esteja saudável antes de iniciar o frontend
-    env_file:
-      - ./.env
+      - kernel
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+      NEXT_PUBLIC_WS_URL: ws://localhost:8080
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
     networks:
-      - prostqs_network
+      - kernel-network
 
-networks:
-  prostqs_network:
-    driver: bridge
+  # ==========================================
+  # DEMO UCP STORE (For Testing)
+  # ==========================================
+  demo-store:
+    build:
+      context: ./external_demo_store
+      dockerfile: Dockerfile
+    container_name: prostqs-demo-store
+    environment:
+      PORT: 9090
+      MERCHANT_ID: demo-store-001
+      MERCHANT_NAME: "Demo Electronics Store"
+      MERCHANT_DOMAIN: "localhost:9090"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+    networks:
+      - kernel-network
 
+# ==========================================
+# VOLUMES (Persistent Storage)
+# ==========================================
 volumes:
-  backend_data: # Define o volume para persistência do SQLite
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+
+# ==========================================
+# NETWORK
+# ==========================================
+networks:
+  kernel-network:
+    driver: bridge

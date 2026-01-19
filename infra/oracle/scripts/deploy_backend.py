@@ -52,24 +52,81 @@ def deploy():
         print("📤 Enviando arquivo zip...")
         sftp.put(ZIP_NAME, f"/home/ubuntu/{ZIP_NAME}")
         
-        # Gerar .env
+        # Gerar .env com configuração de produção (Triangle Architecture)
         import secrets
         
         def gen_secret(n_bytes=32):
-            return secrets.token_urlsafe(n_bytes)[:n_bytes] # Simple way
-            
-        def gen_hex(n_bytes=32):
-             return secrets.token_hex(n_bytes)[:n_bytes] # For 32 bytes exactly if needed
+            return secrets.token_urlsafe(n_bytes)[:n_bytes]
 
-        env_content = f"""
-JWT_SECRET={gen_secret(32)}
-AES_SECRET_KEY={gen_secret(32)}
-SECRETS_MASTER_KEY={gen_secret(32)}
+        # ========================================
+        # TRIANGLE ARCHITECTURE CONFIG
+        # Local SQLite for speed + Neon Sync for truth
+        # ========================================
+        
+        # IMPORTANTE: Substitua pelos seus secrets reais de produção!
+        # Estes valores são apenas placeholders para o primeiro deploy.
+        JWT_SECRET = os.environ.get("PROSTQS_JWT_SECRET", gen_secret(32))
+        AES_SECRET_KEY = os.environ.get("PROSTQS_AES_KEY", gen_secret(32))
+        SECRETS_MASTER_KEY = os.environ.get("PROSTQS_SECRETS_KEY", gen_secret(32))
+        
+        # Neon Postgres URL para sincronização (obrigatório para Triangle)
+        NEON_URL = os.environ.get("PROSTQS_NEON_URL", "")
+
+        env_content = f"""# ========================================
+# PROST-QS ORACLE VM - Triangle Architecture
+# Generated: {time.strftime("%Y-%m-%d %H:%M:%S")}
+# ========================================
+
+# Server
 SERVER_PORT=8080
 GIN_MODE=release
+
+# ========================================
+# TRIANGLE: Local SQLite + Remote Neon Sync
+# ========================================
+# DATABASE_URL is EMPTY to force SQLite as main DB
+# DATABASE_URL=
 SQLITE_DB_PATH=/app/data/prostqs.db
-ALLOWED_ORIGINS=*
-DEBUG_MODE=true
+
+# Neon Postgres for Central Brain sync
+SYNC_DATABASE_URL={NEON_URL}
+
+# LocalStore Engine
+LOCAL_STORE_ENABLED=true
+LOCAL_STORE_PATH=/app/data/localstore.db
+LOCAL_STORE_SYNC_INTERVAL=2s
+LOCAL_STORE_BATCH_SIZE=50
+
+# ========================================
+# Security (MUST MATCH CENTRAL)
+# ========================================
+JWT_SECRET={JWT_SECRET}
+AES_SECRET_KEY={AES_SECRET_KEY}
+SECRETS_MASTER_KEY={SECRETS_MASTER_KEY}
+
+# ========================================
+# CORS
+# ========================================
+ALLOWED_ORIGINS=https://prostqs.com.br,https://www.prostqs.com.br,https://admin-six-mauve.vercel.app,https://uno0826.onrender.com
+
+# ========================================
+# Go Runtime - Optimized for Oracle Free Tier (1GB RAM)
+# ========================================
+GOGC=50
+GOMEMLIMIT=734003200
+GOMAXPROCS=2
+
+# ========================================
+# Features
+# ========================================
+AGENTS_ENABLED=false
+GEMINI_NARRATOR_ENABLED=false
+
+# ========================================
+# Rate Limiting
+# ========================================
+RATE_LIMIT_REQUESTS=100
+RATE_LIMIT_WINDOW_MINUTES=1
 """
         with open("temp_env", "w") as f:
             f.write(env_content)
