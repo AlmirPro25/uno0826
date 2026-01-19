@@ -49,26 +49,29 @@ type PressureIndicator struct {
 	// Low traffic threshold
 	minRequestsThreshold int64 // Minimum requests per minute to trigger error pressure
 
-	// History for trend detection
 	history     []PressureSnapshot
 	historySize int
 	historyMu   sync.Mutex
+
+	persistence *PersistenceService
 }
 
 // PressureSnapshot captures system state at a point in time
 type PressureSnapshot struct {
-	Timestamp      time.Time
-	ErrorRate      float64
-	AvgLatency     time.Duration
-	MemoryPercent  float64
-	GoroutineCount int
-	Level          PressureLevel
+	Timestamp       time.Time
+	ErrorRate       float64
+	AvgLatency      time.Duration
+	MemoryPercent   float64
+	GoroutineCount  int
+	Level           PressureLevel
+	ComponentLevels map[string]PressureLevel
 }
 
 // NewPressureIndicator creates a new pressure indicator
-func NewPressureIndicator(redMetrics *REDMetrics) *PressureIndicator {
+func NewPressureIndicator(redMetrics *REDMetrics, persistence *PersistenceService) *PressureIndicator {
 	p := &PressureIndicator{
 		redMetrics:        redMetrics,
+		persistence:       persistence,
 		errorRateElevated: getEnvFloat("WAROBS_ERROR_RATE_ELEVATED", 5.0),
 		errorRateHigh:     getEnvFloat("WAROBS_ERROR_RATE_HIGH", 15.0),
 		errorRateCritical: getEnvFloat("WAROBS_ERROR_RATE_CRITICAL", 30.0),
@@ -195,10 +198,70 @@ func (p *PressureIndicator) GetCurrentPressure() *PressureReport {
 	report.OverallLevel = p.calculateOverallPressure(report.Components)
 	report.OverallMessage = p.getOverallMessage(report.OverallLevel)
 
-	// Store snapshot
+	// Persist critical incidents if necessary
+	p.checkAndRecordIncidents(report, slowest)
+
+	// Store snapshot (in memory)
 	p.storeSnapshot(report, windowStats.ErrorRate, avgLatency, memoryPercent, goroutineCount)
 
 	return report
+}
+
+func (p *PressureIndicator) checkAndRecordIncidents(report *PressureReport, slowest []*EndpointStats) {
+	if p.persistence == nil || !p.persistence.enabled {
+		return
+	}
+
+	// 1. Check Error Rate Critical (Sustained)
+	if comp, ok := report.Components["error_rate"]; ok && comp.Level == PressureCritical {
+		// Sustained check: should be critical in most recent snapshots
+		if p.isSustained(report.Timestamp, "error_rate", PressureHigh, 3) {
+			routes := make([]string, 0)
+			for _, s := range p.redMetrics.GetErrorEndpoints(p.errorRateHigh) {
+				routes = append(routes, s.Endpoint)
+			}
+			p.persistence.RecordIncident(SeverityCritical, TriggerErrorRate, "error_rate", comp.Value, p.errorRateCritical, comp.Message, routes)
+		}
+	}
+
+	// 2. Check Latency Critical (Sustained)
+	if comp, ok := report.Components["latency"]; ok && comp.Level == PressureCritical {
+		if p.isSustained(report.Timestamp, "latency", PressureHigh, 3) {
+			routes := make([]string, 0)
+			for _, s := range slowest {
+				routes = append(routes, s.Endpoint)
+			}
+			p.persistence.RecordIncident(SeverityHigh, TriggerLatency, "latency", comp.Value, float64(p.latencyCritical.Milliseconds()), comp.Message, routes)
+		}
+	}
+
+	// 3. Overall Critical Event
+	if report.OverallLevel == PressureCritical {
+		p.persistence.RecordKernelEvent("SYSTEM_CRITICAL", "warobs", report.OverallMessage, nil, nil)
+	}
+}
+
+// isSustained checks if a component level was at least 'minLevel' for the last 'count' snapshots
+func (p *PressureIndicator) isSustained(now time.Time, component string, minLevel PressureLevel, count int) bool {
+	p.historyMu.Lock()
+	defer p.historyMu.Unlock()
+
+	if len(p.history) < count {
+		return false
+	}
+
+	// Check recent history
+	matchCount := 0
+	for i := len(p.history) - 1; i >= 0 && len(p.history)-i < count; i-- {
+		snap := p.history[i]
+		if level, ok := snap.ComponentLevels[component]; ok {
+			if level >= minLevel {
+				matchCount++
+			}
+		}
+	}
+
+	return matchCount >= count
 }
 
 // PressureReport contains full pressure analysis
@@ -355,20 +418,27 @@ func (p *PressureIndicator) getOverallMessage(level PressureLevel) string {
 	}
 }
 
-func (p *PressureIndicator) storeSnapshot(report *PressureReport, errorRate float64, latency time.Duration, memory float64, goroutines int) {
+func (p *PressureIndicator) storeSnapshot(report *PressureReport, errorRate float64, avgLatency time.Duration, memoryPercent float64, goroutineCount int) {
 	p.historyMu.Lock()
 	defer p.historyMu.Unlock()
 
-	snapshot := PressureSnapshot{
-		Timestamp:      report.Timestamp,
-		ErrorRate:      errorRate,
-		AvgLatency:     latency,
-		MemoryPercent:  memory,
-		GoroutineCount: goroutines,
-		Level:          report.OverallLevel,
+	// Capture levels for each component
+	compLevels := make(map[string]PressureLevel)
+	for name, comp := range report.Components {
+		compLevels[name] = comp.Level
 	}
 
-	p.history = append(p.history, snapshot)
+	snap := PressureSnapshot{
+		Timestamp:       report.Timestamp,
+		ErrorRate:       errorRate,
+		AvgLatency:      avgLatency,
+		MemoryPercent:   memoryPercent,
+		GoroutineCount:  goroutineCount,
+		Level:           report.OverallLevel,
+		ComponentLevels: compLevels,
+	}
+
+	p.history = append(p.history, snap)
 	if len(p.history) > p.historySize {
 		p.history = p.history[1:]
 	}

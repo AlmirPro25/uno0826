@@ -205,12 +205,27 @@ func main() {
 	}))
 
 	// ========================================
+	// KILL SWITCH - Emergência Controlada
+	// ========================================
+	killSwitchService := killswitch.NewKillSwitchService(gormDB)
+	killSwitchService.StartExpirationChecker(1 * time.Minute)
+
+	// ========================================
 	// WAR OBSERVABILITY - FASE 3: Sistema Nervoso (Global)
 	// "Medir pulsos antes de qualquer rota"
 	// ========================================
-	warObservability := warobs.GetWarObservability()
+	warPersistence := warobs.NewPersistenceService(gormDB)
+	if err := warPersistence.Migrate(); err != nil {
+		log.Printf("⚠️  Erro ao migrar WarObs: %v", err)
+	}
+	warObservability := warobs.InitWarObservability(warPersistence, killSwitchService)
+	warObservability.StartDefenseWorker(1 * time.Minute)
+
+	// Middleware de Autodefesa (Executa ANTES das métricas e rotas)
+	r.Use(warObservability.Defense.GuardMiddleware())
+
 	r.Use(warobs.WarObsMiddleware(warObservability))
-	log.Println("✅ War Observability: Nervos conectados (Global Middleware)")
+	log.Println("✅ War Observability: Nervos conectados com Memória e Autodefesa")
 
 	// Rota raiz para health check rápido do Render
 	r.GET("/", func(c *gin.Context) {
@@ -325,11 +340,7 @@ func main() {
 	// ========================================
 	auditService := audit.NewAuditService(gormDB)
 
-	// ========================================
-	// KILL SWITCH - Fase 11
-	// ========================================
-	killSwitchService := killswitch.NewKillSwitchService(gormDB)
-	killSwitchService.StartExpirationChecker(1 * time.Minute)
+	// KillSwitchService já inicializado anteriormente (Sovereign Context)
 
 	// ========================================
 	// AUTONOMY SERVICE - Fase 12

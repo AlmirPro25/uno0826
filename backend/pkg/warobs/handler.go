@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // ========================================
@@ -31,28 +32,33 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authMiddleware, adminMiddle
 		// Dashboard
 		warobs.GET("/dashboard", h.GetDashboard)
 		warobs.GET("/health", h.GetHealthSummary)
-		
+
 		// RED Metrics
 		warobs.GET("/red/global", h.GetGlobalStats)
 		warobs.GET("/red/endpoints", h.GetAllEndpoints)
 		warobs.GET("/red/top", h.GetTopEndpoints)
 		warobs.GET("/red/slowest", h.GetSlowestEndpoints)
 		warobs.GET("/red/errors", h.GetErrorEndpoints)
-		
+
 		// Pressure
 		warobs.GET("/pressure", h.GetPressure)
 		warobs.GET("/pressure/history", h.GetPressureHistory)
-		
+
 		// SLO
 		warobs.GET("/slo/status", h.GetSLOStatus)
 		warobs.GET("/slo/budget", h.GetErrorBudget)
-		
+
 		// Tracing
 		warobs.GET("/traces", h.GetRecentTraces)
 		warobs.GET("/traces/:id", h.GetTrace)
 		warobs.GET("/traces/errors", h.GetErrorTraces)
 		warobs.GET("/traces/slow", h.GetSlowTraces)
 		warobs.GET("/traces/stats", h.GetTracerStats)
+
+		// Persistence (Memory)
+		warobs.GET("/incidents", h.GetIncidents)
+		warobs.GET("/events", h.GetKernelEvents)
+		warobs.POST("/incidents/:id/resolve", h.ResolveIncident)
 	}
 }
 
@@ -97,7 +103,7 @@ func (h *Handler) GetTopEndpoints(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	
+
 	stats := h.obs.RED.GetTopEndpoints(limit)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -112,7 +118,7 @@ func (h *Handler) GetSlowestEndpoints(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	
+
 	stats := h.obs.RED.GetSlowestEndpoints(limit)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -127,7 +133,7 @@ func (h *Handler) GetErrorEndpoints(c *gin.Context) {
 			threshold = parsed
 		}
 	}
-	
+
 	stats := h.obs.RED.GetErrorEndpoints(threshold)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -177,7 +183,7 @@ func (h *Handler) GetRecentTraces(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	
+
 	traces := h.obs.Tracer.GetRecentTraces(limit)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -188,7 +194,7 @@ func (h *Handler) GetRecentTraces(c *gin.Context) {
 func (h *Handler) GetTrace(c *gin.Context) {
 	traceID := c.Param("id")
 	trace := h.obs.Tracer.GetTrace(traceID)
-	
+
 	if trace == nil {
 		c.JSON(http.StatusNotFound, gin.H{
 			"success": false,
@@ -196,7 +202,7 @@ func (h *Handler) GetTrace(c *gin.Context) {
 		})
 		return
 	}
-	
+
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    trace,
@@ -210,7 +216,7 @@ func (h *Handler) GetErrorTraces(c *gin.Context) {
 			limit = parsed
 		}
 	}
-	
+
 	traces := h.obs.Tracer.GetErrorTraces(limit)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -225,14 +231,14 @@ func (h *Handler) GetSlowTraces(c *gin.Context) {
 			threshold = time.Duration(parsed) * time.Millisecond
 		}
 	}
-	
+
 	limit := 20
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil {
 			limit = parsed
 		}
 	}
-	
+
 	traces := h.obs.Tracer.GetSlowTraces(threshold, limit)
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
@@ -245,5 +251,68 @@ func (h *Handler) GetTracerStats(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"data":    stats,
+	})
+}
+
+// Persistence handlers
+func (h *Handler) GetIncidents(c *gin.Context) {
+	hours := 24
+	if s := c.Query("hours"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil {
+			hours = parsed
+		}
+	}
+
+	incidents, err := h.obs.Persistence.GetRecentIncidents(hours)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    incidents,
+	})
+}
+
+func (h *Handler) GetKernelEvents(c *gin.Context) {
+	limit := 50
+	if s := c.Query("limit"); s != "" {
+		if parsed, err := strconv.Atoi(s); err == nil {
+			limit = parsed
+		}
+	}
+
+	events, err := h.obs.Persistence.GetRecentKernelEvents(limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    events,
+	})
+}
+
+func (h *Handler) ResolveIncident(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID"})
+		return
+	}
+
+	// In a real app, get userID from context
+	adminID := "admin"
+
+	if err := h.obs.Persistence.ResolveIncident(id, adminID); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "Incident resolved",
 	})
 }
