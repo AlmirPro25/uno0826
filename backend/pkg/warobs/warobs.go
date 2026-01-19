@@ -21,6 +21,7 @@ type WarObservability struct {
 	Tracer      *Tracer
 	Persistence *PersistenceService
 	Defense     *DefensePolicyEngine
+	Narrative   *NarrativeIntelligenceService
 }
 
 // Global instance
@@ -52,7 +53,8 @@ func NewWarObservability(persistence *PersistenceService, ks *killswitch.KillSwi
 		SLO:         NewSLOTracker(red),
 		Tracer:      NewTracer(),
 		Persistence: persistence,
-		Defense:     NewDefensePolicyEngine(persistence, ks), // Initialized Defense
+		Defense:     NewDefensePolicyEngine(persistence, ks),
+		Narrative:   NewNarrativeIntelligenceService(persistence),
 	}
 }
 

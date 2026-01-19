@@ -59,6 +59,10 @@ func (h *Handler) RegisterRoutes(r *gin.RouterGroup, authMiddleware, adminMiddle
 		warobs.GET("/incidents", h.GetIncidents)
 		warobs.GET("/events", h.GetKernelEvents)
 		warobs.POST("/incidents/:id/resolve", h.ResolveIncident)
+
+		// Narrative Intelligence (Gemini)
+		warobs.GET("/narrative/explain", h.ExplainActivity)
+		warobs.GET("/narrative/incident/:id", h.ExplainIncident)
 	}
 }
 
@@ -314,5 +318,49 @@ func (h *Handler) ResolveIncident(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,
 		"message": "Incident resolved",
+	})
+}
+
+// Narrative Intelligence handlers
+func (h *Handler) ExplainActivity(c *gin.Context) {
+	if h.obs.Narrative == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Narrative service not available"})
+		return
+	}
+
+	narrative, err := h.obs.Narrative.ExplainRecentActivity(c.Request.Context())
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    narrative,
+	})
+}
+
+func (h *Handler) ExplainIncident(c *gin.Context) {
+	if h.obs.Narrative == nil {
+		c.JSON(http.StatusServiceUnavailable, gin.H{"error": "Narrative service not available"})
+		return
+	}
+
+	idStr := c.Param("id")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid UUID"})
+		return
+	}
+
+	narrative, err := h.obs.Narrative.ExplainIncident(c.Request.Context(), id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"data":    narrative,
 	})
 }
