@@ -5,6 +5,8 @@ import (
 	"runtime"
 	"time"
 
+	"prost-qs/backend/pkg/warobs"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
@@ -31,18 +33,20 @@ type JobServiceInterface interface {
 type HealthHandler struct {
 	db         *gorm.DB
 	jobService JobServiceInterface
+	warObs     *warobs.WarObservability
 	startTime  time.Time
 }
 
 // HealthResponse resposta do health check
 type HealthResponse struct {
-	Status    string            `json:"status"`
-	Timestamp string            `json:"timestamp"`
-	Uptime    string            `json:"uptime"`
-	Version   VersionInfo       `json:"version"`
-	Services  map[string]string `json:"services"`
-	Jobs      JobsHealth        `json:"jobs"`
-	System    SystemInfo        `json:"system"`
+	Status    string                `json:"status"`
+	Timestamp string                `json:"timestamp"`
+	Uptime    string                `json:"uptime"`
+	Version   VersionInfo           `json:"version"`
+	Services  map[string]string     `json:"services"`
+	Jobs      JobsHealth            `json:"jobs"`
+	System    SystemInfo            `json:"system"`
+	Pressure  *warobs.HealthSummary `json:"pressure,omitempty"`
 }
 
 // VersionInfo informações de versão
@@ -69,10 +73,11 @@ type SystemInfo struct {
 }
 
 // NewHealthHandler cria um novo handler de health
-func NewHealthHandler(db *gorm.DB, jobService JobServiceInterface) *HealthHandler {
+func NewHealthHandler(db *gorm.DB, jobService JobServiceInterface, warObs *warobs.WarObservability) *HealthHandler {
 	return &HealthHandler{
 		db:         db,
 		jobService: jobService,
+		warObs:     warObs,
 		startTime:  time.Now(),
 	}
 }
@@ -139,6 +144,15 @@ func (h *HealthHandler) GetHealth(c *gin.Context) {
 			NumCPU:       runtime.NumCPU(),
 			MemoryMB:     memStats.Alloc / 1024 / 1024,
 		},
+	}
+
+	// Add WarObs info if available
+	if h.warObs != nil {
+		response.Pressure = h.warObs.GetHealthSummary()
+		// If pressure is critical, mark as degraded
+		if response.Pressure.Status == "critical" {
+			response.Status = "degraded"
+		}
 	}
 
 	if status == "unhealthy" {

@@ -3,11 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-    Rocket, 
-    Box, 
-    Key, 
-    ArrowRight, 
+import {
+    Rocket,
+    Box,
+    Key,
+    ArrowRight,
     ArrowLeft,
     Check,
     Copy,
@@ -62,7 +62,7 @@ const objectives = [
 export default function OnboardingPage() {
     const router = useRouter();
     const { user, isAuthenticated, loading: authLoading } = useAuth();
-    
+
     const [step, setStep] = useState(1);
     const [objective, setObjective] = useState<Objective>(null);
     const [appName, setAppName] = useState("");
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
 
     const handleCreateApp = async () => {
         if (!appName.trim()) return;
-        
+
         setCreating(true);
         try {
             const res = await api.post("/apps", {
@@ -98,7 +98,7 @@ export default function OnboardingPage() {
 
             // Get credentials
             const credRes = await api.get(`/apps/${res.data.id}/credentials`);
-            
+
             setCreatedApp({
                 id: res.data.id,
                 name: res.data.name,
@@ -106,7 +106,7 @@ export default function OnboardingPage() {
                 api_key: credRes.data.api_key,
                 api_secret: credRes.data.api_secret
             });
-            
+
             setStep(3);
             toast.success("App criado com sucesso!");
         } catch (err: unknown) {
@@ -152,8 +152,8 @@ export default function OnboardingPage() {
                     <div key={s} className="flex items-center">
                         <div className={cn(
                             "w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all duration-300",
-                            step >= s 
-                                ? "bg-indigo-600 text-white" 
+                            step >= s
+                                ? "bg-indigo-600 text-white"
                                 : "bg-white/5 text-slate-600 border border-white/10"
                         )}>
                             {step > s ? <Check className="w-5 h-5" /> : s}
@@ -181,7 +181,7 @@ export default function OnboardingPage() {
                     >
                         <div className="text-center space-y-2">
                             <h1 className="text-4xl font-black text-white uppercase tracking-tighter">
-                                Bem-vindo, <span className="text-indigo-500">{user?.name || "Operador"}</span>
+                                Bem-vindo, <span className="text-indigo-500">{user?.profile?.name || user?.username || "Operador"}</span>
                             </h1>
                             <p className="text-slate-400 font-medium">
                                 O que você quer fazer primeiro?

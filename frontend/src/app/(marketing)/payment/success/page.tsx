@@ -23,11 +23,14 @@ function PaymentSuccessContent() {
         const verifyPayment = async () => {
             // Se já for PRO e não tiver session_id para validar, assume sucesso (navegação interna)
             // Mas por segurança, se tiver session_id, sempre valida no backend
+            // Sempre validar sessão se existir
+            /* 
             if (user?.plan === "pro" && !sessionId) {
                 setStatus("success");
                 triggerConfetti();
                 return;
             }
+            */
 
             try {
                 // Se tiver session_id, chama endpoint de callback do billing
@@ -41,12 +44,9 @@ function PaymentSuccessContent() {
                     await refreshUser();
                     // Pequeno delay para garantir que o refresh terminou
                     setTimeout(() => {
-                        if (user?.plan === "pro") {
-                            setStatus("success");
-                            triggerConfetti();
-                        } else {
-                            setStatus("error");
-                        }
+                        // Como removemos user.plan, assumimos que se chegou aqui sem erro do refresh, está ok ou inválido.
+                        // Mas idealmente deveria ter session_id.
+                        setStatus("error");
                     }, 1000);
                 }
             } catch (error) {

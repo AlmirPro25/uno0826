@@ -59,8 +59,9 @@ export default function SecurityPage() {
 
         <TabsContent value="mfa">
           <div className="grid gap-6 md:grid-cols-2">
-            <MFASetup userEmail={user.email} />
-            
+            {/* MFA Setup Section */}
+            <MFASetup userEmail={user?.email || ""} />
+
             {/* Security Tips */}
             <Card>
               <CardHeader>
@@ -132,15 +133,17 @@ export default function SecurityPage() {
               </CardHeader>
               <CardContent>
                 <ul className="space-y-3 text-sm">
-                  <li className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <span>Use uma senha forte e única</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <div className="h-2 w-2 rounded-full bg-green-500" />
-                    <span>Habilite autenticação de dois fatores</span>
-                  </li>
-                  <li className="flex items-center gap-2">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-2xl font-black text-indigo-500">
+                      {(user?.profile?.name || user?.username || "?")[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-foreground">
+                        {user?.profile?.name || user?.username || "Usuário"}
+                      </h2>
+                      <p className="text-sm text-muted-foreground">{user?.email}</p>
+                    </div>
+                  </div>  <li className="flex items-center gap-2">
                     <div className="h-2 w-2 rounded-full bg-green-500" />
                     <span>Revise sessões ativas regularmente</span>
                   </li>

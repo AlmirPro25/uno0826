@@ -26,6 +26,18 @@ type REDMetrics struct {
 	// Time windows for rate calculation
 	windowSize    time.Duration
 	windowBuckets int
+
+	// Sliding window for global stats (Last 60 seconds)
+	// Circular buffer mapped by time.Now().Unix() % 60
+	globalWindow [60]Bucket
+	windowMu     sync.RWMutex
+}
+
+type Bucket struct {
+	Timestamp int64
+	Requests  int64
+	Errors    int64
+	Errors5xx int64
 }
 
 // EndpointMetrics holds metrics for a single endpoint
@@ -105,6 +117,35 @@ func (r *REDMetrics) Record(endpoint string, duration time.Duration, statusCode 
 	}
 
 	em.lastUpdate = time.Now()
+
+	// Update sliding window
+	r.recordWindow(statusCode)
+}
+
+func (r *REDMetrics) recordWindow(statusCode int) {
+	now := time.Now().Unix()
+	idx := now % 60
+
+	r.windowMu.Lock()
+	defer r.windowMu.Unlock()
+
+	b := &r.globalWindow[idx]
+
+	// If bucket is from the past (loop around), reset it
+	if b.Timestamp != now {
+		b.Timestamp = now
+		b.Requests = 0
+		b.Errors = 0
+		b.Errors5xx = 0
+	}
+
+	b.Requests++
+	if statusCode >= 400 {
+		b.Errors++
+		if statusCode >= 500 {
+			b.Errors5xx++
+		}
+	}
 }
 
 // GetEndpointStats returns stats for a specific endpoint
@@ -175,6 +216,51 @@ func (r *REDMetrics) GetGlobalStats() *GlobalStats {
 		ErrorRate:      errorRate,
 		ErrorRate5xx:   errorRate5xx,
 		EndpointCount:  len(r.endpoints),
+	}
+}
+
+// GetWindowedGlobalStats returns stats for the last N seconds (max 60)
+func (r *REDMetrics) GetWindowedGlobalStats(seconds int) *GlobalStats {
+	if seconds > 60 || seconds <= 0 {
+		seconds = 60
+	}
+
+	r.windowMu.RLock()
+	defer r.windowMu.RUnlock()
+
+	now := time.Now().Unix()
+	var totalReq, totalErr, totalErr5xx int64
+
+	// Sum up buckets for the last N seconds
+	for i := 0; i < seconds; i++ {
+		t := now - int64(i)
+		idx := t % 60
+		// Handle negative mod result if t is negative (unlikely but safe)
+		if idx < 0 {
+			idx += 60
+		}
+
+		b := &r.globalWindow[idx]
+		if b.Timestamp == t {
+			totalReq += b.Requests
+			totalErr += b.Errors
+			totalErr5xx += b.Errors5xx
+		}
+	}
+
+	var errorRate, errorRate5xx float64
+	if totalReq > 0 {
+		errorRate = float64(totalErr) / float64(totalReq) * 100
+		errorRate5xx = float64(totalErr5xx) / float64(totalReq) * 100
+	}
+
+	return &GlobalStats{
+		TotalRequests:  totalReq,
+		TotalErrors:    totalErr,
+		TotalErrors5xx: totalErr5xx,
+		ErrorRate:      errorRate,
+		ErrorRate5xx:   errorRate5xx,
+		EndpointCount:  len(r.endpoints), // Approximation
 	}
 }
 

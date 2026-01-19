@@ -1,0 +1,7 @@
+FROM alpine:latest
+RUN apk add --no-cache ca-certificates tzdata
+WORKDIR /app
+COPY prost-qs-linux-new /app/prost-qs-core
+RUN chmod +x /app/prost-qs-core
+EXPOSE 8080
+ENTRYPOINT ["/app/prost-qs-core"]

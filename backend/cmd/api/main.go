@@ -94,7 +94,9 @@ func main() {
 
 	// Carregar variáveis de ambiente do arquivo .env (se existir)
 	// Em produção, as variáveis vêm do ambiente do container
-	_ = godotenv.Load("../.env") // Ignora erro se não existir
+	_ = godotenv.Load("../.env") // Desenvolvimento (cmd/api -> root)
+	_ = godotenv.Load(".env")    // Container / Raiz do binário
+	_ = godotenv.Load()          // Padrão (diretório atual)
 
 	serverPort := os.Getenv("SERVER_PORT")
 	if serverPort == "" {
@@ -183,6 +185,16 @@ func main() {
 				strings.HasSuffix(origin, ".vercel.app") || origin == "https://uno0826.onrender.com" {
 				return true
 			}
+			// Permitir origens configuradas via env
+			allowedOrigins := os.Getenv("ALLOWED_ORIGINS")
+			if allowedOrigins != "" {
+				origins := strings.Split(allowedOrigins, ",")
+				for _, o := range origins {
+					if strings.TrimSpace(o) == origin {
+						return true
+					}
+				}
+			}
 			return false
 		},
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"},
@@ -191,6 +203,14 @@ func main() {
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
 	}))
+
+	// ========================================
+	// WAR OBSERVABILITY - FASE 3: Sistema Nervoso (Global)
+	// "Medir pulsos antes de qualquer rota"
+	// ========================================
+	warObservability := warobs.GetWarObservability()
+	r.Use(warobs.WarObsMiddleware(warObservability))
+	log.Println("✅ War Observability: Nervos conectados (Global Middleware)")
 
 	// Rota raiz para health check rápido do Render
 	r.GET("/", func(c *gin.Context) {
@@ -462,12 +482,7 @@ func main() {
 	apigate.SetGlobalGate(apiGate)
 	log.Println("✅ API Gate inicializado (FASE 2)")
 
-	// ========================================
-	// WAR OBSERVABILITY - FASE 3: Observabilidade de Guerra
-	// "Ver o sistema respirar, medir pressão"
-	// ========================================
-	warObservability := warobs.GetWarObservability()
-	log.Println("✅ War Observability inicializado (FASE 3)")
+	log.Println("✅ Immunity System inicializado")
 
 	// ========================================
 	// ALERTING SYSTEM - FASE 4: Alertas Reais
@@ -505,9 +520,8 @@ func main() {
 	log.Println("✅ Lighthouse Service inicializado (Farol P2P)")
 
 	// Middlewares globais
-	r.Use(middleware.SecurityHeaders())                               // Security Headers - PRIMEIRO
+	r.Use(middleware.SecurityHeaders())                               // Security Headers
 	r.Use(apiGate.GateMiddleware())                                   // API Gate (FASE 2)
-	r.Use(warobs.WarObsMiddleware(warObservability))                  // War Observability (FASE 3)
 	r.Use(immunity.ProtectionMiddleware())                            // Proteção do sistema imunológico
 	r.Use(middleware.AdvancedRateLimitMiddleware(100, 1*time.Minute)) // Rate limit avançado por endpoint
 	r.Use(middleware.RequestIDMiddleware())                           // Request ID para tracing
@@ -517,7 +531,6 @@ func main() {
 	// "Saber o que está acontecendo quando algo dá errado"
 	// ========================================
 	r.Use(observability.RequestIDMiddleware())
-	r.Use(observability.MetricsMiddleware())
 	// Note: LoggingMiddleware disabled to avoid duplicate logs with Gin default
 
 	// Ready checker for /ready endpoint
@@ -576,7 +589,7 @@ func main() {
 		// ========================================
 		// HEALTH CHECK - Observabilidade
 		// ========================================
-		healthHandler := health.NewHealthHandler(gormDB, jobService)
+		healthHandler := health.NewHealthHandler(gormDB, jobService, warObservability)
 		health.RegisterHealthRoutes(v1, healthHandler)
 
 		// ========================================

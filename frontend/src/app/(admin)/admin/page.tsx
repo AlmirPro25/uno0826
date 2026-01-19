@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Users, DollarSign, BrainCircuit, Zap, BarChart3, Activity, ShieldAlert, ZapIcon, Thermometer, Waveform } from "lucide-react";
+import { Users, DollarSign, BrainCircuit, Zap, BarChart3, Activity, ShieldAlert, Thermometer } from "lucide-react";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -93,7 +93,7 @@ export default function AdminDashboardPage() {
             value: warObs?.global_stats?.total_requests?.toLocaleString() || "-",
             change: `${warObs?.global_stats?.error_rate?.toFixed(2) || "0.00"}% ERRO`,
             trend: "neutral",
-            icon: Waveform,
+            icon: Activity,
             color: "text-zinc-300",
             bg: "bg-zinc-500/10"
         },
@@ -171,7 +171,7 @@ export default function AdminDashboardPage() {
                 <div className="lg:col-span-2 p-6 rounded-2xl border border-white/5 bg-zinc-900/20 backdrop-blur-md">
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-white font-black text-xs uppercase tracking-[0.2em] flex items-center gap-2">
-                            <ZapIcon className="w-4 h-4 text-amber-500" />
+                            <Zap className="w-4 h-4 text-amber-500" />
                             Service Level Objectives (SLOs)
                         </h3>
                         <span className="text-[10px] font-mono text-zinc-500">P99: {warObs?.global_stats?.p99_latency?.toFixed(2) || "0.00"}ms</span>

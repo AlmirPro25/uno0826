@@ -76,10 +76,10 @@ export default function AdminLayout({
                 <div className="p-4 border-t border-red-900/20">
                     <div className="flex items-center gap-3 mb-4 px-2">
                         <div className="w-8 h-8 rounded bg-red-900/20 flex items-center justify-center text-red-500 font-bold border border-red-900/30">
-                            {user?.name?.substring(0, 2).toUpperCase()}
+                            {(user?.profile?.name || user?.username || "?").substring(0, 2).toUpperCase()}
                         </div>
                         <div className="overflow-hidden">
-                            <p className="text-sm font-medium truncate text-red-200">{user?.name}</p>
+                            <p className="text-sm font-medium truncate text-red-200">{user?.profile?.name || user?.username || "Admin"}</p>
                             <p className="text-xs text-red-500/60 truncate uppercase">{user?.role}</p>
                         </div>
                     </div>

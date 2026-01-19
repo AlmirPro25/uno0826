@@ -107,57 +107,67 @@ export default function AdminUsersPage() {
                                         </td>
                                     </motion.tr>
                                 ) : (
-                                    data?.data.map((user, idx) => (
-                                        <motion.tr
-                                            key={user.id}
-                                            initial={{ opacity: 0, y: 10 }}
-                                            animate={{ opacity: 1, y: 0 }}
-                                            transition={{ delay: idx * 0.02 }}
-                                            className="hover:bg-red-500/[0.02] transition-colors group cursor-crosshair"
-                                        >
-                                            <td className="px-8 py-6">
-                                                <div className="flex items-center gap-4">
-                                                    <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/5 flex items-center justify-center text-red-500 font-black text-lg group-hover:bg-red-950/20 group-hover:border-red-500/20 transition-all shadow-xl">
-                                                        {(user.name || user.email || "?")[0].toUpperCase()}
+                                    data?.data.map((user, idx) => {
+                                        const displayName = user.profile?.name || user.username || "Unknown Entity";
+                                        const displayEmail = user.profile?.email || user.email || "No digital footprint";
+                                        const initials = (displayName[0] || "?").toUpperCase();
+
+                                        return (
+                                            <motion.tr
+                                                key={user.id}
+                                                initial={{ opacity: 0, y: 10 }}
+                                                animate={{ opacity: 1, y: 0 }}
+                                                transition={{ delay: idx * 0.02 }}
+                                                className="hover:bg-red-500/[0.02] transition-colors group cursor-crosshair"
+                                            >
+                                                <td className="px-8 py-6">
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="w-12 h-12 rounded-2xl bg-zinc-800 border border-white/5 flex items-center justify-center text-red-500 font-black text-lg group-hover:bg-red-950/20 group-hover:border-red-500/20 transition-all shadow-xl">
+                                                            {initials}
+                                                        </div>
+                                                        <div className="space-y-0.5">
+                                                            <div className="text-white font-black text-sm tracking-tight uppercase group-hover:text-red-400 transition-colors">
+                                                                {displayName}
+                                                            </div>
+                                                            <div className="text-[10px] text-zinc-600 font-mono lower-case tracking-tight italic">
+                                                                {displayEmail}
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                    <div className="space-y-0.5">
-                                                        <div className="text-white font-black text-sm tracking-tight uppercase group-hover:text-red-400 transition-colors">{user.name || "UNIDENTIFIED"}</div>
-                                                        <div className="text-[10px] text-zinc-600 font-mono lower-case tracking-tight italic">{user.email}</div>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    {user.role === "admin" || user.role === "super_admin" ? (
+                                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20">
+                                                            <Shield className="w-3 h-3" /> Admin_Kernel
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-zinc-800 text-zinc-500 border border-white/5">
+                                                            <UserIcon className="w-3 h-3" /> Entity_Mortal
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <span className={cn(
+                                                        "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
+                                                        user.status === 'active'
+                                                            ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
+                                                            : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                                                    )}>
+                                                        <div className={cn("h-1 w-1 rounded-full mr-2 shadow-[0_0_8px_currentColor]", user.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500')} />
+                                                        {user.status || "Unknown"}
+                                                    </span>
+                                                </td>
+                                                <td className="px-8 py-6">
+                                                    <div className="text-[10px] text-zinc-600 font-mono font-black uppercase">
+                                                        {new Date(user.created_at).toLocaleDateString()}
                                                     </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                {user.role === "admin" || user.role === "super_admin" ? (
-                                                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-red-500/10 text-red-500 border border-red-500/20">
-                                                        <Shield className="w-3 h-3" /> Admin_Kernel
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest bg-zinc-800 text-zinc-500 border border-white/5">
-                                                        <UserIcon className="w-3 h-3" /> Entity_Mortal
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <span className={cn(
-                                                    "inline-flex items-center px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest border",
-                                                    user.status === 'active'
-                                                        ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20'
-                                                        : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                                                )}>
-                                                    <div className={cn("h-1 w-1 rounded-full mr-2 shadow-[0_0_8px_currentColor]", user.status === 'active' ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500')} />
-                                                    {user.status || "Unknown"}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-6">
-                                                <div className="text-[10px] text-zinc-600 font-mono font-black uppercase">
-                                                    {new Date(user.created_at).toLocaleDateString()}
-                                                </div>
-                                                <div className="text-[8px] text-zinc-700 font-mono uppercase tracking-tighter">
-                                                    ENTRY_LOG_ID: {user.id.substring(0, 8)}
-                                                </div>
-                                            </td>
-                                        </motion.tr>
-                                    ))
+                                                    <div className="text-[8px] text-zinc-700 font-mono uppercase tracking-tighter">
+                                                        {user.origin_app_id ? `APP: ${user.origin_app_id.substring(0, 8)}` : `ENTRY: ${user.id.substring(0, 8)}`}
+                                                    </div>
+                                                </td>
+                                            </motion.tr>
+                                        )
+                                    })
                                 )}
                             </AnimatePresence>
                         </tbody>

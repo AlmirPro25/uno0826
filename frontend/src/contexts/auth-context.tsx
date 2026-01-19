@@ -58,7 +58,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const refreshUser = useCallback(async () => {
         if (!localStorage.getItem("token")) return;
         try {
-            const res = await api.get("/identity/me");
+            const res = await api.get("/users/me");
             if (res.data) {
                 setUser(res.data);
                 localStorage.setItem("user", JSON.stringify(res.data));
@@ -108,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
                 // Then validate token with backend (silently)
                 try {
-                    const res = await api.get("/identity/me");
+                    const res = await api.get("/users/me");
                     if (res.data) {
                         setUser(res.data);
                         localStorage.setItem("user", JSON.stringify(res.data));
@@ -154,7 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         try {
             // Fetch user profile
-            const res = await api.get("/identity/me");
+            const res = await api.get("/users/me");
             const userData = res.data;
 
             // Save user data

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
+import {
     User, Lock, Bell, Shield, Fingerprint, Loader2, CheckCircle2,
     Brain, Ghost, Zap, AlertTriangle, Key
 } from "lucide-react";
@@ -15,12 +15,12 @@ import Link from "next/link";
 
 export default function SettingsPage() {
     const { user } = useAuth();
-    const [name, setName] = useState(user?.name || "");
+    const [name, setName] = useState(user?.profile?.name || user?.username || "");
     const [saving, setSaving] = useState(false);
     const [currentPassword, setCurrentPassword] = useState("");
     const [newPassword, setNewPassword] = useState("");
     const [changingPassword, setChangingPassword] = useState(false);
-    
+
     // Notification preferences
     const [notifications, setNotifications] = useState({
         billing: true,
@@ -68,11 +68,12 @@ export default function SettingsPage() {
     return (
         <div className="max-w-4xl space-y-12 pb-20">
             <AppHeader />
-            
+
             <div>
-                <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
-                    Configurações
-                </h1>
+                <h1 className="text-3xl font-bold tracking-tight mb-2">Configurações</h1>
+                <p className="text-muted-foreground">
+                    Gerencie suas preferências e configurações da conta para {user?.profile?.name || user?.username || "sua conta"}.
+                </p>
                 <p className="text-slate-500 mt-1 font-medium">Configure sua identidade soberana e protocolos de segurança.</p>
             </div>
 
@@ -115,7 +116,7 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="mt-10 flex justify-end relative z-10">
-                        <Button 
+                        <Button
                             onClick={handleSaveProfile}
                             disabled={saving}
                             className="h-12 px-8 rounded-xl bg-indigo-600 text-white font-black uppercase tracking-widest text-[10px] hover:bg-indigo-500 transition-all"
@@ -153,7 +154,7 @@ export default function SettingsPage() {
                                 className="h-12 bg-white/[0.02] border-white/5 focus:border-indigo-500/50 rounded-xl text-white"
                             />
                         </div>
-                        <Button 
+                        <Button
                             onClick={handleChangePassword}
                             disabled={changingPassword}
                             variant="outline"
@@ -179,9 +180,9 @@ export default function SettingsPage() {
                         {/* Billing Alerts */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input 
-                                    type="checkbox" 
-                                    className="peer sr-only" 
+                                <input
+                                    type="checkbox"
+                                    className="peer sr-only"
                                     checked={notifications.billing}
                                     onChange={(e) => setNotifications(prev => ({ ...prev, billing: e.target.checked }))}
                                 />
@@ -197,9 +198,9 @@ export default function SettingsPage() {
                         {/* Kernel Status */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input 
-                                    type="checkbox" 
-                                    className="peer sr-only" 
+                                <input
+                                    type="checkbox"
+                                    className="peer sr-only"
                                     checked={notifications.kernelStatus}
                                     onChange={(e) => setNotifications(prev => ({ ...prev, kernelStatus: e.target.checked }))}
                                 />
@@ -215,9 +216,9 @@ export default function SettingsPage() {
                         {/* Rule Executions */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input 
-                                    type="checkbox" 
-                                    className="peer sr-only" 
+                                <input
+                                    type="checkbox"
+                                    className="peer sr-only"
                                     checked={notifications.ruleExecutions}
                                     onChange={(e) => setNotifications(prev => ({ ...prev, ruleExecutions: e.target.checked }))}
                                 />
@@ -236,9 +237,9 @@ export default function SettingsPage() {
                         {/* Approval Requests */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input 
-                                    type="checkbox" 
-                                    className="peer sr-only" 
+                                <input
+                                    type="checkbox"
+                                    className="peer sr-only"
                                     checked={notifications.approvalRequests}
                                     onChange={(e) => setNotifications(prev => ({ ...prev, approvalRequests: e.target.checked }))}
                                 />
@@ -257,9 +258,9 @@ export default function SettingsPage() {
                         {/* Shadow Mode */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input 
-                                    type="checkbox" 
-                                    className="peer sr-only" 
+                                <input
+                                    type="checkbox"
+                                    className="peer sr-only"
                                     checked={notifications.shadowMode}
                                     onChange={(e) => setNotifications(prev => ({ ...prev, shadowMode: e.target.checked }))}
                                 />
@@ -278,9 +279,9 @@ export default function SettingsPage() {
                         {/* Kill Switch */}
                         <label className="flex items-center gap-4 cursor-pointer group/item">
                             <div className="relative flex items-center">
-                                <input 
-                                    type="checkbox" 
-                                    className="peer sr-only" 
+                                <input
+                                    type="checkbox"
+                                    className="peer sr-only"
                                     checked={notifications.killSwitch}
                                     onChange={(e) => setNotifications(prev => ({ ...prev, killSwitch: e.target.checked }))}
                                 />
@@ -316,7 +317,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </Link>
-                        
+
                         <Link href="/dashboard/killswitch">
                             <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20 hover:border-rose-500/40 transition-all cursor-pointer">
                                 <div className="flex items-center gap-3">
@@ -328,7 +329,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </Link>
-                        
+
                         <Link href="/dashboard/authority">
                             <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 hover:border-amber-500/40 transition-all cursor-pointer">
                                 <div className="flex items-center gap-3">
@@ -340,7 +341,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </Link>
-                        
+
                         <Link href="/dashboard/secrets">
                             <div className="p-4 rounded-xl bg-indigo-500/10 border border-indigo-500/20 hover:border-indigo-500/40 transition-all cursor-pointer">
                                 <div className="flex items-center gap-3">
@@ -352,7 +353,7 @@ export default function SettingsPage() {
                                 </div>
                             </div>
                         </Link>
-                        
+
                         <Link href="/dashboard/apikeys">
                             <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20 hover:border-emerald-500/40 transition-all cursor-pointer">
                                 <div className="flex items-center gap-3">

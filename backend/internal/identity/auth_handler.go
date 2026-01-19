@@ -311,6 +311,7 @@ func RegisterAuthRoutes(router *gin.RouterGroup, verificationService *Verificati
 	users := router.Group("/users")
 	{
 		users.GET("/me", authMiddleware, handler.GetMe)
+		users.HEAD("/me", authMiddleware, handler.GetMe)
 		users.PUT("/me/profile", authMiddleware, handler.UpdateMe)
 	}
 }

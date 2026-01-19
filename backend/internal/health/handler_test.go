@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/glebarez/sqlite"
 	"github.com/gin-gonic/gin"
+	"github.com/glebarez/sqlite"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
@@ -42,7 +42,7 @@ func (m *MockJobService) GetStats() (pending int64, failed int64, processing int
 func TestHealthHandler_GetHealth_Healthy(t *testing.T) {
 	db := setupHealthTestDB(t)
 	jobService := &MockJobService{pending: 5, failed: 0, processing: 2}
-	handler := NewHealthHandler(db, jobService)
+	handler := NewHealthHandler(db, jobService, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -63,7 +63,7 @@ func TestHealthHandler_GetHealth_Healthy(t *testing.T) {
 func TestHealthHandler_GetHealth_WithFailedJobs(t *testing.T) {
 	db := setupHealthTestDB(t)
 	jobService := &MockJobService{pending: 5, failed: 15, processing: 2}
-	handler := NewHealthHandler(db, jobService)
+	handler := NewHealthHandler(db, jobService, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -83,7 +83,7 @@ func TestHealthHandler_GetHealth_WithFailedJobs(t *testing.T) {
 func TestHealthHandler_GetHealth_CriticalJobs(t *testing.T) {
 	db := setupHealthTestDB(t)
 	jobService := &MockJobService{pending: 5, failed: 60, processing: 2}
-	handler := NewHealthHandler(db, jobService)
+	handler := NewHealthHandler(db, jobService, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -102,7 +102,7 @@ func TestHealthHandler_GetHealth_CriticalJobs(t *testing.T) {
 
 func TestHealthHandler_GetHealth_NilJobService(t *testing.T) {
 	db := setupHealthTestDB(t)
-	handler := NewHealthHandler(db, nil)
+	handler := NewHealthHandler(db, nil, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -120,7 +120,7 @@ func TestHealthHandler_GetHealth_NilJobService(t *testing.T) {
 
 func TestHealthHandler_GetHealthSimple_Healthy(t *testing.T) {
 	db := setupHealthTestDB(t)
-	handler := NewHealthHandler(db, nil)
+	handler := NewHealthHandler(db, nil, nil)
 
 	router := gin.New()
 	router.GET("/health/live", handler.GetHealthSimple)
@@ -139,7 +139,7 @@ func TestHealthHandler_GetHealthSimple_Healthy(t *testing.T) {
 
 func TestHealthHandler_VersionInfo(t *testing.T) {
 	db := setupHealthTestDB(t)
-	handler := NewHealthHandler(db, nil)
+	handler := NewHealthHandler(db, nil, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -162,7 +162,7 @@ func TestHealthHandler_VersionInfo(t *testing.T) {
 
 func TestHealthHandler_SystemInfo(t *testing.T) {
 	db := setupHealthTestDB(t)
-	handler := NewHealthHandler(db, nil)
+	handler := NewHealthHandler(db, nil, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -214,7 +214,7 @@ func TestFormatDuration_Zero(t *testing.T) {
 func TestHealthHandler_ServicesStatus(t *testing.T) {
 	db := setupHealthTestDB(t)
 	jobService := &MockJobService{pending: 0, failed: 0, processing: 0}
-	handler := NewHealthHandler(db, jobService)
+	handler := NewHealthHandler(db, jobService, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -255,7 +255,7 @@ func TestJobsHealth_Struct(t *testing.T) {
 
 func TestHealthHandler_Uptime(t *testing.T) {
 	db := setupHealthTestDB(t)
-	handler := NewHealthHandler(db, nil)
+	handler := NewHealthHandler(db, nil, nil)
 
 	router := gin.New()
 	router.GET("/health", handler.GetHealth)
@@ -277,7 +277,7 @@ func TestHealthHandler_Uptime(t *testing.T) {
 
 func TestRegisterHealthRoutes(t *testing.T) {
 	db := setupHealthTestDB(t)
-	handler := NewHealthHandler(db, nil)
+	handler := NewHealthHandler(db, nil, nil)
 
 	router := gin.New()
 	group := router.Group("/api")

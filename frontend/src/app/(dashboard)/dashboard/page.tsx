@@ -223,7 +223,7 @@ export default function DashboardPage() {
 
                 <div className="text-center pt-8">
                     <h1 className="text-4xl font-black text-white uppercase tracking-tighter">
-                        Olá, <span className="text-indigo-500">{user?.name || "Operador"}</span>
+                        Olá, <span className="text-indigo-500">{user?.profile?.name || user?.username || "Operador"}</span>
                     </h1>
                     <p className="text-slate-500 mt-2 font-medium">
                         Seu kernel está pronto. Vamos criar seu primeiro app.
@@ -649,14 +649,17 @@ export default function DashboardPage() {
                             <Link href="/docs" className="block group">
                                 <div className="p-4 rounded-2xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] transition-all">
                                     <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center text-indigo-400 group-hover:scale-110 transition-transform">
-                                            <BookOpen className="w-5 h-5" />
+                                        <div className="w-10 h-10 rounded-full bg-indigo-500/10 flex items-center justify-center text-indigo-400 font-bold border border-indigo-500/20">
+                                            {(user?.profile?.name || user?.username || "?")[0].toUpperCase()}
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="font-bold text-white text-sm">Integre seu App</p>
-                                            <p className="text-xs text-slate-500">Siga o quickstart</p>
+                                        <div>
+                                            <p className="text-sm font-medium text-white group-hover:text-indigo-400 transition-colors">
+                                                {user?.profile?.name || user?.username || "Usuário"} (Você)
+                                            </p>
+                                            <p className="text-xs text-slate-500">
+                                                Agora
+                                            </p>
                                         </div>
-                                        <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-white group-hover:translate-x-1 transition-all" />
                                     </div>
                                 </div>
                             </Link>
