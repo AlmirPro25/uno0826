@@ -1,0 +1,22 @@
+
+name: Luxe CI Shield
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  quality-assurance:
+    name: 🛡️ Code Integrity Check
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    #

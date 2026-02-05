@@ -35,185 +35,185 @@ interface ChatViewProps {
 
 // Helper function to build a tree structure from a flat file list
 const buildFileTree = (files: ProjectFile[]) => {
-    const tree: any = {};
-    files.forEach(file => {
-        let currentLevel = tree;
-        const pathParts = file.path.split('/');
-        pathParts.forEach((part, index) => {
-            if (index === pathParts.length - 1) {
-                currentLevel[part] = file;
-            } else {
-                if (!currentLevel[part]) {
-                    currentLevel[part] = {};
-                }
-                currentLevel = currentLevel[part];
-            }
-        });
+  const tree: any = {};
+  files.forEach(file => {
+    let currentLevel = tree;
+    const pathParts = file.path.split('/');
+    pathParts.forEach((part, index) => {
+      if (index === pathParts.length - 1) {
+        currentLevel[part] = file;
+      } else {
+        if (!currentLevel[part]) {
+          currentLevel[part] = {};
+        }
+        currentLevel = currentLevel[part];
+      }
     });
-    return tree;
+  });
+  return tree;
 };
 
 const getMonacoLanguage = (path: string) => {
-    const extension = path.split('.').pop()?.toLowerCase();
-    switch (extension) {
-        case 'js': case 'jsx': return 'javascript';
-        case 'ts': case 'tsx': return 'typescript';
-        case 'css': return 'css';
-        case 'json': return 'json';
-        case 'md': return 'markdown';
-        case 'yml': case 'yaml': return 'yaml';
-        case 'sh': return 'shell';
-        case 'dockerfile': return 'dockerfile';
-        default: return 'html';
-    }
+  const extension = path.split('.').pop()?.toLowerCase();
+  switch (extension) {
+    case 'js': case 'jsx': return 'javascript';
+    case 'ts': case 'tsx': return 'typescript';
+    case 'css': return 'css';
+    case 'json': return 'json';
+    case 'md': return 'markdown';
+    case 'yml': case 'yaml': return 'yaml';
+    case 'sh': return 'shell';
+    case 'dockerfile': return 'dockerfile';
+    default: return 'html';
+  }
 };
 
 const getIconForFile = (path: string): { icon: string; color: string; } => {
-    const extension = path.split('.').pop()?.toLowerCase();
-    if (path.toLowerCase().includes('dockerfile')) return { icon: 'fa-brands fa-docker', color: 'text-sky-500' };
-    switch (extension) {
-        case 'html': return { icon: 'fa-brands fa-html5', color: 'text-orange-400' };
-        case 'css': return { icon: 'fa-brands fa-css3-alt', color: 'text-blue-400' };
-        case 'js': return { icon: 'fa-brands fa-js-square', color: 'text-yellow-400' };
-        case 'jsx': return { icon: 'fa-brands fa-react', color: 'text-sky-400' };
-        case 'ts':
-        case 'tsx': return { icon: 'fa-solid fa-file-code', color: 'text-blue-500' }; // No official TS icon in FA free
-        case 'json': return { icon: 'fa-solid fa-file-code', color: 'text-green-400' };
-        case 'md': return { icon: 'fa-brands fa-markdown', color: 'text-slate-300' };
-        case 'sh': return { icon: 'fa-solid fa-terminal', color: 'text-slate-400' };
-        case 'yml':
-        case 'yaml': return { icon: 'fa-solid fa-file-invoice', color: 'text-red-400' };
-        case 'png':
-        case 'jpg':
-        case 'jpeg':
-        case 'gif':
-        case 'svg': return { icon: 'fa-regular fa-file-image', color: 'text-purple-400' };
-        default: return { icon: 'fa-regular fa-file', color: 'text-slate-400' };
-    }
+  const extension = path.split('.').pop()?.toLowerCase();
+  if (path.toLowerCase().includes('dockerfile')) return { icon: 'fa-brands fa-docker', color: 'text-sky-500' };
+  switch (extension) {
+    case 'html': return { icon: 'fa-brands fa-html5', color: 'text-orange-400' };
+    case 'css': return { icon: 'fa-brands fa-css3-alt', color: 'text-blue-400' };
+    case 'js': return { icon: 'fa-brands fa-js-square', color: 'text-yellow-400' };
+    case 'jsx': return { icon: 'fa-brands fa-react', color: 'text-sky-400' };
+    case 'ts':
+    case 'tsx': return { icon: 'fa-solid fa-file-code', color: 'text-blue-500' }; // No official TS icon in FA free
+    case 'json': return { icon: 'fa-solid fa-file-code', color: 'text-green-400' };
+    case 'md': return { icon: 'fa-brands fa-markdown', color: 'text-slate-300' };
+    case 'sh': return { icon: 'fa-solid fa-terminal', color: 'text-slate-400' };
+    case 'yml':
+    case 'yaml': return { icon: 'fa-solid fa-file-invoice', color: 'text-red-400' };
+    case 'png':
+    case 'jpg':
+    case 'jpeg':
+    case 'gif':
+    case 'svg': return { icon: 'fa-regular fa-file-image', color: 'text-purple-400' };
+    default: return { icon: 'fa-regular fa-file', color: 'text-slate-400' };
+  }
 };
 
 
 const FileExplorerNode: React.FC<{
-    name: string;
-    node: any;
-    currentPath: string;
-    level: number;
-    activeFile: string | null;
-    onSelectFile: (path: string) => void;
+  name: string;
+  node: any;
+  currentPath: string;
+  level: number;
+  activeFile: string | null;
+  onSelectFile: (path: string) => void;
 }> = ({ name, node, currentPath, level, activeFile, onSelectFile }) => {
-    const [isOpen, setIsOpen] = useState(true);
-    const isFile = !!node.content;
-    const path = currentPath ? `${currentPath}/${name}` : name;
+  const [isOpen, setIsOpen] = useState(true);
+  const isFile = !!node.content;
+  const path = currentPath ? `${currentPath}/${name}` : name;
 
-    if (isFile) {
-        const isSelected = activeFile === path;
-        const { icon, color } = getIconForFile(path);
-        return (
-            <button
-                onClick={() => onSelectFile(path)}
-                className={`w-full text-left flex items-center gap-2 py-1 transition-colors ${isSelected ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-slate-700/50'}`}
-                style={{ paddingLeft: `${level * 12 + 12}px` }}
-            >
-                <i className={`${icon} ${color} fa-sm w-4 text-center`}></i>
-                <span className="truncate text-xs">{name}</span>
-            </button>
-        );
-    }
-
+  if (isFile) {
+    const isSelected = activeFile === path;
+    const { icon, color } = getIconForFile(path);
     return (
-        <div>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className="w-full text-left flex items-center gap-2 py-1 text-slate-300 hover:bg-slate-700/50"
-                style={{ paddingLeft: `${level * 12 + 12}px` }}
-            >
-                <i className={`fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} fa-xs w-4 text-slate-500`}></i>
-                <i className="fa-solid fa-folder fa-sm w-4 text-amber-400"></i>
-                <span className="truncate text-xs font-semibold">{name}</span>
-            </button>
-            {isOpen && (
-                <div>
-                    {Object.entries(node).sort(([aName, aNode], [bName, bNode]) => {
-                        const aIsFile = !!(aNode as any).content;
-                        const bIsFile = !!(bNode as any).content;
-                        if (aIsFile === bIsFile) return aName.localeCompare(bName);
-                        return aIsFile ? 1 : -1;
-                    }).map(([childName, childNode]) => (
-                        <FileExplorerNode
-                            key={childName}
-                            name={childName}
-                            node={childNode}
-                            currentPath={path}
-                            level={level + 1}
-                            activeFile={activeFile}
-                            onSelectFile={onSelectFile}
-                        />
-                    ))}
-                </div>
-            )}
-        </div>
+      <button
+        onClick={() => onSelectFile(path)}
+        className={`w-full text-left flex items-center gap-2 py-1 transition-colors ${isSelected ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-slate-700/50'}`}
+        style={{ paddingLeft: `${level * 12 + 12}px` }}
+      >
+        <i className={`${icon} ${color} fa-sm w-4 text-center`}></i>
+        <span className="truncate text-xs">{name}</span>
+      </button>
     );
+  }
+
+  return (
+    <div>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full text-left flex items-center gap-2 py-1 text-slate-300 hover:bg-slate-700/50"
+        style={{ paddingLeft: `${level * 12 + 12}px` }}
+      >
+        <i className={`fa-solid ${isOpen ? 'fa-chevron-down' : 'fa-chevron-right'} fa-xs w-4 text-slate-500`}></i>
+        <i className="fa-solid fa-folder fa-sm w-4 text-amber-400"></i>
+        <span className="truncate text-xs font-semibold">{name}</span>
+      </button>
+      {isOpen && (
+        <div>
+          {Object.entries(node).sort(([aName, aNode], [bName, bNode]) => {
+            const aIsFile = !!(aNode as any).content;
+            const bIsFile = !!(bNode as any).content;
+            if (aIsFile === bIsFile) return aName.localeCompare(bName);
+            return aIsFile ? 1 : -1;
+          }).map(([childName, childNode]) => (
+            <FileExplorerNode
+              key={childName}
+              name={childName}
+              node={childNode}
+              currentPath={path}
+              level={level + 1}
+              activeFile={activeFile}
+              onSelectFile={onSelectFile}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 };
 
 
 // Simple markdown parsing for chat bubbles
 const ParsedMarkdown: React.FC<{ content: string }> = React.memo(({ content }) => {
-    const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-    const parsedHtml = useMemo(() => {
-        try {
-            const dirtyHtml = marked.parse(content, { gfm: true, breaks: true }) as string;
-            return dirtyHtml.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
-        } catch (e) {
-            return `<p>Error parsing markdown</p>`;
-        }
-    }, [content]);
+  const parsedHtml = useMemo(() => {
+    try {
+      const dirtyHtml = marked.parse(content, { gfm: true, breaks: true }) as string;
+      return dirtyHtml.replace(/<a href/g, '<a target="_blank" rel="noopener noreferrer" href');
+    } catch (e) {
+      return `<p>Error parsing markdown</p>`;
+    }
+  }, [content]);
 
-    useEffect(() => {
-        if (!containerRef.current) return;
+  useEffect(() => {
+    if (!containerRef.current) return;
 
-        const allCodeBlocks = containerRef.current.querySelectorAll('pre');
-        allCodeBlocks.forEach(preEl => {
-            // Check if the button is already there or if it's inside another pre
-            if (preEl.closest('.code-block-wrapper')) return;
+    const allCodeBlocks = containerRef.current.querySelectorAll('pre');
+    allCodeBlocks.forEach(preEl => {
+      // Check if the button is already there or if it's inside another pre
+      if (preEl.closest('.code-block-wrapper')) return;
 
-            const codeEl = preEl.querySelector('code');
-            const codeToCopy = codeEl ? codeEl.innerText : '';
+      const codeEl = preEl.querySelector('code');
+      const codeToCopy = codeEl ? codeEl.innerText : '';
 
-            const wrapper = document.createElement('div');
-            wrapper.className = 'code-block-wrapper group relative';
-            
-            const button = document.createElement('button');
+      const wrapper = document.createElement('div');
+      wrapper.className = 'code-block-wrapper group relative';
+
+      const button = document.createElement('button');
+      button.innerHTML = '<i class="fa-solid fa-copy fa-xs mr-1.5"></i>Copiar';
+      button.className = 'copy-code-btn absolute top-2 right-2 px-2 py-1 bg-slate-600 hover:bg-slate-500 text-slate-200 rounded-md text-xs font-medium transition-all opacity-0 group-hover:opacity-100 focus:opacity-100';
+
+      button.onclick = () => {
+        navigator.clipboard.writeText(codeToCopy).then(() => {
+          button.innerHTML = '<i class="fa-solid fa-check fa-xs mr-1.5"></i>Copiado!';
+          setTimeout(() => {
             button.innerHTML = '<i class="fa-solid fa-copy fa-xs mr-1.5"></i>Copiar';
-            button.className = 'copy-code-btn absolute top-2 right-2 px-2 py-1 bg-slate-600 hover:bg-slate-500 text-slate-200 rounded-md text-xs font-medium transition-all opacity-0 group-hover:opacity-100 focus:opacity-100';
-            
-            button.onclick = () => {
-                navigator.clipboard.writeText(codeToCopy).then(() => {
-                    button.innerHTML = '<i class="fa-solid fa-check fa-xs mr-1.5"></i>Copiado!';
-                    setTimeout(() => {
-                        button.innerHTML = '<i class="fa-solid fa-copy fa-xs mr-1.5"></i>Copiar';
-                    }, 2000);
-                });
-            };
-
-            preEl.parentNode?.insertBefore(wrapper, preEl);
-            wrapper.appendChild(preEl);
-            wrapper.appendChild(button);
+          }, 2000);
         });
-    }, [parsedHtml]);
+      };
 
-    return (
-        <div 
-          ref={containerRef}
-          className="prose prose-sm prose-invert max-w-none 
+      preEl.parentNode?.insertBefore(wrapper, preEl);
+      wrapper.appendChild(preEl);
+      wrapper.appendChild(button);
+    });
+  }, [parsedHtml]);
+
+  return (
+    <div
+      ref={containerRef}
+      className="prose prose-sm prose-invert max-w-none 
                      prose-p:my-1 prose-headings:my-2 
                      prose-blockquote:border-sky-400 prose-blockquote:text-slate-300
                      prose-code:text-emerald-300 prose-code:bg-slate-800/70 prose-code:p-1 prose-code:rounded-sm prose-code:font-mono
                      prose-pre:bg-slate-900/70 prose-pre:p-3 prose-pre:rounded-md prose-pre:border prose-pre:border-slate-700
                      prose-li:marker:text-sky-400"
-          dangerouslySetInnerHTML={{ __html: parsedHtml }} 
-        />
-    );
+      dangerouslySetInnerHTML={{ __html: parsedHtml }}
+    />
+  );
 });
 
 
@@ -238,10 +238,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
-  
+
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState('');
-  
+
   // Estados para integração com FileSystem
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -268,7 +268,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [activeChat?.messages]);
-  
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -283,7 +283,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setPrompt('');
     }
   };
-  
+
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -294,7 +294,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const handleEditorDidMount = (editorInstance: editor.IStandaloneCodeEditor, monacoInstance: Monaco) => {
     editorRef.current = editorInstance;
   };
-  
+
   const handleStartRename = (chat: ChatSession) => {
     if (chat.id.startsWith('project_CHAT_')) return;
     setEditingChatId(chat.id);
@@ -302,23 +302,23 @@ export const ChatView: React.FC<ChatViewProps> = ({
   };
 
   const handleConfirmRename = (e: React.KeyboardEvent | React.FocusEvent) => {
-      if (editingChatId && editingTitle.trim()) {
-          onRenameChat(editingChatId, editingTitle.trim());
-      }
-      setEditingChatId(null);
-      setEditingTitle('');
+    if (editingChatId && editingTitle.trim()) {
+      onRenameChat(editingChatId, editingTitle.trim());
+    }
+    setEditingChatId(null);
+    setEditingTitle('');
   };
 
   const sortedChats = useMemo(() => {
-      return [...chats].sort((a, b) => {
-          const aIsProject = a.id.startsWith('project_CHAT_');
-          const bIsProject = b.id.startsWith('project_CHAT_');
-          if (aIsProject && !bIsProject) return -1;
-          if (!aIsProject && bIsProject) return 1;
-          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-      });
+    return [...chats].sort((a, b) => {
+      const aIsProject = a.id.startsWith('project_CHAT_');
+      const bIsProject = b.id.startsWith('project_CHAT_');
+      if (aIsProject && !bIsProject) return -1;
+      if (!aIsProject && bIsProject) return 1;
+      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+    });
   }, [chats]);
-  
+
   // Funções de integração com FileSystem
   const handleSaveProject = async () => {
     if (projectFiles.length === 0) {
@@ -326,46 +326,91 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setTimeout(() => setActionMessage(null), 3000);
       return;
     }
-    
+
     setIsSaving(true);
     setActionMessage('💾 Salvando projeto...');
-    
+
     try {
       const projectName = activeChat?.title || 'Projeto AI Weaver';
-      const project = await ProjectFileSystem.createProject(projectName, projectFiles);
-      
+
+      // 🛡️ FILTRO DE SEGURANÇA: Remover binários e arquivos gigantes
+      const safeFiles = projectFiles.filter(file => {
+        // Ignorar binários baseados em extensão
+        const ext = file.path.split('.').pop()?.toLowerCase() || '';
+        const binaryExtensions = ['png', 'jpg', 'jpeg', 'gif', 'mp3', 'wav', 'mp4', 'ico', 'pdf', 'zip', 'exe', 'bin'];
+
+        if (binaryExtensions.includes(ext)) {
+          console.warn(`⚠️ Ignorando arquivo binário para salvar: ${file.path}`);
+          return false;
+        }
+
+        // Ignorar arquivos maiores que 2MB
+        const sizeInBytes = file.content.length;
+        if (sizeInBytes > 2 * 1024 * 1024) {
+          console.warn(`⚠️ Ignorando arquivo muito grande (${Math.round(sizeInBytes / 1024)}KB): ${file.path}`);
+          return false;
+        }
+
+        return true;
+      });
+
+      if (safeFiles.length === 0) {
+        throw new Error("Nenhum arquivo de código válido para salvar (apenas binários ou arquivos grandes detectados).");
+      }
+
+      if (safeFiles.length < projectFiles.length) {
+        setActionMessage('⚠️ Salvando apenas arquivos de código (binários ignorados)...');
+      }
+
+      const project = await ProjectFileSystem.createProject(projectName, safeFiles);
+
       setCurrentProjectId(project.id);
       setActionMessage(`✅ Projeto salvo em: ${project.path}`);
       setTimeout(() => setActionMessage(null), 5000);
     } catch (error: any) {
-      setActionMessage(`❌ Erro ao salvar: ${error.message}`);
+      console.error(error);
+      setActionMessage(`❌ Erro crítico ao salvar: ${error.message}`);
       setTimeout(() => setActionMessage(null), 5000);
     } finally {
       setIsSaving(false);
     }
   };
-  
+
   const handleInstallApp = async () => {
     setIsInstalling(true);
-    setActionMessage('📦 Instalando como app...');
-    
+    setActionMessage('🏭 Instalando via Open Code CLI...');
+
     try {
       // Se não tem projeto salvo, salvar primeiro
       let projectId = currentProjectId;
-      
+
       if (!projectId) {
         const projectName = activeChat?.title || 'Projeto AI Weaver';
-        const project = await ProjectFileSystem.createProject(projectName, projectFiles);
+        // Usar a mesma lógica de filtro aqui se necessário, mas createProject já deve receber safeFiles
+        // Para simplificar, assumimos que quem instala já salvou ou vai salvar agora
+        // Mas o ideal é salvar explicitamente antes. 
+        // Se salvar automático aqui, precisa filtrar também.
+
+        const safeFiles = projectFiles.filter(file => {
+          const ext = file.path.split('.').pop()?.toLowerCase() || '';
+          const binaryExtensions = ['png', 'jpg', 'jpeg', 'gif', 'mp3', 'wav', 'mp4', 'ico', 'pdf', 'zip', 'exe', 'bin'];
+          return !binaryExtensions.includes(ext) && file.content.length <= 2 * 1024 * 1024;
+        });
+
+        const project = await ProjectFileSystem.createProject(projectName, safeFiles);
         projectId = project.id;
         setCurrentProjectId(projectId);
       }
-      
+
       // Instalar como app
       const result = await ProjectFileSystem.installAsApp(projectId);
-      
+
       if (result.success) {
-        setActionMessage(`✅ App instalado! ID: ${result.appId}`);
-        setTimeout(() => setActionMessage(null), 5000);
+        // Mostrar mensagem completa com caminho
+        const msg = result.message || '✅ App instalado!';
+        const pathInfo = result.path ? `\n📁 ${result.path}` : '';
+        setActionMessage(`${msg}${pathInfo}`);
+        setTimeout(() => setActionMessage(null), 8000);
       } else {
         setActionMessage(`❌ Erro ao instalar: ${result.error}`);
         setTimeout(() => setActionMessage(null), 5000);
@@ -377,19 +422,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setIsInstalling(false);
     }
   };
-  
+
   const handleOpenFolder = async () => {
     if (!currentProjectId) {
       setActionMessage('❌ Salve o projeto primeiro');
       setTimeout(() => setActionMessage(null), 3000);
       return;
     }
-    
+
     setActionMessage('📁 Abrindo explorador...');
-    
+
     try {
       const success = await ProjectFileSystem.openInExplorer(currentProjectId);
-      
+
       if (success) {
         setActionMessage('✅ Explorador aberto');
         setTimeout(() => setActionMessage(null), 3000);
@@ -402,10 +447,10 @@ export const ChatView: React.FC<ChatViewProps> = ({
       setTimeout(() => setActionMessage(null), 3000);
     }
   };
-  
+
   // IMPORTANTE: Todos os hooks devem ser chamados antes de qualquer return condicional
   const { isMobile } = useMobileDetection();
-  
+
   // Estados para painéis redimensionáveis (Desktop)
   const [showTerminal, setShowTerminal] = useState(true);
   const [leftPanelWidth, setLeftPanelWidth] = useState(16.66);
@@ -415,46 +460,46 @@ export const ChatView: React.FC<ChatViewProps> = ({
   const [isResizingCenter, setIsResizingCenter] = useState(false);
   const [isResizingEditor, setIsResizingEditor] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
-  
+
   // Calcular largura do painel direito
   const rightPanelWidth = 100 - leftPanelWidth - centerPanelWidth;
-  
+
   // Handlers de resize
   const handleLeftResize = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingLeft(true);
   };
-  
+
   const handleCenterResize = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingCenter(true);
   };
-  
+
   const handleEditorResize = (e: React.MouseEvent) => {
     e.preventDefault();
     setIsResizingEditor(true);
   };
-  
+
   // Effect para resize
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!containerRef.current) return;
-      
+
       const rect = containerRef.current.getBoundingClientRect();
-      
+
       if (isResizingLeft) {
         const x = e.clientX - rect.left;
         const newWidth = (x / rect.width) * 100;
         setLeftPanelWidth(Math.max(10, Math.min(30, newWidth)));
       }
-      
+
       if (isResizingCenter) {
         const x = e.clientX - rect.left;
         const leftEdge = (leftPanelWidth / 100) * rect.width;
         const newWidth = ((x - leftEdge) / rect.width) * 100;
         setCenterPanelWidth(Math.max(30, Math.min(70, newWidth)));
       }
-      
+
       if (isResizingEditor && showTerminal) {
         const editorContainer = containerRef.current.querySelector('.editor-terminal-container');
         if (editorContainer) {
@@ -465,7 +510,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
         }
       }
     };
-    
+
     const handleMouseUp = () => {
       setIsResizingLeft(false);
       setIsResizingCenter(false);
@@ -473,44 +518,44 @@ export const ChatView: React.FC<ChatViewProps> = ({
       document.body.style.cursor = '';
       document.body.style.userSelect = '';
     };
-    
+
     if (isResizingLeft || isResizingCenter || isResizingEditor) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.body.style.cursor = isResizingEditor ? 'row-resize' : 'col-resize';
       document.body.style.userSelect = 'none';
-      
+
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
   }, [isResizingLeft, isResizingCenter, isResizingEditor, leftPanelWidth, showTerminal]);
-  
+
   // Agora sim, podemos ter returns condicionais
   if (projectFiles.length === 0) {
-      return (
-        <div className="flex-grow flex flex-col items-center justify-center text-slate-400 p-4">
-            <i className="fa-solid fa-folder-open fa-3x mb-4"></i>
-            <h2 className="text-xl font-medium text-slate-300">Nenhum Projeto Carregado</h2>
-            <p>Volte para o modo 'Editor', gere um projeto, e então volte para o Chat para começar a refinar.</p>
-             <button
-                onClick={onSwitchToEditor}
-                title="Voltar ao Editor Principal"
-                className="mt-4 px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 text-white rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 flex items-center gap-1.5"
-            >
-                <i className="fa-solid fa-arrow-left fa-sm"></i>
-                Voltar ao Editor
-            </button>
-        </div>
-      );
+    return (
+      <div className="flex-grow flex flex-col items-center justify-center text-slate-400 p-4">
+        <i className="fa-solid fa-folder-open fa-3x mb-4"></i>
+        <h2 className="text-xl font-medium text-slate-300">Nenhum Projeto Carregado</h2>
+        <p>Volte para o modo 'Editor', gere um projeto, e então volte para o Chat para começar a refinar.</p>
+        <button
+          onClick={onSwitchToEditor}
+          title="Voltar ao Editor Principal"
+          className="mt-4 px-4 py-2 text-sm bg-sky-600 hover:bg-sky-500 text-white rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 flex items-center gap-1.5"
+        >
+          <i className="fa-solid fa-arrow-left fa-sm"></i>
+          Voltar ao Editor
+        </button>
+      </div>
+    );
   }
 
   // Layout Mobile - Vertical com proporções específicas
   if (isMobile) {
     return (
-      <div className="h-full w-full bg-slate-900 flex flex-col overflow-hidden" 
-           style={{ paddingTop: '4vh', paddingBottom: '0vh' }}>
+      <div className="h-full w-full bg-slate-900 flex flex-col overflow-hidden"
+        style={{ paddingTop: '4vh', paddingBottom: '0vh' }}>
         {/* 1. CONVERSAS E ARQUIVOS (15%) - NAVEGÁVEL */}
         <div className="h-[15vh] flex-shrink-0 bg-slate-800 border-b border-slate-700 flex">
           {/* Conversas - Metade esquerda */}
@@ -569,20 +614,18 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   <button
                     key={file.path}
                     onClick={() => onSelectFile(file.path)}
-                    className={`w-full text-left p-2 text-xs transition-colors border-b border-slate-700/50 hover:bg-slate-700/50 ${
-                      activeFile === file.path 
-                        ? 'bg-orange-500/20 text-orange-300 border-l-3 border-orange-400' 
-                        : 'text-slate-300'
-                    }`}
+                    className={`w-full text-left p-2 text-xs transition-colors border-b border-slate-700/50 hover:bg-slate-700/50 ${activeFile === file.path
+                      ? 'bg-orange-500/20 text-orange-300 border-l-3 border-orange-400'
+                      : 'text-slate-300'
+                      }`}
                   >
                     <div className="flex items-center gap-2">
-                      <i className={`fa-solid text-sm ${
-                        file.path.endsWith('.html') ? 'fa-file-code text-orange-400' :
+                      <i className={`fa-solid text-sm ${file.path.endsWith('.html') ? 'fa-file-code text-orange-400' :
                         file.path.endsWith('.css') ? 'fa-file-code text-blue-400' :
-                        file.path.endsWith('.js') ? 'fa-file-code text-yellow-400' :
-                        file.path.endsWith('.json') ? 'fa-file-code text-green-400' :
-                        'fa-file text-slate-400'
-                      }`}></i>
+                          file.path.endsWith('.js') ? 'fa-file-code text-yellow-400' :
+                            file.path.endsWith('.json') ? 'fa-file-code text-green-400' :
+                              'fa-file text-slate-400'
+                        }`}></i>
                       <div className="flex-1 min-w-0">
                         <p className="truncate font-medium">{file.path.split('/').pop()}</p>
                         <p className="truncate text-slate-500 text-[10px]">{Math.round(file.content.length / 1024)}KB</p>
@@ -643,7 +686,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
               <div className="flex-shrink-0 p-2 border-b border-slate-700">
                 <h2 className="text-sm font-semibold truncate text-slate-100">{activeChat.title}</h2>
               </div>
-              
+
               {/* Input de Mensagem - FIXO NO TOPO */}
               <div className="flex-shrink-0 p-2 border-b border-slate-700 bg-slate-800">
                 <div className="flex gap-2">
@@ -659,7 +702,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   />
                   {/* 🎛️ Seletor de Modo de Geração */}
                   <GenerationModeInline className="mr-1" />
-                  
+
                   <button
                     onClick={handleSendMessageClick}
                     disabled={!prompt.trim() || isGeneratingResponse}
@@ -673,7 +716,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                   </button>
                 </div>
               </div>
-              
+
               {/* Mensagens - Área scrollável */}
               <div className="flex-1 p-2 overflow-y-auto space-y-2">
                 {activeChat.messages.map((message, index) => (
@@ -694,7 +737,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                 ))}
                 <div ref={messagesEndRef} />
               </div>
-              
+
               {/* Action Buttons Mobile - No rodapé */}
               <div className="flex-shrink-0 px-2 py-1.5 border-t border-slate-700 bg-slate-800/50">
                 <div className="flex gap-1 mb-1">
@@ -705,7 +748,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <i className="fa-solid fa-folder-tree fa-xs"></i>
                     Projetos
                   </button>
-                  
+
                   <button
                     onClick={handleSaveProject}
                     disabled={isSaving || projectFiles.length === 0}
@@ -715,7 +758,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     {currentProjectId ? 'Atualizar' : 'Salvar'}
                   </button>
                 </div>
-                
+
                 <div className="flex gap-1">
                   <button
                     onClick={handleInstallApp}
@@ -725,7 +768,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     <i className={`fa-solid ${isInstalling ? 'fa-spinner animate-spin' : 'fa-box'} fa-xs`}></i>
                     Instalar
                   </button>
-                  
+
                   <button
                     onClick={handleOpenFolder}
                     disabled={!currentProjectId}
@@ -735,7 +778,7 @@ export const ChatView: React.FC<ChatViewProps> = ({
                     Pasta
                   </button>
                 </div>
-                
+
                 {actionMessage && (
                   <div className="mt-1 px-2 py-1 bg-slate-700 text-slate-200 text-xs rounded text-center">
                     {actionMessage}
@@ -758,104 +801,104 @@ export const ChatView: React.FC<ChatViewProps> = ({
 
   // Layout Desktop - Com Terminal Integrado e Painéis Redimensionáveis
   // (Estados já declarados no início do componente)
-  
+
   return (
     <div ref={containerRef} className="flex-grow flex overflow-hidden bg-slate-900 gap-0 p-1 h-full">
       {/* Leftmost Panel (Chat List + File Explorer) */}
-      <div 
+      <div
         className="bg-slate-800/80 rounded-md flex flex-col overflow-hidden"
         style={{ width: `${leftPanelWidth}%`, minWidth: '150px' }}
       >
-        
+
         {/* Container for scrollable lists */}
         <div className="flex-grow flex flex-col min-h-0">
 
-            {/* Top half: Chat List */}
-            <div className="h-1/2 flex flex-col min-h-0">
-                <div className="flex-shrink-0 p-2 border-b border-slate-700">
-                    <div className="flex justify-between items-center">
-                        <h3 className="text-xs font-semibold text-slate-200">Conversas</h3>
-                        <button
-                            onClick={onNewChat}
-                            title="Iniciar Novo Chat"
-                            className="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 text-slate-200 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500 flex items-center gap-1.5"
-                        >
-                            <i className="fa-solid fa-plus fa-xs"></i>
-                            Novo
-                        </button>
-                    </div>
-                </div>
-                <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-700/50">
-                    {sortedChats.map(chat => (
-                        <div key={chat.id}>
-                          {editingChatId === chat.id ? (
-                              <input
-                                  type="text"
-                                  value={editingTitle}
-                                  onChange={(e) => setEditingTitle(e.target.value)}
-                                  onBlur={handleConfirmRename}
-                                  onKeyDown={(e) => e.key === 'Enter' && handleConfirmRename(e)}
-                                  className="w-full bg-slate-600 text-slate-100 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
-                                  autoFocus
-                              />
-                          ) : (
-                            <button
-                                onClick={() => onSelectChat(chat.id)}
-                                onDoubleClick={() => handleStartRename(chat)}
-                                className={`w-full text-left p-2 text-xs transition-colors group relative ${activeChatId === chat.id ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-slate-700/50'}`}
-                            >
-                                <p className="truncate font-medium">{chat.title}</p>
-                                <p className="truncate text-slate-400 text-[10px]">{new Date(chat.createdAt).toLocaleString()}</p>
-                                {!chat.id.startsWith('project_CHAT_') && (
-                                    <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
-                                      <button onClick={(e) => { e.stopPropagation(); handleStartRename(chat); }} className="p-1 hover:bg-slate-600 rounded"><i className="fa-solid fa-pencil fa-xs"></i></button>
-                                      <button onClick={(e) => { e.stopPropagation(); if(window.confirm(`Excluir chat "${chat.title}"?`)) onDeleteChat(chat.id); }} className="p-1 hover:bg-slate-600 rounded"><i className="fa-solid fa-trash fa-xs"></i></button>
-                                    </div>
-                                )}
-                            </button>
-                          )}
+          {/* Top half: Chat List */}
+          <div className="h-1/2 flex flex-col min-h-0">
+            <div className="flex-shrink-0 p-2 border-b border-slate-700">
+              <div className="flex justify-between items-center">
+                <h3 className="text-xs font-semibold text-slate-200">Conversas</h3>
+                <button
+                  onClick={onNewChat}
+                  title="Iniciar Novo Chat"
+                  className="px-2 py-1 text-xs bg-slate-600 hover:bg-slate-500 text-slate-200 rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500 flex items-center gap-1.5"
+                >
+                  <i className="fa-solid fa-plus fa-xs"></i>
+                  Novo
+                </button>
+              </div>
+            </div>
+            <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-700/50">
+              {sortedChats.map(chat => (
+                <div key={chat.id}>
+                  {editingChatId === chat.id ? (
+                    <input
+                      type="text"
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={handleConfirmRename}
+                      onKeyDown={(e) => e.key === 'Enter' && handleConfirmRename(e)}
+                      className="w-full bg-slate-600 text-slate-100 px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-sky-500"
+                      autoFocus
+                    />
+                  ) : (
+                    <button
+                      onClick={() => onSelectChat(chat.id)}
+                      onDoubleClick={() => handleStartRename(chat)}
+                      className={`w-full text-left p-2 text-xs transition-colors group relative ${activeChatId === chat.id ? 'bg-sky-500/20 text-sky-300' : 'text-slate-300 hover:bg-slate-700/50'}`}
+                    >
+                      <p className="truncate font-medium">{chat.title}</p>
+                      <p className="truncate text-slate-400 text-[10px]">{new Date(chat.createdAt).toLocaleString()}</p>
+                      {!chat.id.startsWith('project_CHAT_') && (
+                        <div className="absolute right-1 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 focus-within:opacity-100">
+                          <button onClick={(e) => { e.stopPropagation(); handleStartRename(chat); }} className="p-1 hover:bg-slate-600 rounded"><i className="fa-solid fa-pencil fa-xs"></i></button>
+                          <button onClick={(e) => { e.stopPropagation(); if (window.confirm(`Excluir chat "${chat.title}"?`)) onDeleteChat(chat.id); }} className="p-1 hover:bg-slate-600 rounded"><i className="fa-solid fa-trash fa-xs"></i></button>
                         </div>
-                    ))}
+                      )}
+                    </button>
+                  )}
                 </div>
+              ))}
             </div>
+          </div>
 
-            {/* Bottom half: File Explorer */}
-            <div className="h-1/2 flex flex-col min-h-0 border-t-2 border-slate-700">
-                <div className="flex-shrink-0 p-2 border-b border-slate-700">
-                    <h3 className="text-xs font-semibold text-slate-200">Arquivos do Projeto</h3>
-                </div>
-                <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-700/50">
-                    {Object.entries(fileTree).sort(([aName, aNode], [bName, bNode]) => {
-                        const aIsFile = !!(aNode as any).content;
-                        const bIsFile = !!(bNode as any).content;
-                        if (aIsFile === bIsFile) return aName.localeCompare(bName);
-                        return aIsFile ? 1 : -1; // directories first
-                    }).map(([name, node]) => (
-                        <FileExplorerNode key={name} name={name} node={node} currentPath="" level={0} activeFile={activeFile} onSelectFile={onSelectFile} />
-                    ))}
-                </div>
+          {/* Bottom half: File Explorer */}
+          <div className="h-1/2 flex flex-col min-h-0 border-t-2 border-slate-700">
+            <div className="flex-shrink-0 p-2 border-b border-slate-700">
+              <h3 className="text-xs font-semibold text-slate-200">Arquivos do Projeto</h3>
             </div>
+            <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-700/50">
+              {Object.entries(fileTree).sort(([aName, aNode], [bName, bNode]) => {
+                const aIsFile = !!(aNode as any).content;
+                const bIsFile = !!(bNode as any).content;
+                if (aIsFile === bIsFile) return aName.localeCompare(bName);
+                return aIsFile ? 1 : -1; // directories first
+              }).map(([name, node]) => (
+                <FileExplorerNode key={name} name={name} node={node} currentPath="" level={0} activeFile={activeFile} onSelectFile={onSelectFile} />
+              ))}
+            </div>
+          </div>
 
         </div>
 
         {/* Footer Button */}
         <div className="flex-shrink-0 p-2 border-t border-slate-700">
-            <button
-                onClick={onSwitchToEditor}
-                title="Voltar ao Editor Principal"
-                className="w-full px-3 py-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-white rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500 flex items-center justify-center gap-1.5"
-            >
-                <i className="fa-solid fa-arrow-left fa-sm"></i>
-                Voltar ao Editor
-            </button>
+          <button
+            onClick={onSwitchToEditor}
+            title="Voltar ao Editor Principal"
+            className="w-full px-3 py-1.5 text-xs bg-sky-600 hover:bg-sky-500 text-white rounded-md transition-colors focus:outline-none focus:ring-1 focus:ring-sky-500 flex items-center justify-center gap-1.5"
+          >
+            <i className="fa-solid fa-arrow-left fa-sm"></i>
+            Voltar ao Editor
+          </button>
         </div>
       </div>
-      
+
       {/* Resizer Left */}
       <Resizer direction="horizontal" onMouseDown={handleLeftResize} />
 
       {/* Center Panel (Code Editor + Terminal) */}
-      <div 
+      <div
         className="bg-slate-800/80 rounded-md flex flex-col overflow-hidden editor-terminal-container"
         style={{ width: `${centerPanelWidth}%`, minWidth: '300px' }}
       >
@@ -874,9 +917,9 @@ export const ChatView: React.FC<ChatViewProps> = ({
             <span>{showTerminal ? 'Ocultar' : 'Terminal'}</span>
           </button>
         </div>
-        
+
         {/* Editor Monaco */}
-        <div 
+        <div
           className="min-h-0 border-b border-slate-700"
           style={{ height: showTerminal ? `${editorHeight}%` : '100%' }}
         >
@@ -918,19 +961,19 @@ export const ChatView: React.FC<ChatViewProps> = ({
             }}
           />
         </div>
-        
+
         {/* Resizer Editor/Terminal */}
         {showTerminal && (
           <Resizer direction="vertical" onMouseDown={handleEditorResize} />
         )}
-        
+
         {/* Terminal Integrado */}
         {showTerminal && (
-          <div 
+          <div
             className="min-h-0 overflow-hidden"
             style={{ height: `${100 - editorHeight}%` }}
           >
-            <IntegratedTerminal 
+            <IntegratedTerminal
               projectFiles={projectFiles.map(f => f.path)}
               onCommandExecuted={(command, output) => {
                 console.log('Comando executado:', command);
@@ -940,138 +983,138 @@ export const ChatView: React.FC<ChatViewProps> = ({
           </div>
         )}
       </div>
-      
+
       {/* Resizer Center */}
       <Resizer direction="horizontal" onMouseDown={handleCenterResize} />
 
       {/* Rightmost Panel (Chat Messages) */}
-      <div 
+      <div
         className="bg-slate-800/80 rounded-md flex flex-col overflow-hidden"
         style={{ width: `${rightPanelWidth}%`, minWidth: '250px' }}
       >
         {activeChat ? (
-            <>
-                {/* Chat Header */}
-                <div className="flex-shrink-0 p-3 border-b border-slate-700">
-                    <h2 className="text-sm font-semibold truncate text-slate-100">{activeChat.title}</h2>
-                </div>
-                
-                {/* Prompt Input - FIXO NO TOPO */}
-                <div className="flex-shrink-0 p-3 border-b border-slate-700 bg-slate-800">
-                   <div className="relative">
-                      <textarea
-                        ref={textareaRef}
-                        value={prompt}
-                        onChange={(e) => setPrompt(e.target.value)}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Faça uma pergunta ou dê uma instrução..."
-                        disabled={isGeneratingResponse}
-                        className="w-full pl-3 pr-10 py-2 bg-slate-700 text-slate-100 placeholder-slate-400 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm resize-none scrollbar-thin"
-                        rows={1}
-                      />
-                      <button
-                        onClick={handleSendMessageClick}
-                        disabled={isGeneratingResponse || !prompt.trim()}
-                        className="absolute top-1/2 -translate-y-1/2 right-2 p-1.5 text-slate-300 hover:text-white hover:bg-sky-500 rounded-full disabled:text-slate-500 disabled:hover:bg-transparent transition-colors"
-                        aria-label="Enviar mensagem"
-                      >
-                          <i className="fa-solid fa-paper-plane-top"></i>
-                      </button>
-                   </div>
-                </div>
-                
-                {/* Messages - Área scrollável */}
-                <div className="flex-grow p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-700/50 space-y-4">
-                    {activeChat.messages.map((message, index) => (
-                      <div key={index} className={`flex items-start gap-2.5 ${message.role === 'user' ? 'justify-end' : ''}`}>
-                          {message.role === 'model' && <i className="fa-solid fa-robot text-sky-400 p-2 bg-slate-700 rounded-full"></i>}
-                          <div className={`p-3 rounded-lg max-w-sm ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-700'}`}>
-                            {index === activeChat.messages.length - 1 && isGeneratingResponse ? (
-                                <div className="flex items-center gap-2">
-                                    <span className="w-2 h-2 bg-sky-300 rounded-full animate-pulse"></span>
-                                    <span className="w-2 h-2 bg-sky-300 rounded-full animate-pulse delay-150"></span>
-                                    <span className="w-2 h-2 bg-sky-300 rounded-full animate-pulse delay-300"></span>
-                                </div>
-                            ) : (
-                                <ParsedMarkdown content={message.parts.map(p => p.text).join('')} />
-                            )}
-                            {message.suggestion && !isGeneratingResponse && (
-                                <button 
-                                    onClick={() => onSendMessage(message.suggestion!)}
-                                    className="mt-2 text-xs bg-sky-500/30 hover:bg-sky-500/50 text-sky-200 px-2 py-1 rounded-md w-full text-left transition-colors"
-                                >
-                                    <i className="fa-solid fa-lightbulb-on mr-1.5"></i> {message.suggestion}
-                                </button>
-                            )}
-                          </div>
-                           {message.role === 'user' && <i className="fa-solid fa-user text-blue-400 p-2 bg-slate-700 rounded-full"></i>}
-                      </div>
-                    ))}
-                    <div ref={messagesEndRef} />
-                </div>
-                
-                {/* Action Buttons - No rodapé */}
-                <div className="flex-shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-800/50">
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => setShowProjectsModal(true)}
-                      className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
-                      title="Ver todos os projetos salvos"
-                    >
-                      <i className="fa-solid fa-folder-tree"></i>
-                      Ver Projetos
-                    </button>
-                    
-                    <button
-                      onClick={handleSaveProject}
-                      disabled={isSaving || projectFiles.length === 0}
-                      className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
-                      title="Salvar projeto no HD"
-                    >
-                      <i className={`fa-solid ${isSaving ? 'fa-spinner animate-spin' : 'fa-save'}`}></i>
-                      {currentProjectId ? 'Atualizar' : 'Salvar'}
-                    </button>
-                    
-                    <button
-                      onClick={handleInstallApp}
-                      disabled={isInstalling || projectFiles.length === 0}
-                      className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
-                      title="Instalar como app via CLI"
-                    >
-                      <i className={`fa-solid ${isInstalling ? 'fa-spinner animate-spin' : 'fa-box'}`}></i>
-                      Instalar
-                    </button>
-                    
-                    <button
-                      onClick={handleOpenFolder}
-                      disabled={!currentProjectId}
-                      className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-amber-600 hover:bg-amber-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
-                      title="Abrir pasta no explorador"
-                    >
-                      <i className="fa-solid fa-folder-open"></i>
-                      Abrir Pasta
-                    </button>
-                  </div>
-                  
-                  {/* Action Message */}
-                  {actionMessage && (
-                    <div className="mt-2 px-3 py-1.5 bg-slate-700 text-slate-200 text-xs rounded-md text-center">
-                      {actionMessage}
-                    </div>
-                  )}
-                </div>
-            </>
-        ) : (
-            <div className="flex items-center justify-center h-full text-slate-400 text-sm">
-                <p>Selecione ou crie uma nova conversa.</p>
+          <>
+            {/* Chat Header */}
+            <div className="flex-shrink-0 p-3 border-b border-slate-700">
+              <h2 className="text-sm font-semibold truncate text-slate-100">{activeChat.title}</h2>
             </div>
+
+            {/* Prompt Input - FIXO NO TOPO */}
+            <div className="flex-shrink-0 p-3 border-b border-slate-700 bg-slate-800">
+              <div className="relative">
+                <textarea
+                  ref={textareaRef}
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="Faça uma pergunta ou dê uma instrução..."
+                  disabled={isGeneratingResponse}
+                  className="w-full pl-3 pr-10 py-2 bg-slate-700 text-slate-100 placeholder-slate-400 border border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-500 text-sm resize-none scrollbar-thin"
+                  rows={1}
+                />
+                <button
+                  onClick={handleSendMessageClick}
+                  disabled={isGeneratingResponse || !prompt.trim()}
+                  className="absolute top-1/2 -translate-y-1/2 right-2 p-1.5 text-slate-300 hover:text-white hover:bg-sky-500 rounded-full disabled:text-slate-500 disabled:hover:bg-transparent transition-colors"
+                  aria-label="Enviar mensagem"
+                >
+                  <i className="fa-solid fa-paper-plane-top"></i>
+                </button>
+              </div>
+            </div>
+
+            {/* Messages - Área scrollável */}
+            <div className="flex-grow p-3 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-700/50 space-y-4">
+              {activeChat.messages.map((message, index) => (
+                <div key={index} className={`flex items-start gap-2.5 ${message.role === 'user' ? 'justify-end' : ''}`}>
+                  {message.role === 'model' && <i className="fa-solid fa-robot text-sky-400 p-2 bg-slate-700 rounded-full"></i>}
+                  <div className={`p-3 rounded-lg max-w-sm ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-slate-700'}`}>
+                    {index === activeChat.messages.length - 1 && isGeneratingResponse ? (
+                      <div className="flex items-center gap-2">
+                        <span className="w-2 h-2 bg-sky-300 rounded-full animate-pulse"></span>
+                        <span className="w-2 h-2 bg-sky-300 rounded-full animate-pulse delay-150"></span>
+                        <span className="w-2 h-2 bg-sky-300 rounded-full animate-pulse delay-300"></span>
+                      </div>
+                    ) : (
+                      <ParsedMarkdown content={message.parts.map(p => p.text).join('')} />
+                    )}
+                    {message.suggestion && !isGeneratingResponse && (
+                      <button
+                        onClick={() => onSendMessage(message.suggestion!)}
+                        className="mt-2 text-xs bg-sky-500/30 hover:bg-sky-500/50 text-sky-200 px-2 py-1 rounded-md w-full text-left transition-colors"
+                      >
+                        <i className="fa-solid fa-lightbulb-on mr-1.5"></i> {message.suggestion}
+                      </button>
+                    )}
+                  </div>
+                  {message.role === 'user' && <i className="fa-solid fa-user text-blue-400 p-2 bg-slate-700 rounded-full"></i>}
+                </div>
+              ))}
+              <div ref={messagesEndRef} />
+            </div>
+
+            {/* Action Buttons - No rodapé */}
+            <div className="flex-shrink-0 px-3 py-2 border-t border-slate-700 bg-slate-800/50">
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => setShowProjectsModal(true)}
+                  className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
+                  title="Ver todos os projetos salvos"
+                >
+                  <i className="fa-solid fa-folder-tree"></i>
+                  Ver Projetos
+                </button>
+
+                <button
+                  onClick={handleSaveProject}
+                  disabled={isSaving || projectFiles.length === 0}
+                  className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-green-600 hover:bg-green-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
+                  title="Salvar projeto no HD"
+                >
+                  <i className={`fa-solid ${isSaving ? 'fa-spinner animate-spin' : 'fa-save'}`}></i>
+                  {currentProjectId ? 'Atualizar' : 'Salvar'}
+                </button>
+
+                <button
+                  onClick={handleInstallApp}
+                  disabled={isInstalling || projectFiles.length === 0}
+                  className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-purple-600 hover:bg-purple-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
+                  title="Instalar como app via CLI"
+                >
+                  <i className={`fa-solid ${isInstalling ? 'fa-spinner animate-spin' : 'fa-box'}`}></i>
+                  Instalar
+                </button>
+
+                <button
+                  onClick={handleOpenFolder}
+                  disabled={!currentProjectId}
+                  className="flex-1 min-w-[100px] px-3 py-1.5 text-xs bg-amber-600 hover:bg-amber-500 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-md transition-colors flex items-center justify-center gap-1.5"
+                  title="Abrir pasta no explorador"
+                >
+                  <i className="fa-solid fa-folder-open"></i>
+                  Abrir Pasta
+                </button>
+              </div>
+
+              {/* Action Message */}
+              {actionMessage && (
+                <div className="mt-2 px-3 py-1.5 bg-slate-700 text-slate-200 text-xs rounded-md text-center">
+                  {actionMessage}
+                </div>
+              )}
+            </div>
+          </>
+        ) : (
+          <div className="flex items-center justify-center h-full text-slate-400 text-sm">
+            <p>Selecione ou crie uma nova conversa.</p>
+          </div>
         )}
       </div>
-      
+
       {/* Projects Modal */}
-      <ProjectsModal 
-        isOpen={showProjectsModal} 
-        onClose={() => setShowProjectsModal(false)} 
+      <ProjectsModal
+        isOpen={showProjectsModal}
+        onClose={() => setShowProjectsModal(false)}
       />
     </div>
   );

@@ -1,0 +1,55 @@
+
+# CYDONIA SERVER CONTAINMENT PROTOCOL
+# Stage 1: Thermal Shielding (Build)
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Install system dependencies for native modules (SQLite/Prisma)
+RUN apk add --no-cache python3 make g++ openssl
+
+# Layer Caching: Manifests
+COPY package*.json ./
+COPY backend/package*.json ./backend/
+COPY shared/package*.json ./shared/
+
+# Install dependencies (incorporating shared types)
+# Assuming workspace structure or manual copy. 
+# We copy shared first to ensure type consistency.
+COPY shared ./shared
+COPY backend ./backend
+
+WORKDIR /app/backend
+RUN npm ci
+
+# Generate Neural Pathways (Prisma Client)
+RUN npx prisma generate
+
+# Stage 2: Life Support (Runtime)
+FROM node:18-alpine AS runner
+
+WORKDIR /app
+
+# Install OpenSSL for Prisma Engine in Alpine
+RUN apk add --no-cache openssl
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Copy necessary artifacts only
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/src ./src
+COPY --from=builder /app/backend/package.json ./
+COPY --from=builder /app/backend/prisma ./prisma
+# Copy shared types if needed at runtime or for reference
+COPY --from=builder /app/shared ../shared
+
+# Create volume mount point for SQLite persistence
+RUN mkdir -p /app/data
+ENV DATABASE_URL="file:/app/data/aerosphere_core.db"
+
+# Expose neural port
+EXPOSE 3000
+
+# Fail-Safe Start: Migrate then ignite
+CMD ["sh", "-c", "npx prisma migrate deploy && node src/server.js"]

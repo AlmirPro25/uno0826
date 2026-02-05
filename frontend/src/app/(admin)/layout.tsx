@@ -14,7 +14,8 @@ import {
     BrainCircuit,
     Settings,
     DollarSign,
-    Cpu
+    Cpu,
+    Building2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -22,6 +23,7 @@ const adminNav = [
     { name: "War Dashboard", href: "/admin", icon: Activity },
     { name: "Cognitive View", href: "/admin/intelligence", icon: BrainCircuit },
     { name: "Sovereign Framework", href: "/admin/sovereign", icon: Cpu },
+    { name: "Enterprise Tenants", href: "/admin/tenants", icon: Building2 },
     { name: "User Management", href: "/admin/users", icon: Users },
     { name: "Financial Ledger", href: "/admin/payments", icon: DollarSign },
     { name: "Governance", href: "/admin/governance", icon: ShieldAlert },

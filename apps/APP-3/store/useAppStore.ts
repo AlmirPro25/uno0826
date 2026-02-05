@@ -88,7 +88,7 @@ const FRONTEND_FIRST_MODE = true; // Ativar geração Frontend-first por padrão
 // Helper function para verificar se deve usar modo Frontend-first
 function shouldUseFrontendFirst(prompt: string): boolean {
     if (!FRONTEND_FIRST_MODE) return false;
-    
+
     const projectType = detectProjectTypeFromPrompt(prompt);
     return projectType === 'fullstack';
 }
@@ -694,7 +694,8 @@ interface AppState {
     isApiKeyModalOpen: boolean;
     autoCritiqueResult: string | null;
     isLoadingCritique: boolean;
-    
+    currentFullStack: { frontend: string | null; backend: string | null; styling: string | null } | null;
+
     // 📊 SISTEMA DE PONTUAÇÃO
     currentScore: {
         performance: number;
@@ -793,13 +794,13 @@ interface AppActions {
     // AI Command Actions
     handleAiCommand: (prompt: string, currentCode: string, attachments?: AttachmentFile[], action?: 'GENERATE_CODE_FROM_PLAN' | 'REFINE_PLAN', forceFullStack?: boolean, arquitetaUnica?: boolean, artesaoMundos?: boolean) => Promise<void>;
     handleAiCommandWithAntiSimulation: (prompt: string, currentCode: string, attachments?: AttachmentFile[], action?: 'GENERATE_CODE_FROM_PLAN' | 'REFINE_PLAN', forceFullStack?: boolean, arquitetaUnica?: boolean, artesaoMundos?: boolean) => Promise<void>;
-    
+
     // Nova função FullStack com streaming
     handleFullStackStreamingGeneration: (prompt: string, currentCode: string, attachments?: AttachmentFile[]) => Promise<void>;
-    
+
     // Nova função Arquiteta Única
     handleArquitetaUnicaGeneration: (prompt: string, currentCode: string, attachments?: AttachmentFile[]) => Promise<void>;
-    
+
     // Nova função Artesão de Mundos 3D
     handleArtesaoMundosGeneration: (prompt: string, currentCode: string, attachments?: AttachmentFile[]) => Promise<void>;
     handleFetchUrl: (url: string, currentCode: string) => Promise<void>;
@@ -964,7 +965,7 @@ interface AppActions {
     // Tech Stack Modal
     openTechStackModal: () => void;
     closeTechStackModal: () => void;
-    selectTechStack: (stack: TechStack, specialist: 'general' | 'frontend' | 'backend') => void;
+    selectTechStack: (stack: TechStack, specialist: 'general' | 'frontend' | 'backend', fullStack?: { frontend: string | null; backend: string | null; styling: string | null }) => void;
 
     // 🎛️ CONTROLE DE MODO DE GERAÇÃO
     setGenerationMode: (mode: 'auto' | 'single' | 'enterprise') => void;
@@ -1021,7 +1022,7 @@ const cleanMarkdownWrapper = (code: string): string => {
 const updateCodeAndExtractFiles = (code: string, set: any, get: any, extractFiles: boolean = false) => {
     const cleanedCode = cleanMarkdownWrapper(code);
     set({ htmlCode: cleanedCode });
-    
+
     // Só extrair arquivos se solicitado explicitamente (evita travamento durante streaming)
     if (extractFiles) {
         const { appMode } = get();
@@ -1209,7 +1210,7 @@ export const useAppStore = create(immer<AppState & AppActions>((set, get) => ({
     isApiKeyModalOpen: false,
     autoCritiqueResult: null,
     isLoadingCritique: false,
-    
+
     // 📊 SISTEMA DE PONTUAÇÃO - ESTADO INICIAL
     currentScore: null,
     scoreHistory: [],
@@ -1220,6 +1221,7 @@ export const useAppStore = create(immer<AppState & AppActions>((set, get) => ({
     isGeneratingFrontend: false,
     isGeneratingBackend: false,
     isConnectingFrontendBackend: false,
+    currentFullStack: null,
     frontendQualityScore: 0,
     backendQualityScore: 0,
     integrationGuide: null,
@@ -1371,38 +1373,38 @@ export const useAppStore = create(immer<AppState & AppActions>((set, get) => ({
     critiqueGeneratedCode: async () => {
         const { htmlCode, initialPlanPrompt, projectPlan, selectedTextModel } = get();
         console.log('🔬 Iniciando crítica automática...', { htmlCode: htmlCode.length, initialPlanPrompt });
-        
+
         if (htmlCode === initialHtmlBase || !htmlCode.trim()) {
             console.log('❌ Crítica cancelada: código vazio ou inicial');
             return;
         }
-        
-        set({ 
-            isLoadingCritique: true, 
-            autoCritiqueResult: null, 
-            aiStatusMessage: "🎯 FASE 1/3: Avaliação de Qualidade com Sistema Unificado..." 
+
+        set({
+            isLoadingCritique: true,
+            autoCritiqueResult: null,
+            aiStatusMessage: "🎯 FASE 1/3: Avaliação de Qualidade com Sistema Unificado..."
         });
-        
+
         try {
             // FASE 1: AVALIAÇÃO COM SISTEMA UNIFICADO
             console.log('🎯 Executando avaliação de qualidade...');
             const { unifiedQualitySystem } = await import('../services/UnifiedQualitySystem');
             const report = unifiedQualitySystem.evaluate(htmlCode);
             console.log('✅ Avaliação concluída:', report);
-            
-            set({ 
-                aiStatusMessage: `🔬 FASE 2/3: Qualidade avaliada (${report.overallScore}/100). Executando crítica IA...` 
+
+            set({
+                aiStatusMessage: `🔬 FASE 2/3: Qualidade avaliada (${report.overallScore}/100). Executando crítica IA...`
             });
-            
+
             // FASE 2: GERAR CRÍTICA FORMATADA
             const critique = `
 ## 📊 Auto-Avaliação Completa
 
 ### Score Geral: ${report.overallScore}/100 ${report.passed ? '✅' : '⚠️'}
 
-${report.passed ? 
-  '**✅ Código aprovado!** Atingiu o padrão de excelência mínimo.' : 
-  '**⚠️ Código precisa de melhorias** para atingir o padrão de excelência (mínimo 85/100).'}
+${report.passed ?
+                    '**✅ Código aprovado!** Atingiu o padrão de excelência mínimo.' :
+                    '**⚠️ Código precisa de melhorias** para atingir o padrão de excelência (mínimo 85/100).'}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -1434,22 +1436,22 @@ ${report.recommendations.slice(0, 5).map((rec, i) => `${i + 1}. ${rec}`).join('\
 
 Avaliado em: ${new Date(report.evaluatedAt).toLocaleString('pt-BR')}
 `;
-            
-            set({ 
-                autoCritiqueResult: critique, 
-                aiStatusMessage: "🎯 FASE 3/3: Análise completa. Aplicando correções automaticamente..." 
+
+            set({
+                autoCritiqueResult: critique,
+                aiStatusMessage: "🎯 FASE 3/3: Análise completa. Aplicando correções automaticamente..."
             });
-            
+
             // FASE 3: AUTO-APLICAÇÃO DAS CORREÇÕES (apenas se score < 85)
             if (report.overallScore < 85) {
                 await get().autoApplyCritiqueImprovements(critique);
             } else {
-                set({ 
+                set({
                     aiStatusMessage: `✅ Código aprovado! Pontuação: ${report.overallScore}/100 🎯`,
                     autoCritiqueResult: null // Limpar crítica se código está bom
                 });
             }
-            
+
         } catch (critiqueError) {
             console.error("Failed to get auto-critique:", critiqueError);
             set({ aiStatusMessage: "❌ Falha na auto-avaliação. Código mantido como está." });
@@ -1461,7 +1463,7 @@ Avaliado em: ${new Date(report.evaluatedAt).toLocaleString('pt-BR')}
     // 🚀 NOVA FUNÇÃO: AUTO-APLICAÇÃO INTELIGENTE
     autoApplyCritiqueImprovements: async (critique: string) => {
         const { htmlCode, selectedTextModel } = get();
-        
+
         set({
             aiStatusMessage: "🔧 FASE 3/3: Aplicando melhorias automaticamente...",
             previousHtmlCode: htmlCode,
@@ -1504,7 +1506,7 @@ ${htmlCode}
         try {
             let finalCode = "";
             const stream = generateAiResponseStream(autoFixPrompt, 'refine_code_no_plan', selectedTextModel, false, null, htmlCode, null, []);
-            
+
             for await (const chunk of stream) {
                 finalCode += chunk.chunk;
                 set({ htmlCode: finalCode });
@@ -1515,7 +1517,7 @@ ${htmlCode}
             if (finalCode.includes('ai-researched-image://')) {
                 try {
                     const { processHtmlAndGenerateImages } = await import('../services/GeminiImageService');
-                    const result = await processHtmlAndGenerateImages(finalCode, () => {});
+                    const result = await processHtmlAndGenerateImages(finalCode, () => { });
                     finalCodeWithImages = result.htmlContent;
                 } catch (imageError) {
                     console.error('Erro na geração de imagens:', imageError);
@@ -1524,15 +1526,15 @@ ${htmlCode}
 
             // 📊 CALCULAR PONTUAÇÃO DE MELHORIA
             const improvementScore = await get().calculateImprovementScore(htmlCode, finalCodeWithImages, critique);
-            
+
             // 📈 SALVAR NO HISTÓRICO
             const newScoreEntry = {
                 timestamp: Date.now(),
                 score: improvementScore.totalScore,
                 improvements: improvementScore.improvements
             };
-            
-            set({ 
+
+            set({
                 htmlCode: finalCodeWithImages,
                 aiStatusMessage: `✅ Auto-correção concluída! Pontuação: ${improvementScore.totalScore}/100 📊`,
                 autoCritiqueResult: null, // Limpar crítica após aplicar
@@ -1550,9 +1552,9 @@ ${htmlCode}
 
         } catch (error) {
             console.error('Erro na auto-correção:', error);
-            set({ 
+            set({
                 htmlCode: get().previousHtmlCode || htmlCode,
-                aiStatusMessage: "❌ Erro na auto-correção. Código restaurado." 
+                aiStatusMessage: "❌ Erro na auto-correção. Código restaurado."
             });
         }
     },
@@ -1682,8 +1684,8 @@ ${htmlCode}
         if (!code.includes('flex') && !code.includes('grid')) { score -= 20; issues.push("Layout não responsivo"); }
 
         // Verificar unidades responsivas
-        if (!code.includes('rem') && !code.includes('em') && !code.includes('vw') && !code.includes('vh')) { 
-            score -= 15; issues.push("Unidades não responsivas"); 
+        if (!code.includes('rem') && !code.includes('em') && !code.includes('vw') && !code.includes('vh')) {
+            score -= 15; issues.push("Unidades não responsivas");
         }
 
         return { score: Math.max(0, score), issues, metrics: { mediaQueries, hasFlexGrid: code.includes('flex') || code.includes('grid') } };
@@ -1853,20 +1855,20 @@ ${autoCritiqueResult}
             if (finalCode.includes('ai-researched-image://')) {
                 try {
                     console.log('🎨 Detectados placeholders de imagem, iniciando geração...');
-                    
+
                     // Importar dinamicamente o serviço de imagens
                     const { processHtmlAndGenerateImages } = await import('../services/GeminiImageService');
-                    
+
                     const result = await processHtmlAndGenerateImages(
                         finalCode,
                         (current, total, description) => {
                             console.log(`📸 Gerando imagem ${current}/${total}: ${description.substring(0, 30)}...`);
                         }
                     );
-                    
+
                     finalCodeWithImages = result.htmlContent;
                     console.log(`✅ ${result.imagesGenerated} imagens geradas automaticamente!`);
-                    
+
                 } catch (imageError) {
                     console.error('⚠️ Erro na geração de imagens, continuando sem imagens:', imageError);
                     // Continuar sem imagens em caso de erro
@@ -1903,40 +1905,40 @@ ${autoCritiqueResult}
         // VERIFICAR SE ANTI-SIMULAÇÃO ESTÁ HABILITADA
         if (!isAntiSimulationEnabled) {
             console.log('⚠️ Anti-simulação desabilitada. Usando sistema refinado menos restritivo.');
-            
+
             // Usar sistema anti-simulação refinado (menos restritivo)
             const { AntiSimulationRefiner } = await import('../services/AntiSimulationRefiner');
-            
+
             // Executar geração normal primeiro
             const result = await get().handleAiCommand(prompt, currentCode, attachments, action, forceFullStack, arquitetaUnica, artesaoMundos);
-            
+
             // NOVO: Aplicar sistema de auto-avaliação inteligente da IA
             setTimeout(async () => {
                 const currentCode = get().htmlCode;
                 if (currentCode && currentCode.length > 100) {
                     console.log('🤖 Iniciando auto-avaliação inteligente da IA...');
-                    
+
                     try {
                         // Importar sistema de auto-avaliação
                         const { aiSelfEvaluationSystem } = await import('../services/AISelfevaluationSystem');
-                        
+
                         // Executar ciclo completo: Auto-avaliação → Auto-pontuação → Auto-correção
                         const selfImprovementResult = await aiSelfEvaluationSystem.executeFullSelfImprovementCycle(
                             currentCode,
                             prompt,
                             90 // Score mínimo desejado
                         );
-                        
+
                         console.log(`📊 Auto-avaliação: ${selfImprovementResult.originalScore} → ${selfImprovementResult.finalScore} pontos`);
-                        
+
                         // Aplicar código melhorado se houve melhoria significativa
                         if (selfImprovementResult.finalScore > selfImprovementResult.originalScore + 5) {
                             console.log('✨ IA se auto-corrigiu! Aplicando melhorias...');
-                            set({ 
+                            set({
                                 htmlCode: selfImprovementResult.finalCode,
                                 aiStatusMessage: `🧠 IA se auto-avaliou e melhorou: ${selfImprovementResult.originalScore} → ${selfImprovementResult.finalScore} pontos`
                             });
-                            
+
                             // Log das melhorias aplicadas
                             selfImprovementResult.correctionDetails.changesApplied.forEach(change => {
                                 console.log(`🔧 ${change}`);
@@ -1944,33 +1946,33 @@ ${autoCritiqueResult}
                         } else {
                             console.log('✅ Código já estava em boa qualidade segundo auto-avaliação da IA');
                         }
-                        
+
                         // Fallback: Sistema universal de pontuação como backup
                         const { UniversalScoringSystem } = await import('../services/UniversalScoringSystem');
                         const backupScore = await UniversalScoringSystem.evaluateCodeAfterGeneration(
-                            selfImprovementResult.finalCode, 
+                            selfImprovementResult.finalCode,
                             'ai-self-evaluation'
                         );
-                        
+
                         if (backupScore.score < 75) {
                             console.log('🔄 Aplicando correção adicional via sistema universal...');
                             const finalCode = await UniversalScoringSystem.autoCorrectIfNeeded(
-                                selfImprovementResult.finalCode, 
+                                selfImprovementResult.finalCode,
                                 backupScore
                             );
-                            
+
                             if (finalCode !== selfImprovementResult.finalCode) {
                                 set({ htmlCode: finalCode });
                             }
                         }
-                        
+
                     } catch (error) {
                         console.error('❌ Erro na auto-avaliação da IA:', error);
-                        
+
                         // Fallback para sistema anterior em caso de erro
                         const { AntiSimulationRefiner } = await import('../services/AntiSimulationRefiner');
                         const refinementResult = await AntiSimulationRefiner.refineAntiSimulation(currentCode);
-                        
+
                         if (!refinementResult.passed) {
                             console.log('🔧 Aplicando correções de simulação (fallback)...');
                             set({ htmlCode: refinementResult.refinedCode });
@@ -1978,7 +1980,7 @@ ${autoCritiqueResult}
                     }
                 }
             }, 1500); // Aumentado para 1.5s para dar tempo da IA processar
-            
+
             return result;
         }
 
@@ -2123,10 +2125,10 @@ REGENERE AGORA COM QUALIDADE ENTERPRISE.`;
                 try {
                     console.log('🎨 Detectados placeholders de imagem, iniciando geração...');
                     set({ aiStatusMessage: '🎨 Gerando imagens profissionais com IA...' });
-                    
+
                     // Importar dinamicamente o serviço de imagens
                     const { processHtmlAndGenerateImages } = await import('../services/GeminiImageService');
-                    
+
                     const imageResult = await processHtmlAndGenerateImages(
                         result.code,
                         (current, total, description) => {
@@ -2134,17 +2136,17 @@ REGENERE AGORA COM QUALIDADE ENTERPRISE.`;
                             set({ aiStatusMessage: `🎨 Gerando imagem ${current}/${total}: ${description.substring(0, 40)}...` });
                         }
                     );
-                    
+
                     finalCodeWithImages = imageResult.htmlContent;
                     console.log(`✅ ${imageResult.imagesGenerated} imagens geradas automaticamente!`);
-                    
+
                     // Atualizar o HTML com as imagens geradas
                     set({ htmlCode: finalCodeWithImages });
-                    
+
                     // Comprimir URLs para o editor (manter código limpo)
                     const { compressImageUrls } = await import('../services/ImageUrlExpander');
                     const compressedCodeForEditor = compressImageUrls(finalCodeWithImages);
-                    
+
                     // Atualizar editor com código comprimido
                     if (editorRef?.current) {
                         const model = editorRef.current.getModel();
@@ -2156,7 +2158,7 @@ REGENERE AGORA COM QUALIDADE ENTERPRISE.`;
                             }]);
                         }
                     }
-                    
+
                 } catch (imageError) {
                     console.error('⚠️ Erro na geração de imagens, continuando sem imagens:', imageError);
                     // Continuar sem imagens em caso de erro
@@ -2186,13 +2188,13 @@ REGENERE AGORA COM QUALIDADE ENTERPRISE.`;
                 try {
                     console.log('🎯 Iniciando sistema híbrido de auto-avaliação...');
                     set({ isLoadingCritique: true });
-                    
+
                     // FASE 1: Avaliar com UnifiedQualitySystem (score objetivo)
                     console.log('📊 FASE 1: Avaliando com UnifiedQualitySystem...');
                     const { unifiedQualitySystem } = await import('../services/UnifiedQualitySystem');
                     const report = unifiedQualitySystem.evaluate(finalCode);
                     console.log('✅ FASE 1 concluída. Score:', report.overallScore);
-                    
+
                     // FASE 2: Gerar crítica conversacional com IA (feedback detalhado)
                     console.log('🤖 FASE 2: Gerando crítica conversacional com IA...');
                     const aiCritique = await critiqueGeneratedSite(
@@ -2202,14 +2204,14 @@ REGENERE AGORA COM QUALIDADE ENTERPRISE.`;
                         selectedTextModel
                     );
                     console.log('✅ FASE 2 concluída. Crítica gerada.');
-                    
+
                     // FASE 3: Combinar os dois sistemas em um painel híbrido SEMPRE VISÍVEL
                     const hybridCritique = `
 ## 🎯 Auto-Avaliação Inteligente (Score: ${report.overallScore}/100 ${report.passed ? '✅' : '⚠️'})
 
-${report.passed ? 
-  '**✅ Código Aprovado!** Atingiu o padrão de excelência (85+/100).' : 
-  '**⚠️ Código Precisa de Melhorias** para atingir o padrão de excelência.'}
+${report.passed ?
+                            '**✅ Código Aprovado!** Atingiu o padrão de excelência (85+/100).' :
+                            '**⚠️ Código Precisa de Melhorias** para atingir o padrão de excelência.'}
 
 ---
 
@@ -2233,9 +2235,9 @@ ${aiCritique}
 
 ### 🎯 Melhorias ${report.refinementCount > 0 ? 'Aplicadas Automaticamente' : 'Recomendadas'}
 
-${report.improvements.length > 0 ? 
-  report.improvements.slice(0, 8).map((imp, i) => `${i + 1}. ${imp.replace(/[*_]/g, '')}`).join('\n') :
-  '✨ Nenhuma melhoria necessária. Código está excelente!'}
+${report.improvements.length > 0 ?
+                            report.improvements.slice(0, 8).map((imp, i) => `${i + 1}. ${imp.replace(/[*_]/g, '')}`).join('\n') :
+                            '✨ Nenhuma melhoria necessária. Código está excelente!'}
 
 ${report.refinementCount > 0 ? `\n**✅ Sistema refinhou automaticamente ${report.refinementCount}x para atingir qualidade máxima.**` : ''}
 
@@ -2244,8 +2246,8 @@ ${report.refinementCount > 0 ? `\n**✅ Sistema refinhou automaticamente ${repor
 ### 💡 Próximos Passos Sugeridos
 
 ${report.recommendations.length > 0 ?
-  report.recommendations.slice(0, 5).map((rec, i) => `${i + 1}. ${rec.replace(/[*_]/g, '')}`).join('\n') :
-  '🎉 Parabéns! Código está perfeito. Nenhuma ação adicional necessária.'}
+                            report.recommendations.slice(0, 5).map((rec, i) => `${i + 1}. ${rec.replace(/[*_]/g, '')}`).join('\n') :
+                            '🎉 Parabéns! Código está perfeito. Nenhuma ação adicional necessária.'}
 
 ---
 
@@ -2253,12 +2255,12 @@ ${report.recommendations.length > 0 ?
 **🤖 Sistema:** UnifiedQualitySystem + Gemini AI  
 **⚡ Tempo de Análise:** ${report.refinementCount > 0 ? 'Com refinamento automático' : 'Análise única'}
 `;
-                    
+
                     console.log('🎯 FASE 3: Combinando sistemas...');
                     console.log('📊 Painel híbrido gerado com sucesso!');
                     console.log('📝 Tamanho da crítica:', hybridCritique.length, 'caracteres');
                     console.log('🟡 PAINEL AMARELO DEVE APARECER AGORA!');
-                    
+
                     set({
                         autoCritiqueResult: hybridCritique,
                         currentScore: {
@@ -2273,9 +2275,9 @@ ${report.recommendations.length > 0 ?
                         },
                         isLoadingCritique: false
                     });
-                    
+
                     console.log('🎯 Painel híbrido gerado: Score objetivo + Feedback conversacional da IA');
-                    
+
                 } catch (error) {
                     console.error('Erro na auto-crítica híbrida:', error);
                     set({ isLoadingCritique: false });
@@ -2351,28 +2353,28 @@ ${report.recommendations.length > 0 ?
                 const currentGeneratedCode = get().htmlCode;
                 if (currentGeneratedCode && currentGeneratedCode.length > 100) {
                     console.log('🤖 Iniciando auto-avaliação inteligente da IA...');
-                    
+
                     try {
                         // Importar sistema de auto-avaliação
                         const { aiSelfEvaluationSystem } = await import('../services/AISelfevaluationSystem');
-                        
+
                         // Executar ciclo completo: Auto-avaliação → Auto-pontuação → Auto-correção
                         const selfImprovementResult = await aiSelfEvaluationSystem.executeFullSelfImprovementCycle(
                             currentGeneratedCode,
                             prompt,
                             90 // Score mínimo desejado
                         );
-                        
+
                         console.log(`📊 Auto-avaliação: ${selfImprovementResult.originalScore} → ${selfImprovementResult.finalScore} pontos`);
-                        
+
                         // Aplicar código melhorado se houve melhoria significativa
                         if (selfImprovementResult.finalScore > selfImprovementResult.originalScore + 5) {
                             console.log('✨ IA se auto-corrigiu! Aplicando melhorias...');
-                            set({ 
+                            set({
                                 htmlCode: selfImprovementResult.finalCode,
                                 aiStatusMessage: `🧠 IA se auto-avaliou e melhorou: ${selfImprovementResult.originalScore} → ${selfImprovementResult.finalScore} pontos`
                             });
-                            
+
                             // Log das melhorias aplicadas
                             selfImprovementResult.correctionDetails.changesApplied.forEach(change => {
                                 console.log(`🔧 ${change}`);
@@ -2380,7 +2382,7 @@ ${report.recommendations.length > 0 ?
                         } else {
                             console.log('✅ Código já estava em boa qualidade segundo auto-avaliação da IA');
                         }
-                        
+
                     } catch (error) {
                         console.error('❌ Erro na auto-avaliação da IA:', error);
                     }
@@ -2455,7 +2457,7 @@ ${report.recommendations.length > 0 ?
                 if (!projectPlan) throw new Error("Tentativa de gerar código sem um plano.");
                 const { selectedGenerationType } = get();
                 const generationPrompt = initialPlanPrompt || prompt;
-                
+
                 // NOVA LÓGICA INTELIGENTE: Baseada na seleção do usuário
                 if (selectedGenerationType === 'backend') {
                     await get().generateBackendOnly(generationPrompt, projectPlan, attachmentParts);
@@ -2479,7 +2481,7 @@ ${report.recommendations.length > 0 ?
                     // 3. Backend é criado baseado no frontend real
                     // 4. Melhor experiência de desenvolvimento
                     // 5. Permite pausar após frontend se necessário
-                    
+
                     // FASE 1: FRONTEND - Mostrar progresso no editor
                     set({
                         currentAppPhase: 'GENERATING_FRONTEND',
@@ -2525,7 +2527,7 @@ ${report.recommendations.length > 0 ?
                         aiStatusMessage: '🚀 Projeto full-stack completo! Frontend-First + Backend + Mídia integrados.'
                     });
                     setTimeout(() => get().clearDetailedStatus(), 3000);
-                    
+
                     // 🎨 ABRIR SELETOR DE CORES APÓS GERAÇÃO (se configurado)
                     if (get().showColorPickerAfterGeneration) {
                         setTimeout(() => {
@@ -2533,7 +2535,7 @@ ${report.recommendations.length > 0 ?
                             get().openThemeModal();
                         }, 1500);
                     }
-                    
+
                     // Ativar auto-avaliador após geração completa
                     setupAutoEvaluator();
                 } else {
@@ -2558,7 +2560,7 @@ ${report.recommendations.length > 0 ?
                             console.log('🏢 [STORE] Enterprise Pipeline completo - usando código convertido');
                             finalCode = chunk.chunk; // Usar código já convertido
                             updateCodeAndExtractFiles(finalCode, set, get, true);
-                            
+
                             // Atualizar editor com código convertido
                             const editorRef = (window as any).globalEditorRef;
                             if (editorRef?.current) {
@@ -2573,7 +2575,7 @@ ${report.recommendations.length > 0 ?
                             }
                             continue; // Pular para próximo chunk (se houver)
                         }
-                        
+
                         finalCode += chunk.chunk;
 
                         // PRIMEIRO: Limpar markdown wrapper e atualizar código
@@ -2622,10 +2624,10 @@ ${report.recommendations.length > 0 ?
                         try {
                             console.log('🎨 Detectados placeholders de imagem, iniciando geração...');
                             set({ aiStatusMessage: '🎨 Gerando imagens profissionais com IA...' });
-                            
+
                             // Importar dinamicamente o serviço de imagens
                             const { processHtmlAndGenerateImages } = await import('../services/GeminiImageService');
-                            
+
                             const result = await processHtmlAndGenerateImages(
                                 finalCode,
                                 (current, total, description) => {
@@ -2633,13 +2635,13 @@ ${report.recommendations.length > 0 ?
                                     set({ aiStatusMessage: `🎨 Gerando imagem ${current}/${total}: ${description.substring(0, 40)}...` });
                                 }
                             );
-                            
+
                             finalCodeWithImages = result.htmlContent;
                             console.log(`✅ ${result.imagesGenerated} imagens geradas automaticamente!`);
-                            
+
                             // Atualizar o HTML com as imagens geradas
                             set({ htmlCode: finalCodeWithImages });
-                            
+
                             // Forçar re-renderização após pequeno delay para garantir que localStorage foi atualizado
                             setTimeout(() => {
                                 console.log('🔄 Forçando re-renderização para expansão de URLs...');
@@ -2648,7 +2650,7 @@ ${report.recommendations.length > 0 ?
                                     set({ htmlCode: finalCodeWithImages }); // Restore original
                                 }, 100);
                             }, 500);
-                            
+
                             // Atualizar editor também
                             const editorRef = (window as any).globalEditorRef;
                             if (editorRef?.current) {
@@ -2661,7 +2663,7 @@ ${report.recommendations.length > 0 ?
                                     }]);
                                 }
                             }
-                            
+
                         } catch (imageError) {
                             console.error('⚠️ Erro na geração de imagens, continuando sem imagens:', imageError);
                             // Continuar sem imagens em caso de erro
@@ -2675,7 +2677,7 @@ ${report.recommendations.length > 0 ?
                     // Removido temporariamente para simplificar
 
                     set({ htmlCode: finalCodeWithMedia, projectPlan: null, currentAppPhase: 'CODE_GENERATED', aiStatusMessage: '✅ Código gerado com sucesso! Site pronto para visualização e edição.' });
-                    
+
                     // Extrair arquivos separados DEPOIS que tudo estiver pronto
                     const { appMode } = get();
                     if (appMode === 'chat') {
@@ -2684,9 +2686,9 @@ ${report.recommendations.length > 0 ?
                             set({ projectFiles: files });
                         }
                     }
-                    
+
                     setTimeout(() => get().clearDetailedStatus(), 3000);
-                    
+
                     // 🎨 ABRIR SELETOR DE CORES APÓS GERAÇÃO (se configurado)
                     if (get().showColorPickerAfterGeneration) {
                         setTimeout(() => {
@@ -2694,7 +2696,7 @@ ${report.recommendations.length > 0 ?
                             get().openThemeModal();
                         }, 1500); // Delay para dar tempo do usuário ver o resultado
                     }
-                    
+
                     // Ativar auto-avaliador após geração normal
                     setupAutoEvaluator();
                 }
@@ -2751,17 +2753,17 @@ ${report.recommendations.length > 0 ?
                 });
 
                 set({ aiStatusMessage: 'Atualizando mídia para dar vida ao site...' });
-                
+
                 // 🎨 SISTEMA DE GERAÇÃO AUTOMÁTICA DE IMAGENS
                 let finalCodeWithImages = finalCode;
                 if (finalCode.includes('ai-researched-image://')) {
                     try {
                         console.log('🎨 Detectados placeholders de imagem, iniciando geração...');
                         set({ aiStatusMessage: '🎨 Gerando imagens profissionais com IA...' });
-                        
+
                         // Importar dinamicamente o serviço de imagens
                         const { processHtmlAndGenerateImages } = await import('../services/GeminiImageService');
-                        
+
                         const result = await processHtmlAndGenerateImages(
                             finalCode,
                             (current, total, description) => {
@@ -2769,17 +2771,17 @@ ${report.recommendations.length > 0 ?
                                 set({ aiStatusMessage: `🎨 Gerando imagem ${current}/${total}: ${description.substring(0, 40)}...` });
                             }
                         );
-                        
+
                         finalCodeWithImages = result.htmlContent;
                         console.log(`✅ ${result.imagesGenerated} imagens geradas automaticamente!`);
-                        
+
                         // Atualizar o HTML com as imagens geradas
                         set({ htmlCode: finalCodeWithImages });
-                        
+
                         // Comprimir URLs para o editor (manter código limpo)
                         const { compressImageUrls } = await import('../services/ImageUrlExpander');
                         const compressedCodeForEditor = compressImageUrls(finalCodeWithImages);
-                        
+
                         // Atualizar editor com código comprimido
                         const editorRef = (window as any).globalEditorRef;
                         if (editorRef?.current) {
@@ -2792,17 +2794,17 @@ ${report.recommendations.length > 0 ?
                                 }]);
                             }
                         }
-                        
+
                     } catch (imageError) {
                         console.error('⚠️ Erro na geração de imagens, continuando sem imagens:', imageError);
                         // Continuar sem imagens em caso de erro
                     }
                 }
-                
+
                 const finalCodeWithMedia = await postProcessHtmlWithMedia(finalCodeWithImages);
 
                 set({ htmlCode: finalCodeWithMedia, currentAppPhase: 'CODE_GENERATED', aiStatusMessage: 'Código refinado com sucesso!' });
-                
+
                 // Extrair arquivos separados DEPOIS que tudo estiver pronto
                 const { appMode } = get();
                 if (appMode === 'chat') {
@@ -2811,7 +2813,7 @@ ${report.recommendations.length > 0 ?
                         set({ projectFiles: files });
                     }
                 }
-                
+
                 await get().critiqueGeneratedCode();
             }
 
@@ -2849,7 +2851,7 @@ ${report.recommendations.length > 0 ?
     // --- Chat Mode Actions ---
     switchToChatMode: (currentCode) => {
         let files = parseFilesFromHtml(currentCode);
-        
+
         // Se não conseguiu extrair arquivos, criar arquivo padrão
         if (files.length === 0) {
             files = [{
@@ -3089,11 +3091,11 @@ ${report.recommendations.length > 0 ?
         const { contextualAiCommand, contextualAiTargetElementInfo, selectedTextModel } = get();
         if (!contextualAiCommand || !contextualAiTargetElementInfo) return null;
 
-        set({ 
-            isLoadingContextualAi: true, 
-            contextualAiAnalysisResults: null, 
+        set({
+            isLoadingContextualAi: true,
+            contextualAiAnalysisResults: null,
             contextualAiError: null,
-            autoCritiqueResult: null 
+            autoCritiqueResult: null
         });
 
         try {
@@ -3128,12 +3130,12 @@ ${report.recommendations.length > 0 ?
         } catch (error) {
             console.error("❌ Erro na modificação contextual:", error);
             const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido ao processar sua solicitação';
-            
+
             // Mantém o painel aberto em caso de erro para o usuário tentar novamente
-            set({ 
+            set({
                 contextualAiError: errorMessage,
                 aiStatusMessage: `❌ Falha ao modificar elemento: ${errorMessage}`,
-                isLoadingContextualAi: false 
+                isLoadingContextualAi: false
             });
             return null;
         }
@@ -3561,7 +3563,7 @@ ${report.recommendations.length > 0 ?
 
     generateWithSelectedPersona: async (prompt: string, currentCode: string) => {
         const { selectedPersona, selectedTextModel } = get();
-        
+
         if (!selectedPersona) {
             throw new Error('Nenhuma persona selecionada');
         }
@@ -3661,29 +3663,34 @@ ${report.recommendations.length > 0 ?
         });
     },
 
-    selectTechStack: (stack: TechStack, specialist: 'general' | 'frontend' | 'backend') => {
+    selectTechStack: (stack: TechStack, specialist: 'general' | 'frontend' | 'backend', fullStack?: { frontend: string | null; backend: string | null; styling: string | null }) => {
         set(state => {
+            // Guardar a stack completa se fornecida
+            if (fullStack) {
+                state.currentFullStack = fullStack;
+            }
+
             // Criar nova aba com a tecnologia selecionada
             const newTab: EditorTab = {
                 id: `tab-${Date.now()}`,
                 name: `${stackTemplates[stack]?.name || stack}`,
                 stack: stack,
-                content: stackTemplates[stack]?.template || '// Novo projeto',
+                content: stackTemplates[stack]?.defaultFiles[0]?.content || '// Novo projeto',
                 isActive: false,
                 isDirty: false,
                 aiSpecialist: specialist,
                 createdAt: new Date(),
                 lastModified: new Date(),
-                language: stackTemplates[stack]?.language || 'javascript'
+                language: stackTemplates[stack]?.defaultFiles[0]?.language || 'javascript'
             };
 
             // Desativar todas as abas
             state.editorTabs.forEach(tab => tab.isActive = false);
-            
+
             // Adicionar nova aba e ativá-la
             state.editorTabs.push(newTab);
             state.activeEditorId = newTab.id;
-            
+
             // Fechar modal
             state.isTechStackModalOpen = false;
         });
@@ -3751,17 +3758,17 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
                     aiStatusMessage: '📋 Plano criado! Gerando código...',
                     isLoadingAi: true // Manter loading para continuar gerando
                 });
-                
+
                 // ✅ CORREÇÃO: Gerar código automaticamente após o plano
                 // Em vez de esperar um botão que não existe
                 console.log('🚀 Gerando código automaticamente após plano...');
-                
+
                 // Chamar handleAiCommand com action GENERATE_CODE_FROM_PLAN
                 await get().handleAiCommand(lastUserPromptForLog, 'GENERATE_CODE_FROM_PLAN');
             }
         } catch (error) {
             console.error('Erro ao criar plano:', error);
-            
+
             // Mensagem de erro mais específica
             let errorMessage = 'Erro ao criar plano. Tente novamente.';
             if (error instanceof Error) {
@@ -3773,7 +3780,7 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
                     errorMessage = '⚠️ Limite de uso atingido. Aguarde alguns minutos.';
                 }
             }
-            
+
             set({
                 isLoadingAi: false,
                 currentAppPhase: 'AI_ERROR_STATE',
@@ -3784,7 +3791,7 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
 
     performAdvancedResearchAndShowPalettes: async (prompt: string) => {
         console.log('🔍 Iniciando pesquisa avançada para:', prompt);
-        
+
         // Salvar o prompt para usar depois
         set({
             lastUserPromptForLog: prompt,
@@ -3801,16 +3808,16 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
             // 🚀 FASE 1: PESQUISA ULTRA-INTELIGENTE - Cache + Expansão + Análise
             console.log('🚀 Iniciando pesquisa ULTRA-INTELIGENTE...');
             set({ aiStatusMessage: '🚀 Analisando intenção, expandindo queries, consultando cache...' });
-            
+
             let webResearchFindings: ResearchFinding[] = [];
             try {
                 const { WebResearchEngine } = await import('@/services/WebResearchEngine');
                 const webEngine = new WebResearchEngine();
-                
+
                 // 🚀 Usar ultraSmartResearch - máxima cobertura com cache e expansão
                 // Combina: SmartQueryAnalyzer + QueryExpander + ResearchCache
                 const webResults = await webEngine.ultraSmartResearch(prompt, 20);
-                
+
                 // Converter KnowledgePackets para ResearchFindings
                 webResearchFindings = webResults.packets.map(packet => ({
                     title: packet.title,
@@ -3820,11 +3827,11 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
                     category: mapPacketTypeToCategory(packet.type),
                     imageQuery: `${packet.source} ${packet.title.split(' ').slice(0, 3).join(' ')}`
                 }));
-                
+
                 console.log(`✅ Pesquisa inteligente concluída: ${webResearchFindings.length} resultados`);
                 console.log(`📊 Fontes: ${webResults.sources.join(', ')}`);
                 console.log(`⏱️ Tempo: ${webResults.searchTime}ms`);
-                
+
                 // Mostrar resultados da pesquisa web
                 if (webResearchFindings.length > 0) {
                     set({
@@ -3836,14 +3843,14 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
             } catch (webError) {
                 console.warn('⚠️ Pesquisa inteligente falhou, continuando com pesquisa de design:', webError);
             }
-            
+
             // 🎨 FASE 2: PESQUISA DE DESIGN - Cores, fontes, efeitos
             console.log('🎨 Iniciando pesquisa de design...');
             set({ aiStatusMessage: '🎨 FASE 2/4: Pesquisando design, cores e padrões...' });
-            
+
             const designResearch = await performAdvancedResearch(prompt, get().selectedTextModel);
             console.log('✅ Pesquisa de design concluída:', designResearch);
-            
+
             // Combinar pesquisa web com pesquisa de design
             set({
                 designResearch,
@@ -3853,11 +3860,11 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
                 aiStatusMessage: '🎨 Pesquisa concluída! Escolha sua paleta de cores favorita.',
                 isLoadingAi: false
             });
-            
+
             console.log('🎨 Seletor de paletas aberto!');
         } catch (error) {
             console.error('❌ Erro na pesquisa avançada:', error);
-            
+
             // Mensagem de erro mais específica
             let errorMessage = 'Erro na pesquisa. Tente novamente.';
             if (error instanceof Error) {
@@ -3869,7 +3876,7 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
                     errorMessage = '⚠️ Limite de uso atingido. Aguarde alguns minutos.';
                 }
             }
-            
+
             set({
                 isLoadingAi: false,
                 currentAppPhase: 'AI_ERROR_STATE',
@@ -3882,7 +3889,7 @@ Crie um plano detalhado usando a pesquisa e a paleta selecionada.
 
     generateFrontendOnly: async (prompt: string, plan: string, attachments: Part[]) => {
         const { selectedTextModel, researchFindings } = get();
-        
+
         set({
             currentAppPhase: 'GENERATING_FRONTEND',
             aiStatusMessage: '🎨 Gerando Frontend Completo - Interface, navegação e funcionalidades...',
@@ -3929,18 +3936,18 @@ Crie um frontend que impressione e funcione de verdade!
 `;
 
             const response = await generateAiResponse(
-                intelligentPrompt, 
-                'generate_code_from_plan', 
-                selectedTextModel, 
-                plan, 
-                null, 
-                prompt, 
-                researchFindings, 
+                intelligentPrompt,
+                'generate_code_from_plan',
+                selectedTextModel,
+                plan,
+                null,
+                prompt,
+                researchFindings,
                 attachments
             );
 
             get().updateStatusProgress(80);
-            
+
             const finalCode = await postProcessHtmlWithMedia(response.content);
             get().updateStatusProgress(100);
 
@@ -3967,7 +3974,7 @@ Crie um frontend que impressione e funcione de verdade!
 
     generateBackendOnly: async (prompt: string, plan: string, attachments: Part[]) => {
         const { selectedTextModel, researchFindings } = get();
-        
+
         set({
             currentAppPhase: 'GENERATING_BACKEND',
             aiStatusMessage: '⚙️ Gerando Backend Completo - APIs, banco de dados e lógica de negócio...',
@@ -4024,13 +4031,13 @@ Crie um backend que funcione de verdade em produção!
 `;
 
             const response = await generateAiResponse(
-                intelligentPrompt, 
-                'generate_backend', 
-                selectedTextModel, 
-                plan, 
-                null, 
-                prompt, 
-                researchFindings, 
+                intelligentPrompt,
+                'generate_backend',
+                selectedTextModel,
+                plan,
+                null,
+                prompt,
+                researchFindings,
                 attachments
             );
 
@@ -4058,9 +4065,9 @@ Crie um backend que funcione de verdade em produção!
 
     generateFullStackIntelligent: async (prompt: string, plan: string, attachments: Part[]) => {
         const { selectedTextModel, researchFindings } = get();
-        
+
         console.log('🚀 INICIANDO GERAÇÃO FULLSTACK INTELIGENTE - 5 CHAMADAS API COM STREAMING');
-        
+
         set({
             currentAppPhase: 'GENERATING_FRONTEND',
             aiStatusMessage: '🚀 Gerando Full Stack Inteligente - Sistema completo e integrado...',
@@ -4072,7 +4079,7 @@ Crie um backend que funcione de verdade em produção!
             const { projectPlan } = get();
             let frontendCode = "";
             let backendCode = "";
-            
+
             // ===== CHAMADA API 1: FRONTEND COMPLETO COM STREAMING =====
             console.log('📡 CHAMADA API 1/5: Frontend completo com streaming');
             set({
@@ -4100,20 +4107,20 @@ Pense como um usuário real usaria este sistema!
 
             // Usando streaming para mostrar o código sendo gerado em tempo real
             const frontendStream = generateAiResponseStream(
-                frontendPrompt, 
-                'generate_code_from_plan', 
+                frontendPrompt,
+                'generate_code_from_plan',
                 selectedTextModel,
                 false, // isReactLikely
-                plan, 
-                null, 
-                prompt, 
+                plan,
+                null,
+                prompt,
                 attachments
             );
-            
+
             // Processar cada chunk do streaming
             for await (const chunk of frontendStream) {
                 frontendCode += chunk.chunk;
-                
+
                 // Atualizar editor em tempo real
                 const editorRef = (window as any).globalEditorRef;
                 if (editorRef?.current) {
@@ -4124,16 +4131,16 @@ Pense como um usuário real usaria este sistema!
                             range: fullRange,
                             text: frontendCode
                         }]);
-                        
+
                         // Auto-scroll para o final
                         const lineCount = model.getLineCount();
                         editorRef.current.revealLine(lineCount, 1);
                     }
                 }
             }
-            
+
             // Desativar streaming após concluir
-            set({ 
+            set({
                 htmlCode: frontendCode,
                 editorInteractionState: { ...get().editorInteractionState, isStreaming: false }
             });
@@ -4149,7 +4156,7 @@ Pense como um usuário real usaria este sistema!
             get().setDetailedStatus('Backend', 'API Call 2', 'Chamada dedicada para backend...', 20, 30);
 
             const separator = `\n\n<!-- ===== BACKEND INTEGRADO (API CALL 2) ===== -->\n<!-- Frontend ↑ | Backend ↓ -->\n\n`;
-            
+
             const backendPrompt = `
 ⚙️ **BACKEND INTEGRADO PARA FULL STACK**
 
@@ -4173,23 +4180,23 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
             // Usando streaming para o backend também
             let combinedCode = frontendCode + separator;
             backendCode = "";
-            
+
             const backendStream = generateAiResponseStream(
-                backendPrompt, 
-                'generate_backend', 
+                backendPrompt,
+                'generate_backend',
                 selectedTextModel,
                 false, // isReactLikely
-                projectPlan, 
-                frontendCode, 
-                prompt, 
+                projectPlan,
+                frontendCode,
+                prompt,
                 attachmentParts
             );
-            
+
             // Processar cada chunk do streaming
             for await (const chunk of backendStream) {
                 backendCode += chunk.chunk;
                 const updatedCode = combinedCode + backendCode;
-                
+
                 // Atualizar editor em tempo real
                 const editorRef = (window as any).globalEditorRef;
                 if (editorRef?.current) {
@@ -4200,17 +4207,17 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
                             range: fullRange,
                             text: updatedCode
                         }]);
-                        
+
                         // Auto-scroll para o final
                         const lineCount = model.getLineCount();
                         editorRef.current.revealLine(lineCount, 1);
                     }
                 }
             }
-            
+
             // Desativar streaming após concluir
             combinedCode = frontendCode + separator + backendCode;
-            set({ 
+            set({
                 htmlCode: combinedCode,
                 editorInteractionState: { ...get().editorInteractionState, isStreaming: false }
             });
@@ -4228,25 +4235,25 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
             const docSeparator = `\n\n<!-- ===== DOCUMENTAÇÃO COMPLETA (API CALL 3) ===== -->\n\n`;
             let codeWithDocs = combinedCode + docSeparator;
             let documentation = "";
-            
+
             const docPrompt = `PROJETO COMPLETO:\nFRONTEND:\n${frontendCode}\n\nBACKEND:\n${backendCode}\n\n${prompt}\n\nGERE DOCUMENTAÇÃO COMPLETA:\n- README.md detalhado\n- Instruções de instalação\n- Como usar o sistema\n- Estrutura do projeto\n- APIs e endpoints\n- Exemplos de uso\n- Troubleshooting`;
-            
+
             const docStream = generateAiResponseStream(
-                docPrompt, 
-                'generate_code_from_plan', 
+                docPrompt,
+                'generate_code_from_plan',
                 selectedTextModel,
                 false, // isReactLikely
-                projectPlan, 
-                codeWithDocs, 
-                prompt, 
+                projectPlan,
+                codeWithDocs,
+                prompt,
                 attachmentParts
             );
-            
+
             // Processar cada chunk do streaming
             for await (const chunk of docStream) {
                 documentation += chunk.chunk;
                 const updatedCode = codeWithDocs + documentation;
-                
+
                 // Atualizar editor em tempo real
                 const editorRef = (window as any).globalEditorRef;
                 if (editorRef?.current) {
@@ -4257,17 +4264,17 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
                             range: fullRange,
                             text: updatedCode
                         }]);
-                        
+
                         // Auto-scroll para o final
                         const lineCount = model.getLineCount();
                         editorRef.current.revealLine(lineCount, 1);
                     }
                 }
             }
-            
+
             // Desativar streaming após concluir
             codeWithDocs += documentation;
-            set({ 
+            set({
                 htmlCode: codeWithDocs,
                 editorInteractionState: { ...get().editorInteractionState, isStreaming: false }
             });
@@ -4322,7 +4329,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
 
         } catch (error: any) {
             console.error('❌ Erro no sistema FullStack:', error);
-            
+
             set({
                 isLoadingAi: false,
                 isLoadingCritique: false,
@@ -4336,7 +4343,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
     // ===== SISTEMA ARTESÃO DE MUNDOS 3D - ISOLADO E ESPECIALIZADO =====
     handleArtesaoMundosGeneration: async (prompt: string, currentCode: string, attachments?: AttachmentFile[]) => {
         console.log('🎮 INICIANDO ARTESÃO DE MUNDOS ISOLADO - ESPECIALISTA EM JOGOS 3D');
-        
+
         set(state => {
             state.isLoadingAi = true;
             state.previousHtmlCode = currentCode;
@@ -4357,16 +4364,16 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
             const GameWorldContextManager = (await import('../services/GameWorldContext')).default;
 
             // ===== DETECÇÃO INTELIGENTE: PRIMEIRA GERAÇÃO VS EXPANSÃO =====
-            const isFirstGeneration = !currentCode.includes('construirMundo') && 
-                                    !currentCode.includes('THREE.Scene') && 
-                                    !currentCode.includes('GameWorld');
-            
+            const isFirstGeneration = !currentCode.includes('construirMundo') &&
+                !currentCode.includes('THREE.Scene') &&
+                !currentCode.includes('GameWorld');
+
             console.log(`🔍 ARTESÃO ISOLADO - Modo: ${isFirstGeneration ? 'CRIAÇÃO INICIAL' : 'EXPANSÃO LEGO'}`);
 
             if (isFirstGeneration) {
                 // ===== CRIAÇÃO INICIAL COM SISTEMA ISOLADO =====
                 console.log('🏗️ ARTESÃO ISOLADO - Criando novo mundo de jogo');
-                
+
                 set({
                     currentAppPhase: 'GENERATING_CODE_FROM_PLAN',
                     aiStatusMessage: '🎮 ARTESÃO ISOLADO: Criando mundo de jogo especializado...',
@@ -4408,7 +4415,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
             } else {
                 // ===== EXPANSÃO COM SISTEMA LEGO =====
                 console.log('🔧 ARTESÃO ISOLADO - Expandindo mundo existente');
-                
+
                 set({
                     currentAppPhase: 'GENERATING_CODE_FROM_PLAN',
                     aiStatusMessage: '🎮 ARTESÃO ISOLADO: Expandindo mundo com sistema Lego...'
@@ -4417,7 +4424,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
 
                 // Tentar recuperar contexto do mundo
                 let gameWorld = get().tryRecoverGameWorld(currentCode);
-                
+
                 if (!gameWorld) {
                     // Criar contexto básico se não encontrado
                     console.log('⚠️ Contexto não encontrado, criando contexto básico');
@@ -4452,9 +4459,9 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
 
         } catch (error) {
             console.error('❌ ARTESÃO ISOLADO - Erro:', error);
-            
+
             let errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
-            
+
             // Mensagem mais amigável para problemas de API Key
             if (errorMessage.includes('API Key') || errorMessage.includes('not found') || errorMessage.includes('getGenerativeModel')) {
                 errorMessage = '🔑 API Key não configurada. Clique no botão de configurações para adicionar sua chave do Gemini.';
@@ -4463,25 +4470,25 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
                     get().openApiKeyModal();
                 }, 1000);
             }
-            
+
             set({
                 currentAppPhase: 'IDLE',
                 aiStatusMessage: `❌ ${errorMessage}`,
                 isLoadingAi: false
             });
-            
+
             get().clearDetailedStatus();
         }
     },
 
     // ===== MÉTODOS AUXILIARES PARA ARTESÃO DE MUNDOS =====
-    
+
     /**
      * Detecta o tipo de jogo baseado no prompt do usuário
      */
     detectGameType: (prompt: string): 'fps' | 'platformer' | 'racing' | 'puzzle' | 'rpg' | 'strategy' | 'exploration' | 'arcade' => {
         const promptLower = prompt.toLowerCase();
-        
+
         if (promptLower.includes('fps') || promptLower.includes('tiro') || promptLower.includes('arma') || promptLower.includes('atirador')) {
             return 'fps';
         }
@@ -4503,7 +4510,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
         if (promptLower.includes('exploração') || promptLower.includes('explorar') || promptLower.includes('mundo aberto') || promptLower.includes('aventura')) {
             return 'exploration';
         }
-        
+
         return 'arcade'; // Default
     },
 
@@ -4512,14 +4519,14 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
      */
     detectComplexity: (prompt: string): 'simple' | 'medium' | 'complex' => {
         const promptLower = prompt.toLowerCase();
-        
+
         if (promptLower.includes('simples') || promptLower.includes('básico') || promptLower.includes('fácil')) {
             return 'simple';
         }
         if (promptLower.includes('complexo') || promptLower.includes('avançado') || promptLower.includes('detalhado') || promptLower.includes('completo')) {
             return 'complex';
         }
-        
+
         return 'medium'; // Default
     },
 
@@ -4552,7 +4559,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
         } catch (error) {
             console.warn('⚠️ Erro ao recuperar contexto do mundo:', error);
         }
-        
+
         return null;
     },
 
@@ -4561,7 +4568,7 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
      */
     createBasicGameWorld: (currentCode: string): any => {
         const worldId = `world_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-        
+
         return {
             id: worldId,
             name: 'Mundo Recuperado',
@@ -4580,8 +4587,8 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
                 audio: { ambientSounds: [], effectSounds: [], reverbZones: [] },
                 physics: { engine: 'cannon', gravity: { x: 0, y: -9.82, z: 0 }, rigidBodies: [], constraints: [] },
                 performance: { fps: 60, drawCalls: 0, triangles: 0, memoryUsage: 0, bottlenecks: [] },
-                bounds: { 
-                    min: { x: -100, y: -10, z: -100 }, 
+                bounds: {
+                    min: { x: -100, y: -10, z: -100 },
                     max: { x: 100, y: 50, z: 100 },
                     safeZone: { min: { x: -50, y: 0, z: -50 }, max: { x: 50, y: 20, z: 50 } }
                 }
@@ -4606,9 +4613,9 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
     // ===== SISTEMA FULLSTACK COM STREAMING - FRONTEND-FIRST =====
     generateFullStackUnified: async (prompt: string, plan: string, attachments: Part[]) => {
         const { selectedTextModel, researchFindings } = get();
-        
+
         console.log('🚀 INICIANDO GERAÇÃO FULLSTACK UNIFICADA - CHAMADA API ÚNICA');
-        
+
         set({
             currentAppPhase: 'GENERATING_FRONTEND',
             aiStatusMessage: '🚀 Gerando Full Stack Completo - Sistema integrado em uma única chamada...',
@@ -4620,10 +4627,10 @@ O backend deve servir EXATAMENTE o que o frontend precisa!
         try {
             const attachmentParts = attachments || [];
             let fullStackCode = "";
-            
+
             // ===== CHAMADA API ÚNICA: FULLSTACK COMPLETO COM STREAMING =====
             console.log('📡 CHAMADA API ÚNICA: Sistema completo com streaming');
-            
+
             const fullStackPrompt = `
 🚀 **SISTEMA FULLSTACK COMPLETO - GERAÇÃO UNIFICADA**
 
@@ -4664,20 +4671,20 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
 
             // Usando streaming para mostrar o código sendo gerado em tempo real
             const fullStackStream = generateAiResponseStream(
-                fullStackPrompt, 
-                'generate_code_from_plan', 
+                fullStackPrompt,
+                'generate_code_from_plan',
                 selectedTextModel,
                 false, // isReactLikely
-                plan, 
-                null, 
-                prompt, 
+                plan,
+                null,
+                prompt,
                 attachments
             );
-            
+
             // Processar cada chunk do streaming
             for await (const chunk of fullStackStream) {
                 fullStackCode += chunk.chunk;
-                
+
                 // Atualizar editor em tempo real
                 const editorRef = (window as any).globalEditorRef;
                 if (editorRef?.current) {
@@ -4688,16 +4695,16 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
                             range: fullRange,
                             text: fullStackCode
                         }]);
-                        
+
                         // Auto-scroll para o final
                         const lineCount = model.getLineCount();
                         editorRef.current.revealLine(lineCount, 1);
                     }
                 }
             }
-            
+
             // Desativar streaming após concluir
-            set({ 
+            set({
                 htmlCode: fullStackCode,
                 editorInteractionState: { ...get().editorInteractionState, isStreaming: false }
             });
@@ -4752,13 +4759,13 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
 
         } catch (error: any) {
             console.error('❌ Erro no sistema FullStack Unificado:', error);
-            
+
             // Mensagem mais clara para erro 503
             let errorMessage = error.message;
             if (error.message?.includes('503') || error.message?.includes('overloaded')) {
                 errorMessage = '⚠️ Servidor do Gemini está sobrecarregado. Aguarde alguns segundos e tente novamente. Dica: Use prompts mais simples ou tente em horários de menor uso.';
             }
-            
+
             set({
                 isLoadingAi: false,
                 isLoadingCritique: false,
@@ -4771,7 +4778,7 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
 
     handleFullStackStreamingGeneration: async (prompt: string, currentCode: string, attachments?: AttachmentFile[]) => {
         console.log('🔥 INICIANDO MODO FULLSTACK COM STREAMING - Frontend-First');
-        
+
         set(state => {
             state.isLoadingAi = true;
             state.previousHtmlCode = currentCode;
@@ -4799,9 +4806,9 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
         try {
             // Se não há plano, criar um primeiro
             if (!projectPlan) {
-                set({ 
-                    currentAppPhase: 'PERFORMING_RESEARCH', 
-                    aiStatusMessage: '🔍 Analisando requisitos para projeto fullstack...' 
+                set({
+                    currentAppPhase: 'PERFORMING_RESEARCH',
+                    aiStatusMessage: '🔍 Analisando requisitos para projeto fullstack...'
                 });
                 get().setDetailedStatus('Research', 'Análise', 'Pesquisando tecnologias e arquitetura...', 10, 20);
 
@@ -4810,7 +4817,7 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
 
                 // Plano não precisa de streaming, é texto curto
                 const planResponse = await generateAiResponse(prompt, 'create_plan', selectedTextModel, null, currentCode === initialHtmlBase ? null : currentCode, prompt, researchResults, attachmentParts);
-                
+
                 if (planResponse.type === AiResponseType.PLAN) {
                     projectPlan = planResponse.content;
                     set({ projectPlan, initialPlanPrompt: prompt });
@@ -4835,10 +4842,10 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
             let frontendCode = "";
             // 🎛️ Passar generationMode do store para controle manual do usuário
             const frontendStream = generateAiResponseStream(prompt, 'generate_code_from_plan', selectedTextModel, false, projectPlan, null, prompt, attachmentParts, get().generationMode);
-            
+
             for await (const chunk of frontendStream) {
                 frontendCode += chunk.chunk;
-                
+
                 // Atualizar editor em tempo real
                 const editorRef = (window as any).globalEditorRef;
                 if (editorRef?.current) {
@@ -4894,18 +4901,18 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
                 aiStatusMessage: '🚀 Projeto full-stack completo! Frontend-First + Backend + Mídia integrados.',
                 isLoadingAi: false
             });
-            
+
             setTimeout(() => get().clearDetailedStatus(), 3000);
 
         } catch (error) {
             console.error('❌ ERRO NO FULLSTACK STREAMING:', error);
-            
+
             set({
                 currentAppPhase: 'IDLE',
                 aiStatusMessage: `❌ Erro na geração fullstack: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
                 isLoadingAi: false
             });
-            
+
             get().clearDetailedStatus();
         }
     },
@@ -4913,7 +4920,7 @@ Crie um sistema COMPLETO e FUNCIONAL pronto para produção!
     // ===== SISTEMA ARQUITETA ÚNICA - APP COMPLETO EM 2 ARQUIVOS =====
     handleArquitetaUnicaGeneration: async (prompt: string, currentCode: string, attachments?: AttachmentFile[]) => {
         console.log('🏗️ INICIANDO MODO ARQUITETA ÚNICA - App completo em 2 arquivos');
-        
+
         set(state => {
             state.isLoadingAi = true;
             state.previousHtmlCode = currentCode;
@@ -4985,13 +4992,13 @@ NUNCA use <script type="text/plain"> a menos que o usuário peça explicitamente
             let finalCode = "";
             // 🎛️ Passar generationMode do store para controle manual do usuário
             const stream = generateAiResponseStream(arquitetaPrompt, 'generate_code_from_plan', selectedTextModel, false, null, currentCode === initialHtmlBase ? null : currentCode, prompt, attachmentParts, get().generationMode);
-            
+
             for await (const chunk of stream) {
                 // 🏢 ENTERPRISE PIPELINE: Detectar evento de conclusão com código convertido
                 if ((chunk as any).type === 'enterprise_complete') {
                     console.log('🏢 [ARQUITETA] Enterprise Pipeline completo - usando código convertido');
                     finalCode = chunk.chunk; // Usar código já convertido
-                    
+
                     const editorRef = (window as any).globalEditorRef;
                     if (editorRef?.current) {
                         const model = editorRef.current.getModel();
@@ -5005,9 +5012,9 @@ NUNCA use <script type="text/plain"> a menos que o usuário peça explicitamente
                     }
                     continue;
                 }
-                
+
                 finalCode += chunk.chunk;
-                
+
                 // Atualizar editor em tempo real
                 const editorRef = (window as any).globalEditorRef;
                 if (editorRef?.current) {
@@ -5020,7 +5027,7 @@ NUNCA use <script type="text/plain"> a menos que o usuário peça explicitamente
                         }]);
                     }
                 }
-                
+
                 // Atualizar progresso
                 const progress = Math.min(30 + (finalCode.length / 100), 80);
                 get().updateStatusProgress(progress);
@@ -5030,7 +5037,7 @@ NUNCA use <script type="text/plain"> a menos que o usuário peça explicitamente
             set(state => {
                 state.editorInteractionState.isStreaming = false;
             });
-            
+
             get().updateStatusProgress(80);
             set({ aiStatusMessage: '🎬 Processando mídia e otimizações finais...' });
 
@@ -5044,18 +5051,18 @@ NUNCA use <script type="text/plain"> a menos que o usuário peça explicitamente
                 aiStatusMessage: '🏗️ Aplicação completa criada! Frontend + Backend em 2 arquivos.',
                 isLoadingAi: false
             });
-            
+
             setTimeout(() => get().clearDetailedStatus(), 3000);
 
         } catch (error) {
             console.error('❌ ERRO NO ARQUITETA ÚNICA:', error);
-            
+
             set({
                 currentAppPhase: 'IDLE',
                 aiStatusMessage: `❌ Erro na criação da aplicação: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
                 isLoadingAi: false
             });
-            
+
             get().clearDetailedStatus();
         }
     },

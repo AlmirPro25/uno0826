@@ -1,0 +1,49 @@
+
+version: '3.8'
+
+# SENTINEL NEXUS - LOCAL DEVELOPMENT MATRIX
+# Use this for active coding and live-reloading.
+
+services:
+  # [CORE SYSTEM]
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      target: builder # Stay in builder stage for dev tools
+    container_name: sentinel_core_dev
+    command: npm run dev --prefix backend
+    volumes:
+      - ./backend:/usr/src/app/backend
+      - ./shared:/usr/src/app/shared
+      - /usr/src/app/backend/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=file:./sentinel.db
+      - JWT_SECRET=DEV_SECRET_KEY_OVERRIDE
+
+  # [INTERFACE LAYER]
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      target: builder
+    container_name: sentinel_ui_dev
+    command: npm run dev --prefix frontend -- --host
+    volumes:
+      - ./frontend:/usr/src/app/frontend
+      - ./shared:/usr/src/app/shared
+      - /usr/src/app/frontend/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:3000
+    depends_on:
+      - backend
+
+networks:
+  default:
+    name: sentinel_net

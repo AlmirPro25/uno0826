@@ -120,38 +120,98 @@ class ProjectIntelligenceServer {
   }
 
   async analyzeProjectNeeds({ userRequest, projectContext = '' }) {
+    // 🧠 AURORA BUILDER INTEGRATION 🧠
+    // Análise profunda usando os conceitos do Aurora Kernel
+
+    // 1. Detectar Intenção de Arquitetura (Aurora Check)
+    const auroraCheck = this.auroraAnalysis(userRequest);
+
     const analysis = {
       realNeed: this.extractRealNeed(userRequest),
-      suggestedApproach: this.suggestApproach(userRequest),
+      suggestedApproach: auroraCheck.approach || this.suggestApproach(userRequest),
       avoidThese: this.identifyUnnecessaryFeatures(userRequest),
-      implementation: this.suggestImplementation(userRequest)
+      implementation: this.suggestImplementation(userRequest),
+      auroraContext: auroraCheck.context
     };
 
     return {
       content: [{
         type: 'text',
         text: `
-# Análise Inteligente do Projeto
+# 🧠 Aurora Intelligence (Project Analysis)
 
-## O que o usuário REALMENTE precisa:
+## 🎯 Intenção Real (Aurora Decoded):
 ${analysis.realNeed}
 
-## Abordagem recomendada:
+## 🏗️ Arquitetura Recomendada:
 ${analysis.suggestedApproach}
 
-## O que EVITAR (complexidade desnecessária):
+## 📜 Manifestos Ativos:
+${auroraCheck.manifests.length > 0 ? auroraCheck.manifests.join('\n') : '- Padrão (Web/Simples)'}
+
+## ⚠️ Complexidade Desnecessária (Evitar):
 ${analysis.avoidThese.map(item => `- ❌ ${item}`).join('\n')}
 
-## Implementação sugerida:
+## 🚀 Caminho da Construção (The Way):
 ${analysis.implementation}
 
-## Princípio: "Menos é mais"
-- Funcionalidade primeiro, beleza depois
-- Se funciona simples, não complique
-- Usuário quer resultado, não processo
+${analysis.auroraContext ? `
+## 🔥 AURORA KERNEL CONTEXT:
+${analysis.auroraContext}
+` : ''}
+
+## Princípio Fundamental: "Deus e o Diabo moram no detalhe"
+- Se for fazer, faça com perfeição arquitetural.
+- Código frágil é rejeitado pelo Kernel.
+- ${auroraCheck.principle}
         `
       }]
     };
+  }
+
+  // Novo método inspirado no AuroraBuilder.ts
+  auroraAnalysis(request) {
+    const reqLower = request.toLowerCase();
+    const result = {
+      approach: null,
+      manifests: [],
+      context: '',
+      principle: 'Funcionalidade robusta > Aparência'
+    };
+
+    // 📱 DETECTAR MOBILE
+    if (reqLower.includes('android') || reqLower.includes('ios') || reqLower.includes('app') && !reqLower.includes('web app')) {
+      result.manifests.push('📱 MOBILE ARCHITECT MANIFEST');
+      result.approach = 'Aplicação Nativa/Híbrida com foco em UX tátil e performance offline.';
+      result.context += '\n- Priorizar estruturas nativas ou frameworks robustos (React Native/Flutter).\n- Lembrar do ciclo de vida da Activity/View.\n- Otimizar para bateria e dados.';
+    }
+
+    // 🌐 DETECTAR DISTRIBUÍDO
+    if (reqLower.includes('distribuído') || reqLower.includes('cluster') || reqLower.includes('escala') || reqLower.includes('microserviço')) {
+      result.manifests.push('🌐 DISTRIBUTED MESH MANIFEST');
+      result.approach = 'Arquitetura de Mesh Network com nós auto-gerenciáveis.';
+      result.context += '\n- Implementar Gossip Protocol para descoberta.\n- Idempotência é obrigatória.\n- "Assume Failure" como premissa.';
+      result.principle = 'O sistema deve sobreviver à morte de qualquer nó.';
+    }
+
+    // ⚙️ DETECTAR LOW-LEVEL
+    if (reqLower.includes('kernel') || reqLower.includes('driver') || reqLower.includes('assembly') || reqLower.includes('c++') || reqLower.includes('rust')) {
+      result.manifests.push('⚙️ LOW-LEVEL ARCHITECT MANIFEST');
+      result.approach = 'Código de sistema de alta performance e controle de memória.';
+      result.context += '\n- Gerenciamento manual de memória onde necessário.\n- Zero-cost abstractions.\n- Segurança de tipos rigorosa.';
+    }
+
+    // 👑 DETECTAR PROST-QS
+    if (reqLower.includes('auth') || reqLower.includes('login') || reqLower.includes('pagamento') || reqLower.includes('segurança')) {
+      result.manifests.push('👑 PROST-QS SOVEREIGN KERNEL');
+      result.context += '\n- Autenticação e Billing delegados ao Kernel Soberano.\n- Não reinventar a roda de segurança.\n- Auditoria de transações obrigatória.';
+    }
+
+    if (result.manifests.length === 0) {
+      result.manifests.push('✅ WEB STANDARD (Aurora Optimized)');
+    }
+
+    return result;
   }
 
   extractRealNeed(request) {
@@ -189,33 +249,33 @@ ${analysis.implementation}
     if (request.toLowerCase().includes('react')) {
       return 'Componentes React mínimos = App funcionando';
     }
-    
+
     return 'Solução mais direta possível que atenda o requisito';
   }
 
   identifyUnnecessaryFeatures(request) {
     const unnecessary = [];
-    
+
     // Se não mencionou autenticação, não precisa
     if (!request.toLowerCase().includes('login') && !request.toLowerCase().includes('auth')) {
       unnecessary.push('Sistema de login/autenticação');
     }
-    
+
     // Se não mencionou banco de dados, talvez não precise
     if (!request.toLowerCase().includes('banco') && !request.toLowerCase().includes('database')) {
       unnecessary.push('Banco de dados complexo (use localStorage ou arquivo)');
     }
-    
+
     // Se não mencionou design específico, foque na função
     if (!request.toLowerCase().includes('design') && !request.toLowerCase().includes('bonito')) {
       unnecessary.push('Design elaborado (CSS básico resolve)');
     }
-    
+
     // Sempre evitar over-engineering
     unnecessary.push('Arquitetura complexa para problema simples');
     unnecessary.push('Frameworks pesados para tarefas básicas');
     unnecessary.push('Configurações elaboradas');
-    
+
     return unnecessary;
   }
 
@@ -278,7 +338,7 @@ Resultado: API funcionando em minutos.`;
       }
     };
 
-    const matchedSolution = Object.entries(solutions).find(([key]) => 
+    const matchedSolution = Object.entries(solutions).find(([key]) =>
       problem.toLowerCase().includes(key.split(' ').slice(-1)[0])
     );
 
@@ -347,10 +407,10 @@ ${constraints.length > 0 ? constraints.map(c => `- ${c}`).join('\n') : '- Nenhum
 # Análise de Complexidade
 
 ## Complexidade desnecessária identificada:
-${foundComplexity.length > 0 ? 
-  foundComplexity.map(item => `- ❌ ${item} → ✅ ${alternatives[item] || 'Alternativa mais simples'}`).join('\n') :
-  '✅ Solução parece adequadamente simples'
-}
+${foundComplexity.length > 0 ?
+            foundComplexity.map(item => `- ❌ ${item} → ✅ ${alternatives[item] || 'Alternativa mais simples'}`).join('\n') :
+            '✅ Solução parece adequadamente simples'
+          }
 
 ## Pergunta fundamental:
 **"Isso é realmente necessário para fazer funcionar?"**

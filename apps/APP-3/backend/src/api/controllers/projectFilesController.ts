@@ -75,22 +75,22 @@ export const getProject = async (req: Request, res: Response) => {
         const { id } = req.params;
         const projects = loadProjectsIndex();
         const projectMeta = projects.find(p => p.id === id);
-        
+
         if (!projectMeta) {
             return res.status(404).json({ error: 'Projeto não encontrado' });
         }
-        
+
         // Ler arquivos do projeto
         const projectPath = projectMeta.path;
         const files: ProjectFile[] = [];
-        
+
         function readDir(dir: string, basePath: string = '') {
             const items = fs.readdirSync(dir);
             for (const item of items) {
                 const fullPath = path.join(dir, item);
                 const relativePath = basePath ? `${basePath}/${item}` : item;
                 const stat = fs.statSync(fullPath);
-                
+
                 if (stat.isDirectory()) {
                     readDir(fullPath, relativePath);
                 } else {
@@ -101,11 +101,11 @@ export const getProject = async (req: Request, res: Response) => {
                 }
             }
         }
-        
+
         if (fs.existsSync(projectPath)) {
             readDir(projectPath);
         }
-        
+
         res.json({
             project: {
                 ...projectMeta,
@@ -124,33 +124,33 @@ export const getProject = async (req: Request, res: Response) => {
 export const createProject = async (req: Request, res: Response) => {
     try {
         const { name, files } = req.body;
-        
+
         if (!name || !files || !Array.isArray(files)) {
             return res.status(400).json({ error: 'Nome e arquivos são obrigatórios' });
         }
-        
+
         // Gerar ID e caminho
         const id = uuidv4();
         const safeName = name.replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 50);
         const timestamp = Date.now();
         const projectFolder = `${safeName}_${timestamp}`;
         const projectPath = path.join(PROJECTS_BASE, projectFolder);
-        
+
         // Criar pasta do projeto
         fs.mkdirSync(projectPath, { recursive: true });
-        
+
         // Salvar arquivos
         for (const file of files) {
             const filePath = path.join(projectPath, file.path);
             const fileDir = path.dirname(filePath);
-            
+
             if (!fs.existsSync(fileDir)) {
                 fs.mkdirSync(fileDir, { recursive: true });
             }
-            
+
             fs.writeFileSync(filePath, file.content);
         }
-        
+
         // Atualizar índice
         const projects = loadProjectsIndex();
         const newProject: ProjectMeta = {
@@ -162,9 +162,9 @@ export const createProject = async (req: Request, res: Response) => {
         };
         projects.push(newProject);
         saveProjectsIndex(projects);
-        
+
         console.log(`✅ Projeto criado: ${projectPath}`);
-        
+
         res.status(201).json({
             ...newProject,
             files
@@ -182,33 +182,33 @@ export const updateProject = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
         const { files } = req.body;
-        
+
         const projects = loadProjectsIndex();
         const projectIndex = projects.findIndex(p => p.id === id);
-        
+
         if (projectIndex === -1) {
             return res.status(404).json({ error: 'Projeto não encontrado' });
         }
-        
+
         const projectMeta = projects[projectIndex];
         const projectPath = projectMeta.path;
-        
+
         // Atualizar arquivos
         for (const file of files) {
             const filePath = path.join(projectPath, file.path);
             const fileDir = path.dirname(filePath);
-            
+
             if (!fs.existsSync(fileDir)) {
                 fs.mkdirSync(fileDir, { recursive: true });
             }
-            
+
             fs.writeFileSync(filePath, file.content);
         }
-        
+
         // Atualizar timestamp
         projects[projectIndex].updatedAt = new Date().toISOString();
         saveProjectsIndex(projects);
-        
+
         res.json({ success: true });
     } catch (error: any) {
         console.error('Erro ao atualizar projeto:', error);
@@ -222,25 +222,25 @@ export const updateProject = async (req: Request, res: Response) => {
 export const deleteProject = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        
+
         const projects = loadProjectsIndex();
         const projectIndex = projects.findIndex(p => p.id === id);
-        
+
         if (projectIndex === -1) {
             return res.status(404).json({ error: 'Projeto não encontrado' });
         }
-        
+
         const projectMeta = projects[projectIndex];
-        
+
         // Deletar pasta do projeto
         if (fs.existsSync(projectMeta.path)) {
             fs.rmSync(projectMeta.path, { recursive: true, force: true });
         }
-        
+
         // Remover do índice
         projects.splice(projectIndex, 1);
         saveProjectsIndex(projects);
-        
+
         res.json({ success: true });
     } catch (error: any) {
         console.error('Erro ao deletar projeto:', error);
@@ -249,53 +249,128 @@ export const deleteProject = async (req: Request, res: Response) => {
 };
 
 /**
- * POST /api/projects/:id/install - Instala projeto como app
+ * POST /api/projects/:id/install - Instala projeto como app via Open Code CLI
  */
 export const installProject = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        
+        const { fullStack } = req.body; // Stack opcional vinda do frontend
+
         const projects = loadProjectsIndex();
         const projectMeta = projects.find(p => p.id === id);
-        
+
         if (!projectMeta) {
             return res.status(404).json({ error: 'Projeto não encontrado' });
         }
-        
+
         const projectPath = projectMeta.path;
-        
-        // Verificar se tem package.json
-        const packageJsonPath = path.join(projectPath, 'package.json');
-        
-        if (fs.existsSync(packageJsonPath)) {
-            // Projeto Node.js - rodar npm install
-            exec('npm install', { cwd: projectPath }, (error, stdout, stderr) => {
-                if (error) {
-                    console.error('Erro npm install:', error);
-                    return res.json({ 
-                        success: true, 
+        const projectName = projectMeta.name || 'app';
+
+        console.log(`🏭 Instalando projeto via CLI: ${projectName}`);
+        console.log(`📁 Caminho: ${projectPath}`);
+
+        // Caminho para o factory.bat
+        const factoryScript = path.resolve(__dirname, '../../../../factory.bat');
+
+        // Verificar se o factory existe
+        if (!fs.existsSync(factoryScript)) {
+            console.log(`⚠️ Factory não encontrado em: ${factoryScript}`);
+            // Fallback: só roda npm install se tiver package.json
+            const packageJsonPath = path.join(projectPath, 'package.json');
+
+            if (fs.existsSync(packageJsonPath)) {
+                exec('npm install', { cwd: projectPath }, (error, stdout, stderr) => {
+                    if (error) {
+                        console.error('Erro npm install:', error);
+                    }
+                    res.json({
+                        success: true,
                         appId: id,
-                        message: 'Projeto salvo. npm install falhou mas arquivos estão OK.',
+                        message: 'Projeto instalado (npm install executado)',
                         path: projectPath
                     });
-                }
-                
-                res.json({ 
-                    success: true, 
+                });
+            } else {
+                res.json({
+                    success: true,
                     appId: id,
-                    message: 'Projeto instalado com sucesso!',
+                    message: 'Projeto salvo (sem package.json)',
                     path: projectPath
                 });
-            });
-        } else {
-            // Projeto simples (HTML/CSS/JS) - já está pronto
-            res.json({ 
-                success: true, 
-                appId: id,
-                message: 'Projeto salvo com sucesso!',
-                path: projectPath
-            });
+            }
+            return;
         }
+
+        // Montar argumentos para o factory
+        const args: string[] = ['install', projectPath, '--name', projectName];
+
+        // Adicionar stack se fornecida
+        if (fullStack) {
+            if (fullStack.frontend) args.push('--frontend', fullStack.frontend);
+            if (fullStack.backend) args.push('--backend', fullStack.backend);
+            if (fullStack.styling) args.push('--styling', fullStack.styling);
+            console.log(`🔧 Stack: ${JSON.stringify(fullStack)}`);
+        }
+
+        console.log(`🚀 Executando: ${factoryScript} ${args.join(' ')}`);
+
+        // Executar o factory
+        const { spawn } = require('child_process');
+        const factoryProcess = spawn(factoryScript, args, {
+            cwd: path.dirname(factoryScript),
+            shell: true
+        });
+
+        let output = '';
+        let errorOutput = '';
+
+        factoryProcess.stdout.on('data', (data: Buffer) => {
+            const chunk = data.toString();
+            console.log(`[FACTORY]: ${chunk}`);
+            output += chunk;
+        });
+
+        factoryProcess.stderr.on('data', (data: Buffer) => {
+            const chunk = data.toString();
+            console.error(`[FACTORY ERR]: ${chunk}`);
+            errorOutput += chunk;
+        });
+
+        factoryProcess.on('close', (code: number) => {
+            console.log(`🏭 Factory finalizado com código: ${code}`);
+
+            if (code === 0) {
+                res.json({
+                    success: true,
+                    appId: id,
+                    message: '✅ Projeto instalado via Open Code CLI!',
+                    path: projectPath,
+                    logs: output
+                });
+            } else {
+                // Mesmo com erro, o projeto foi salvo
+                res.json({
+                    success: true,
+                    appId: id,
+                    message: `⚠️ Projeto salvo. CLI retornou código ${code}`,
+                    path: projectPath,
+                    logs: output,
+                    errors: errorOutput
+                });
+            }
+        });
+
+        factoryProcess.on('error', (err: Error) => {
+            console.error('Erro ao executar factory:', err);
+            res.json({
+                success: true,
+                appId: id,
+                message: 'Projeto salvo (factory não disponível)',
+                path: projectPath,
+                error: err.message
+            });
+        });
+
     } catch (error: any) {
         console.error('Erro ao instalar projeto:', error);
         res.status(500).json({ error: error.message });
@@ -308,24 +383,24 @@ export const installProject = async (req: Request, res: Response) => {
 export const openProjectFolder = async (req: Request, res: Response) => {
     try {
         const { id } = req.params;
-        
+
         const projects = loadProjectsIndex();
         const projectMeta = projects.find(p => p.id === id);
-        
+
         if (!projectMeta) {
             return res.status(404).json({ error: 'Projeto não encontrado' });
         }
-        
+
         const projectPath = projectMeta.path;
-        
+
         // Verificar se a pasta existe
         if (!fs.existsSync(projectPath)) {
             return res.status(404).json({ error: 'Pasta do projeto não encontrada' });
         }
-        
+
         // Abrir no explorador de arquivos
         const platform = process.platform;
-        
+
         if (platform === 'win32') {
             // No Windows, usar start para abrir o explorer
             exec(`start "" "${projectPath}"`, { shell: 'cmd.exe' }, (error) => {

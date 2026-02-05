@@ -1,0 +1,286 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// O Perfil Psicológico e de Controle do Alvo
+model Contact {
+  id              String    @id // Serialized ID (e.g., 551199999999@c.us)
+  name            String?
+  pushName        String?
+  profilePicUrl   String?
+  
+  // Estado Operacional
+  isPaused        Boolean   @default(false) // Se true, o humano assumiu
+  lastInteraction DateTime  @default(now())
+  
+  // Perfil Semântico (Calculado pela IA)
+  semanticProfile String?   @default("neutro") // Ex: "Carente", "Direto", "Agressivo"
+  avgResponseTime Int       @default(60) // Em segundos.
+  
+  // Memória Afetiva (O "Coração" do sistema)
+  // Memória Afetiva (O "Coração" do sistema)
+  trustLevel      Int       @default(0) // 0 a 100
+  intimacyLevel   Int       @default(0) // 0 a 100
+  emotionalState  String    @default("NEUTRAL") // NEUTRAL, ANXIOUS, EXCITED, ANGRY, SAD
+  
+  // Cognitive State (Deep Profiling)
+  engagementScore Int       @default(0) // 0 a 100 (Interest level)
+  salesReadiness  Int       @default(0) // 0 a 100 (Conversion probability)
+  lastTone        String    @default("NEUTRAL") // "carente", "frio", "exaltado", "curioso"
+  replyLatencyProfile String @default("NORMAL") // "IMMEDIATE", "NORMAL", "SLOW", "VARIABLE"
+
+  
+  // Míssil Teleguiado
+  activeDirective String?   // A "missão" atual (ex: "Venda o curso agora")
+  directiveStatus String    @default("IDLE") // IDLE, EXECUTING, COMPLETED (String for SQLite enum simplicity, or mapped manually)
+  
+  messages        Message[]
+  logs            SystemLog[]
+  directives      Directive[]
+
+  @@map("contacts")
+}
+
+// Histórico para Contexto (Janela Deslizante)
+model Message {
+  id        String   @id @default(uuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  
+  fromMe    Boolean  // True = Bot/Humano, False = Cliente
+  isOperator Boolean @default(false) // 🆕 TRUE = Enviado pelo humano no celular (não pela IA)
+  body      String
+  timestamp DateTime @default(now())
+  
+  // Metadados para análise de sucesso
+  sentimentScore Float? // -1.0 a 1.0 (Opcional, futuro)
+  
+  // 🆕 Metadados para Hiper-Cognição
+  tokenCount     Int     @default(0)    // Contagem de tokens para análise
+  wordCount      Int     @default(0)    // Palavras na mensagem
+  hasEmoji       Boolean @default(false)
+  mediaType      String? // TEXT, IMAGE, AUDIO, VIDEO, DOCUMENT
+  
+  // 🆕 Análise Cognitiva (Preenchido após processamento)
+  intent         String? // greeting, question, objection, closing, etc.
+  emotion        String? // Emoção detectada
+  
+  @@index([contactId, timestamp])
+  @@index([isOperator, timestamp]) // 🆕 Index para buscar msgs do operador
+  @@map("messages")
+}
+
+// Auditoria de Decisões da IA
+model SystemLog {
+  id          String   @id @default(uuid())
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  level       String   // INFO, WARN, ERROR, ACTION
+  event       String   // "PRESENCE_DETECTED", "MESSAGE_GENERATED", "DELAY_APPLIED"
+  details     String   // JSON string com detalhes da decisão (ex: tempo calculado de delay)
+  createdAt   DateTime @default(now())
+
+  @@map("system_logs")
+}
+
+// Configuração Dinâmica da Persona (O "Ego" Intercambiável)
+model Persona {
+  id              String    @id @default(uuid())
+  isActive        Boolean   @default(false)
+  
+  name            String    // Ex: "Eliane"
+  description     String    // Ex: "Vendedora de Packs Sexy da Ribeira"
+  
+  // A Alma da Persona
+  age             Int       @default(25)
+  origin          String?   // Ex: "Ribeira, Bahia"
+  backstory       String    // A história de vida (motivação)
+  
+  // Voz e Comportamento
+  voiceTone       String    // Ex: "Sensual, direta, bem humorada"
+  communicationStyle String // Ex: "Usa muitos emojis, erros leves de pt-br, gírias regionais"
+  
+  // Regras de Negócio
+  pixKey          String?   
+  pixName         String?
+  paymentInstructions String? // Ex: "Pede sinal de 50 pra encontro"
+  
+  prompts         String?   // Custom System Prompt override (JSON or Text)
+
+  products        Product[]
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("personas")
+}
+
+// Catálogo de Produtos Dinâmico
+model Product {
+  id          String   @id @default(uuid())
+  personaId   String
+  persona     Persona  @relation(fields: [personaId], references: [id])
+  
+  name        String   // Ex: "Pack Fogo Total"
+  description String   // Ex: "10 fotos + 10 vídeos"
+  price       Float    // Ex: 50.00
+  @@map("products")
+}
+
+// A CARTA MAGNA DO AGENTE (Constituição Inviolável)
+model Constitution {
+  id              String    @id @default(uuid())
+  isActive        Boolean   @default(true)
+  name            String    // Ex: "Protocolo Asimov-Vendas"
+  
+  // Princípios Fundamentais (Hard Constraints)
+  primaryDirective   String // Ex: "Nunca prejudicar financeiramente o dono."
+  secondaryDirective String // Ex: "Maximizar lucro respeitando a ética."
+  tertiaryDirective  String // Ex: "Proteger a própria existência (não ser banido)."
+
+  // Limites Éticos (Safety Boundaries)
+  allowedTopics      String // JSON array: ["vendas", "sedução_leve", "terapia"]
+  forbiddenTopics    String // JSON array: ["crime", "menores", "violência"]
+  
+  maxDailyMessages   Int    @default(500)
+  cooldownPeriod     Int    @default(300) // Segundos entre "sessões de venda"
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@map("constitutions")
+}
+
+// Diretivas Táticas (Ordens do General)
+model Directive {
+  id              String    @id @default(uuid())
+  contactId       String
+  contact         Contact   @relation(fields: [contactId], references: [id])
+  
+  instruction     String    // Ex: "Venda o plano premium agora."
+  priority        String    // LOW, MEDIUM, HIGH, CRITICAL
+  status          String    @default("PENDING") // PENDING, EXECUTING, COMPLETED, FAILED
+  
+  createdAt       DateTime  @default(now())
+  expiresAt       DateTime? 
+
+  @@map("directives")
+  @@index([contactId, status])
+}
+
+// ============================================================================
+// 🧬 FASE 3: HIPER-COGNIÇÃO E MEMÓRIA CENTENÁRIA
+// ============================================================================
+
+// O "DNA de Escrita" do Operador (Extração de Estilo)
+model OperatorStyle {
+  id                    String    @id @default(uuid())
+  
+  // Métricas de Estilo Extraídas
+  avgWordCount          Float     @default(0)     // Média de palavras por mensagem
+  avgSentenceLength     Float     @default(0)     // Tamanho médio de frases
+  emojiFrequency        Float     @default(0)     // % de msgs com emoji
+  commonEmojis          String    @default("[]")  // JSON: ["😂", "❤️", "🔥"]
+  punctuationStyle      String    @default("INFORMAL") // FORMAL, INFORMAL, NONE
+  capitalizationStyle   String    @default("MIXED")    // UPPER, LOWER, MIXED, PROPER
+  
+  // Gírias e Expressões
+  frequentPhrases       String    @default("[]")  // JSON: ["tipo", "mano", "slc"]
+  regionalExpressions   String    @default("[]")  // JSON: ["oxe", "égua"]
+  intentionalErrors     String    @default("[]")  // JSON: ["vc", "tb", "pq"]
+  
+  // Padrões de Timing
+  avgResponseTimeMs     Int       @default(30000)
+  preferredHoursStart   Int       @default(9)     // Horário ativo início (0-23)
+  preferredHoursEnd     Int       @default(23)    // Horário ativo fim (0-23)
+  
+  // Métricas de Venda
+  closingPhrases        String    @default("[]")  // JSON: Frases que levam à venda
+  objectionHandlers     String    @default("[]")  // JSON: Como lida com objeções
+  
+  // Meta
+  messagesAnalyzed      Int       @default(0)
+  lastExtraction        DateTime  @default(now())
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("operator_styles")
+}
+
+// Resumos de Memória de Longo Prazo
+model MemorySummary {
+  id          String    @id @default(uuid())
+  contactId   String?   // Se null, é um resumo global
+  
+  type        String    // DAILY, WEEKLY, MONTHLY, CONTACT_PROFILE
+  period      String    // "2026-01-24", "2026-W04", "2026-01"
+  
+  // O Resumo Gerado pela IA
+  summary     String    // Markdown/Text do resumo
+  keyInsights String    @default("[]") // JSON: Principais insights
+  salesCount  Int       @default(0)    // Vendas no período
+  revenue     Float     @default(0)    // Receita no período
+  
+  // Métricas de Engajamento
+  messagesReceived Int @default(0)
+  messagesSent     Int @default(0)
+  avgSentiment     Float @default(0)
+  
+  // Hot Topics (O que foi mais discutido)
+  topTopics   String    @default("[]") // JSON: ["preço", "entrega", "qualidade"]
+  
+  createdAt   DateTime  @default(now())
+
+  @@unique([contactId, type, period])
+  @@map("memory_summaries")
+}
+
+// Padrões de Objeção Aprendidos (Sales IQ)
+model ObjectionPattern {
+  id                  String    @id @default(uuid())
+  
+  // A Objeção
+  triggerPattern      String    // Ex: "tá caro", "muito caro", "não tenho grana"
+  category            String    // PRICE, TRUST, TIMING, NEED, COMPETITION
+  
+  // A Resposta Vencedora (Aprendida do Operador)
+  winningResponse     String    // A resposta que funcionou
+  successRate         Float     @default(0)  // Taxa de sucesso (0-1)
+  timesUsed           Int       @default(0)
+  timesConverted      Int       @default(0)  // Quantas vezes levou à venda
+  
+  // Contexto
+  emotionalContext    String    @default("NEUTRAL") // Em qual emoção funciona melhor
+  intimacyThreshold   Int       @default(0)         // Mínimo de intimidade pra usar
+  
+  // Origem
+  learnedFromOperator Boolean   @default(false)     // Se foi aprendido do humano
+  sourceMessageId     String?                       // ID da msg original
+  
+  isActive            Boolean   @default(true)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@map("objection_patterns")
+}
+
+// Eventos de Presença (Tracking de Atividade do Celular)
+model PresenceEvent {
+  id          String    @id @default(uuid())
+  contactId   String
+  
+  eventType   String    // ONLINE, OFFLINE, TYPING, RECORDING_AUDIO
+  duration    Int?      // Duração em segundos (se aplicável)
+  
+  createdAt   DateTime  @default(now())
+
+  @@index([contactId, createdAt])
+  @@map("presence_events")
+}

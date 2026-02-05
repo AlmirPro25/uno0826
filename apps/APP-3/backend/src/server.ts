@@ -15,7 +15,7 @@ const PORT = environment.PORT;
 
 // Middleware
 app.use(cors()); // Enable CORS for all routes
-app.use(express.json({ limit: '10mb' })); // Parse JSON bodies, with a larger limit for code payloads
+app.use(express.json({ limit: '50mb' })); // Parse JSON bodies, with a larger limit for code payloads
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 
 // Servir imagens geradas estaticamente
@@ -31,7 +31,7 @@ app.get('/', (req: Request, res: Response) => {
 
 // Unhandled route handler - This must be after all other routes and before the error handler
 app.use((req: Request, res: Response, next: NextFunction) => {
-    res.status(404).json({ message: 'Not Found' });
+  res.status(404).json({ message: 'Not Found' });
 });
 
 // Global Error Handler Middleware - This must be the last 'app.use()'
@@ -40,10 +40,10 @@ app.use(errorMiddleware);
 const startServer = async () => {
   try {
     await connectToDatabase();
-    
+
     // Inicializa WebSockets
     initializeWebSockets(httpServer);
-    
+
     httpServer.listen(PORT, () => {
       console.log(`🚀 Server is running on http://localhost:${PORT}`);
       console.log(`🔌 WebSocket available at ws://localhost:${PORT}/ws/terminal`);

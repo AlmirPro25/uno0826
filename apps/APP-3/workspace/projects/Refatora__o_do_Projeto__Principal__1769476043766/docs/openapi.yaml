@@ -1,0 +1,141 @@
+
+openapi: 3.0.3
+info:
+  title: Aerosphere OS - Neural Link API
+  description: >
+    Interface de programação para o "Pulmão Rubro". Permite monitoramento
+    biométrico/geológico e modulação de sistemas de suporte à vida.
+    WARNING: Uso incorreto pode resultar em despressurização do Setor 7.
+  version: 1.0.0
+  contact:
+    name: Cydonia Architect
+    email: x-2084@tharsis-region.mars
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Primary Neural Node
+
+paths:
+  /telemetry:
+    get:
+      summary: Sincronizar Pulso Planetário
+      description: Retorna o estado atual da biosfera, níveis de recursos e integridade estrutural.
+      responses:
+        '200':
+          description: Telemetria recebida com sucesso.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanetaryState'
+        '503':
+          description: Sensores offline. Iniciando protocolo de estimativa.
+
+  /modulate:
+    post:
+      summary: Intervenção Executiva
+      description: Altera parâmetros críticos de terraformação (O2, Pressão, Temperatura). Requer confirmação tripla simulada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModulationCommand'
+      responses:
+        '200':
+          description: Modulação aceita. Atuadores em movimento.
+        '400':
+          description: Parâmetros inválidos ou violação de segurança biológica.
+        '409':
+          description: Conflito de sistemas. O bloqueio de emergência impediu a ação.
+
+  /logs/audit:
+    get:
+      summary: Recuperar Caixa Preta
+      description: Retorna os últimos eventos críticos do sistema.
+      responses:
+        '200':
+          description: Histórico recuperado.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemLog'
+
+  /emergency/fail-safe:
+    post:
+      summary: PROTOCOLO OMEGA
+      description: Trava todos os sistemas em modo de sobrevivência máxima. Fecha comportas, reduz consumo de energia.
+      responses:
+        '202':
+          description: Protocolo Omega iniciado. Que Deus nos ajude.
+
+components:
+  schemas:
+    PlanetaryState:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        atmosphere:
+          type: object
+          properties:
+            oxygen_ppm:
+              type: integer
+              description: Nível de oxigênio em partes por milhão. (Safe: 195000-235000)
+            pressure_kpa:
+              type: number
+              format: float
+              description: Pressão atmosférica em Kilopascals.
+            radiation_sieverts:
+              type: number
+              format: float
+              description: Radiação ionizante externa.
+        resources:
+          type: object
+          properties:
+            water_reserves_liters:
+              type: integer
+            energy_output_mw:
+              type: number
+            biomass_index:
+              type: number
+              description: Índice de saúde das algas (0.0 - 1.0).
+        sector_status:
+          type: object
+          properties:
+            dome_integrity:
+              type: number
+              description: Porcentagem de integridade do escudo/vidro.
+            active_alerts:
+              type: integer
+
+    ModulationCommand:
+      type: object
+      required:
+        - target_system
+        - value
+        - authorization_hash
+      properties:
+        target_system:
+          type: string
+          enum: [OXYGEN_GENERATOR, PRESSURE_VALVE, THERMAL_REGULATOR, SHIELD_HARMONICS]
+        value:
+          type: number
+          description: Novo valor de setpoint.
+        authorization_hash:
+          type: string
+          description: Assinatura criptográfica da ordem executiva.
+
+    SystemLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        severity:
+          type: string
+          enum: [INFO, WARNING, CRITICAL, FATAL]
+        message:
+          type: string
+        timestamp:
+          type: string

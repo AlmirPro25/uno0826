@@ -1,0 +1,52 @@
+
+# CYDONIA DEVELOPMENT ENVIRONMENT
+# Simulation Mode: Active
+# Hot-Reload: Enabled
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+      target: builder # Use builder stage for dev to have devDeps
+    command: npm run dev
+    volumes:
+      - ./backend:/app/backend
+      - ./shared:/app/shared
+      - /app/backend/node_modules
+      - cydonia_data:/app/data
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/data/dev.db
+      - JWT_SECRET=DEV_KEY_OXYGEN_LEAK
+    networks:
+      - aerosphere_net
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      target: builder
+    command: npm run dev -- --host
+    volumes:
+      - ./frontend:/app/frontend
+      - ./shared:/app/shared
+      - /app/frontend/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://backend:3000
+    depends_on:
+      - backend
+    networks:
+      - aerosphere_net
+
+volumes:
+  cydonia_data:
+
+networks:
+  aerosphere_net:
+    driver: bridge

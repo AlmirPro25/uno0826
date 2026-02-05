@@ -1,0 +1,56 @@
+
+{
+  "project": {
+    "name": "Sentinel Nexus",
+    "codename": "PROJECT_WATCHTOWER",
+    "version": "1.0.0-ALPHA",
+    "classification": "TOP SECRET"
+  },
+  "design_philosophy": {
+    "aesthetic": "Tactical Onyx & Alert Orange",
+    "ux_pattern": "War Room / Heads-Up Display (HUD)",
+    "core_colors": {
+      "void_black": "#0F0F12",
+      "alert_orange": "#FF5F1F",
+      "safety_green": "#39FF14",
+      "steel_gray": "#2A2A35",
+      "critical_red": "#FF0033"
+    },
+    "font_stack": "JetBrains Mono, Roboto Mono, monospace"
+  },
+  "technical_stack": {
+    "backend": {
+      "runtime": "Node.js",
+      "framework": "Express",
+      "database_orm": "Prisma",
+      "database_engine": "SQLite (file-based persistence)",
+      "realtime_protocol": "WebSockets (ws library)",
+      "security": "Helmet, CORS, Rate Limiting"
+    },
+    "frontend": {
+      "framework": "Vanilla JS (ES6+)",
+      "styling": "CSS Variables + Flexbox/Grid (No frameworks)",
+      "mapping_engine": "Leaflet.js (CDN) with CartoDB Dark Matter tiles",
+      "charts": "Chart.js (CDN) for sensor telemetry",
+      "communication": "Fetch API + WebSocket Client"
+    }
+  },
+  "modules": {
+    "core": "Server initialization and Database connection",
+    "tracking": "Real-time geospatial coordinate updates",
+    "telemetry": "Sensor data simulation (Temp, Tilt, Humidity)",
+    "security": "Lockdown protocols and Geofencing logic",
+    "vault": "Encrypted document storage simulator"
+  },
+  "deployment_strategy": {
+    "type": "Monolithic Standalone",
+    "containerization": "Docker",
+    "startup_sequence": [
+      "Initialize SQLite",
+      "Run Migrations",
+      "Seed Tactical Data",
+      "Start WebSocket Server",
+      "Start HTTP Server"
+    ]
+  }
+}

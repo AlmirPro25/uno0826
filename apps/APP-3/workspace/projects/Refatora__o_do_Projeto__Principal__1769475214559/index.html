@@ -1,0 +1,393 @@
+<html lang="pt-BR" class="scroll-smooth"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Web Weaver - De Ideia a Império. Em Minutos.</title>
+    <meta name="description" content="AI Web Weaver é a primeira fábrica de negócios digitais do mundo, transformando suas ideias em aplicativos web completos e prontos para o mercado com o poder da inteligência artificial.">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Satoshi:wght@400;500;700&amp;family=Clash+Display:wght@600&amp;display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --color-background: #0D0C1D;
+            --color-primary: #5C67F2;
+            --color-secondary: #C471ED;
+            --color-accent: #00BFFF;
+            --color-text: #E0E0E0;
+            --color-text-muted: #A0A0A0;
+            --font-heading: 'Clash Display', sans-serif;
+            --font-body: 'Satoshi', sans-serif;
+        }
+
+        body {
+            background-color: var(--color-background);
+            color: var(--color-text);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+        }
+
+        .font-heading { font-family: var(--font-heading); }
+        .font-body { font-family: var(--font-body); }
+
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hero-gradient-text {
+            background: linear-gradient(90deg, var(--color-primary), var(--color-secondary), var(--color-accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+            animation: gradient-flow 8s ease infinite;
+            background-size: 200% auto;
+        }
+
+        @keyframes gradient-flow {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .cta-button {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+        .cta-button::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: radial-gradient(circle, var(--color-accent) 0%, var(--color-primary) 100%);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+            z-index: -1;
+        }
+        .cta-button:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 191, 255, 0.2);
+        }
+
+        .feature-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .feature-card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+        }
+        
+        .fade-in-up.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        #hero-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            opacity: 0.4;
+        }
+
+    </style>
+</head>
+<body data-aid="body-main">
+
+    <div id="app-container" data-aid="div-app-container" class="relative">
+
+        <!-- HEADER -->
+        <header data-aid="header-main" role="banner" class="fixed top-0 left-0 right-0 z-50 glass-effect">
+            <nav data-aid="nav-main" class="container mx-auto px-6 py-4 flex justify-between items-center">
+                <a href="#" data-aid="link-logo" class="text-2xl font-heading font-bold" aria-label="AI Web Weaver - Página Inicial">
+                    AI Web Weaver
+                </a>
+                <div data-aid="div-desktop-nav" class="hidden md:flex items-center space-x-8">
+                    <a href="#features" data-aid="link-nav-features" class="hover:text-white transition-colors">Funcionalidades</a>
+                    <a href="#showcase" data-aid="link-nav-showcase" class="hover:text-white transition-colors">Exemplos</a>
+                    <a href="#cta" data-aid="link-nav-cta" class="bg-white/10 px-4 py-2 rounded-md hover:bg-white/20 transition-colors">Acesso Beta</a>
+                </div>
+                <button data-aid="button-mobile-menu-toggle" id="mobile-menu-button" class="md:hidden focus:outline-none" aria-label="Abrir menu de navegação">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-4 6h4"></path></svg>
+                </button>
+            </nav>
+            <!-- Mobile Menu -->
+            <div data-aid="div-mobile-menu" id="mobile-menu" class="hidden md:hidden">
+                <a href="#features" data-aid="link-mobile-nav-features" class="block py-2 px-6 text-sm hover:bg-white/5">Funcionalidades</a>
+                <a href="#showcase" data-aid="link-mobile-nav-showcase" class="block py-2 px-6 text-sm hover:bg-white/5">Exemplos</a>
+                <a href="#cta" data-aid="link-mobile-nav-cta" class="block py-2 px-6 text-sm hover:bg-white/5">Acesso Beta</a>
+            </div>
+        </header>
+
+        <main data-aid="main-content" role="main">
+
+            <!-- HERO SECTION -->
+            <section data-aid="section-hero" id="hero" role="region" aria-labelledby="hero-title" class="relative min-h-screen flex items-center justify-center text-center overflow-hidden pt-20">
+                <canvas id="hero-canvas" data-aid="canvas-hero-background"></canvas>
+                <div data-aid="div-hero-content" class="relative z-10 px-4">
+                    <h1 data-aid="h1-hero-title" id="hero-title" class="font-heading text-5xl md:text-7xl lg:text-8xl font-bold leading-tight mb-4">
+                        De Ideia a <span class="hero-gradient-text">Império</span>.
+                        <br class="hidden md:block">
+                        Em Minutos.
+                    </h1>
+                    <p data-aid="p-hero-subtitle" class="max-w-3xl mx-auto text-lg md:text-xl text-text-muted mb-8">
+                        AI Web Weaver é a primeira fábrica de negócios digitais do mundo. Descreva sua visão e nossa IA constrói, integra e prepara para o deploy um ecossistema web completo.
+                    </p>
+                    <a href="#cta" data-aid="a-hero-cta" class="cta-button inline-block bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg px-8 py-4 rounded-full shadow-lg">
+                        Construir o Futuro Agora
+                    </a>
+                </div>
+            </section>
+
+            <!-- HOW IT WORKS SECTION -->
+            <section data-aid="section-how-it-works" id="how-it-works" role="region" aria-labelledby="how-it-works-title" class="py-20 md:py-32">
+                <div data-aid="div-how-it-works-container" class="container mx-auto px-6 text-center">
+                    <h2 data-aid="h2-how-it-works-title" id="how-it-works-title" class="font-heading text-4xl md:text-5xl font-bold mb-4 fade-in-up">A Mágica em 3 Passos</h2>
+                    <p data-aid="p-how-it-works-subtitle" class="max-w-2xl mx-auto text-text-muted mb-16 fade-in-up" style="transition-delay: 100ms;">Simplicidade radical para resultados exponenciais.</p>
+                    <div data-aid="div-steps-grid" class="grid md:grid-cols-3 gap-8 md:gap-12">
+                        <!-- Step 1 -->
+                        <div data-aid="div-step-1" class="fade-in-up" style="transition-delay: 200ms;">
+                            <div data-aid="div-step-1-icon-wrapper" class="mx-auto mb-6 w-20 h-20 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-white text-3xl font-bold">1</div>
+                            <h3 data-aid="h3-step-1-title" class="text-2xl font-bold mb-2">Descreva</h3>
+                            <p data-aid="p-step-1-desc" class="text-text-muted">Use linguagem natural para detalhar seu aplicativo, suas funcionalidades, e o público-alvo. Pense em negócio, não em código.</p>
+                        </div>
+                        <!-- Step 2 -->
+                        <div data-aid="div-step-2" class="fade-in-up" style="transition-delay: 350ms;">
+                            <div data-aid="div-step-2-icon-wrapper" class="mx-auto mb-6 w-20 h-20 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-white text-3xl font-bold">2</div>
+                            <h3 data-aid="h3-step-2-title" class="text-2xl font-bold mb-2">Construa</h3>
+                            <p data-aid="p-step-2-desc" class="text-text-muted">Nossa IA projeta a arquitetura, escreve o front-end e back-end, configura o banco de dados e integra APIs em tempo real.</p>
+                        </div>
+                        <!-- Step 3 -->
+                        <div data-aid="div-step-3" class="fade-in-up" style="transition-delay: 500ms;">
+                            <div data-aid="div-step-3-icon-wrapper" class="mx-auto mb-6 w-20 h-20 flex items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary text-white text-3xl font-bold">3</div>
+                            <h3 data-aid="h3-step-3-title" class="text-2xl font-bold mb-2">Exporte</h3>
+                            <p data-aid="p-step-3-desc" class="text-text-muted">Receba um repositório completo, com código limpo, documentação e instruções de deploy. Seu negócio, pronto para escalar.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- FEATURES SECTION -->
+            <section data-aid="section-features" id="features" role="region" aria-labelledby="features-title" class="py-20 md:py-32 bg-black/20">
+                <div data-aid="div-features-container" class="container mx-auto px-6">
+                    <div class="text-center">
+                        <h2 data-aid="h2-features-title" id="features-title" class="font-heading text-4xl md:text-5xl font-bold mb-4 fade-in-up">Uma Fábrica, Não uma Ferramenta</h2>
+                        <p data-aid="p-features-subtitle" class="max-w-2xl mx-auto text-text-muted mb-16 fade-in-up" style="transition-delay: 100ms;">Construímos ecossistemas digitais completos, não apenas páginas.</p>
+                    </div>
+                    <div data-aid="div-features-grid" class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        <!-- Feature 1 -->
+                        <div data-aid="div-feature-1" class="feature-card glass-effect p-8 rounded-2xl fade-in-up" style="transition-delay: 200ms;">
+                            <h3 data-aid="h3-feature-1-title" class="text-2xl font-bold mb-3">Full-Stack Real</h3>
+                            <p data-aid="p-feature-1-desc" class="text-text-muted">Front-end reativo, back-end robusto e banco de dados relacional. Tudo conectado e pronto para produção.</p>
+                        </div>
+                        <!-- Feature 2 -->
+                        <div data-aid="div-feature-2" class="feature-card glass-effect p-8 rounded-2xl fade-in-up" style="transition-delay: 300ms;">
+                            <h3 data-aid="h3-feature-2-title" class="text-2xl font-bold mb-3">IA Arquitetural</h3>
+                            <p data-aid="p-feature-2-desc" class="text-text-muted">Nossa IA não apenas escreve código, ela projeta sistemas escaláveis e seguros, escolhendo a melhor tecnologia para cada tarefa.</p>
+                        </div>
+                        <!-- Feature 3 -->
+                        <div data-aid="div-feature-3" class="feature-card glass-effect p-8 rounded-2xl fade-in-up" style="transition-delay: 400ms;">
+                            <h3 data-aid="h3-feature-3-title" class="text-2xl font-bold mb-3">Integrações Nativas</h3>
+                            <p data-aid="p-feature-3-desc" class="text-text-muted">Precisa de pagamentos, autenticação ou e-mails? A IA integra Stripe, Auth0, SendGrid e mais, de forma automática.</p>
+                        </div>
+                        <!-- Feature 4 -->
+                        <div data-aid="div-feature-4" class="feature-card glass-effect p-8 rounded-2xl fade-in-up" style="transition-delay: 500ms;">
+                            <h3 data-aid="h3-feature-4-title" class="text-2xl font-bold mb-3">Design System Inteligente</h3>
+                            <p data-aid="p-feature-4-desc" class="text-text-muted">Gera interfaces belas, responsivas e acessíveis, com um sistema de design coeso e componentes reutilizáveis.</p>
+                        </div>
+                        <!-- Feature 5 -->
+                        <div data-aid="div-feature-5" class="feature-card glass-effect p-8 rounded-2xl fade-in-up" style="transition-delay: 600ms;">
+                            <h3 data-aid="h3-feature-5-title" class="text-2xl font-bold mb-3">Deploy com Um Clique</h3>
+                            <p data-aid="p-feature-5-desc" class="text-text-muted">Seu projeto vem com arquivos de configuração para Vercel, Netlify e Docker, pronto para ir ao ar instantaneamente.</p>
+                        </div>
+                        <!-- Feature 6 -->
+                        <div data-aid="div-feature-6" class="feature-card glass-effect p-8 rounded-2xl fade-in-up" style="transition-delay: 700ms;">
+                            <h3 data-aid="h3-feature-6-title" class="text-2xl font-bold mb-3">Código que Você Ama</h3>
+                            <p data-aid="p-feature-6-desc" class="text-text-muted">Exportamos código limpo, comentado e seguindo as melhores práticas. Feito por IA, perfeito para humanos.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SHOWCASE SECTION -->
+            <section data-aid="section-showcase" id="showcase" role="region" aria-labelledby="showcase-title" class="py-20 md:py-32">
+                <div data-aid="div-showcase-container" class="container mx-auto px-6">
+                    <div class="text-center">
+                        <h2 data-aid="h2-showcase-title" id="showcase-title" class="font-heading text-4xl md:text-5xl font-bold mb-4 fade-in-up">Construído em Horas, Não Meses.</h2>
+                        <p data-aid="p-showcase-subtitle" class="max-w-2xl mx-auto text-text-muted mb-16 fade-in-up" style="transition-delay: 100ms;">Exemplos de ecossistemas gerados pela AI Web Weaver.</p>
+                    </div>
+                    <div data-aid="div-showcase-grid" class="grid md:grid-cols-2 gap-8">
+                        <!-- Showcase Item 1 -->
+                        <div data-aid="div-showcase-item-1" class="fade-in-up" style="transition-delay: 200ms;">
+                            <div data-aid="div-showcase-item-1-image-wrapper" class="relative overflow-hidden rounded-lg mb-4">
+                                <img src="ai-img://img_1755467145589_4fhjz" alt="Dashboard de Análise de Dados de um SaaS" class="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-300">
+                            </div>
+                            <h3 data-aid="h3-showcase-item-1-title" class="text-xl font-bold">Plataforma SaaS de Análise</h3>
+                            <p data-aid="p-showcase-item-1-desc" class="text-text-muted">Dashboard, autenticação, planos de assinatura e relatórios.</p>
+                        </div>
+                        <!-- Showcase Item 2 -->
+                        <div data-aid="div-showcase-item-2" class="fade-in-up" style="transition-delay: 350ms;">
+                            <div data-aid="div-showcase-item-2-image-wrapper" class="relative overflow-hidden rounded-lg mb-4">
+                                <img src="ai-img://img_1755467149811_5icsf" alt="Loja Virtual de Moda de Luxo" class="w-full h-auto object-cover transform hover:scale-105 transition-transform duration-300">
+                            </div>
+                            <h3 data-aid="h3-showcase-item-2-title" class="text-xl font-bold">E-commerce de Luxo</h3>
+                            <p data-aid="p-showcase-item-2-desc" class="text-text-muted">Catálogo de produtos, carrinho, checkout com Stripe e painel de admin.</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- CTA SECTION -->
+            <section data-aid="section-cta" id="cta" role="region" aria-labelledby="cta-title" class="py-20 md:py-32">
+                <div data-aid="div-cta-container" class="container mx-auto px-6 text-center">
+                    <div data-aid="div-cta-content" class="max-w-3xl mx-auto glass-effect rounded-2xl p-8 md:p-16 fade-in-up">
+                        <h2 data-aid="h2-cta-title" id="cta-title" class="font-heading text-4xl md:text-5xl font-bold mb-4">O Futuro do Desenvolvimento Chegou.</h2>
+                        <p data-aid="p-cta-subtitle" class="text-text-muted text-lg mb-8">Junte-se à revolução. Inscreva-se para o acesso beta exclusivo e seja um dos primeiros a transformar ideias em negócios com uma velocidade sem precedentes.</p>
+                        <a href="#" data-aid="a-cta-main" class="cta-button inline-block bg-gradient-to-r from-primary to-secondary text-white font-bold text-lg px-8 py-4 rounded-full shadow-lg">
+                            Solicitar Acesso Beta
+                        </a>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- FOOTER -->
+        <footer data-aid="footer-main" role="contentinfo" class="py-8 border-t border-white/10">
+            <div data-aid="div-footer-container" class="container mx-auto px-6 text-center text-text-muted">
+                <p data-aid="p-copyright">© 2024 AI Web Weaver. Todos os direitos reservados. Construindo o futuro da web.</p>
+            </div>
+        </footer>
+
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // Mobile Menu Toggle
+            const menuButton = document.getElementById('mobile-menu-button');
+            const mobileMenu = document.getElementById('mobile-menu');
+            if (menuButton && mobileMenu) {
+                menuButton.addEventListener('click', () => {
+                    mobileMenu.classList.toggle('hidden');
+                });
+            }
+            
+            // Scroll Animations
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('visible');
+                    }
+                });
+            }, {
+                threshold: 0.1
+            });
+            
+            const elementsToAnimate = document.querySelectorAll('.fade-in-up');
+            elementsToAnimate.forEach(el => observer.observe(el));
+
+            // Hero Canvas Animation
+            const canvas = document.getElementById('hero-canvas');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                let width = canvas.width = window.innerWidth;
+                let height = canvas.height = window.innerHeight;
+                let particles = [];
+                const particleCount = 100;
+
+                class Particle {
+                    constructor() {
+                        this.x = Math.random() * width;
+                        this.y = Math.random() * height;
+                        this.size = Math.random() * 2 + 1;
+                        this.speedX = Math.random() * 1 - 0.5;
+                        this.speedY = Math.random() * 1 - 0.5;
+                        this.color = 'rgba(92, 103, 242, ' + Math.random() + ')';
+                    }
+                    update() {
+                        if (this.x > width || this.x < 0) this.speedX *= -1;
+                        if (this.y > height || this.y < 0) this.speedY *= -1;
+                        this.x += this.speedX;
+                        this.y += this.speedY;
+                    }
+                    draw() {
+                        ctx.fillStyle = this.color;
+                        ctx.beginPath();
+                        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+
+                function init() {
+                    for (let i = 0; i < particleCount; i++) {
+                        particles.push(new Particle());
+                    }
+                }
+
+                function animate() {
+                    ctx.clearRect(0, 0, width, height);
+                    for (let i = 0; i < particles.length; i++) {
+                        particles[i].update();
+                        particles[i].draw();
+                    }
+                    connect();
+                    requestAnimationFrame(animate);
+                }
+
+                function connect() {
+                    let opacityValue = 1;
+                    for (let a = 0; a < particles.length; a++) {
+                        for (let b = a; b < particles.length; b++) {
+                            let distance = Math.sqrt(
+                                (particles[a].x - particles[b].x) * (particles[a].x - particles[b].x) +
+                                (particles[a].y - particles[b].y) * (particles[a].y - particles[b].y)
+                            );
+                            if (distance < 100) {
+                                opacityValue = 1 - (distance/100);
+                                ctx.strokeStyle = 'rgba(196, 113, 237, ' + opacityValue + ')';
+                                ctx.lineWidth = 0.5;
+                                ctx.beginPath();
+                                ctx.moveTo(particles[a].x, particles[a].y);
+                                ctx.lineTo(particles[b].x, particles[b].y);
+                                ctx.stroke();
+                            }
+                        }
+                    }
+                }
+
+                window.addEventListener('resize', () => {
+                    width = canvas.width = window.innerWidth;
+                    height = canvas.height = window.innerHeight;
+                    particles = [];
+                    init();
+                });
+
+                init();
+                animate();
+            }
+        });
+    </script>
+
+</body></html>

@@ -1,0 +1,79 @@
+
+name: AEGIS-VII CONTINUOUS INTEGRATION
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  # INTELLIGENCE VERIFICATION
+  verification:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: 18
+        cache: 'npm'
+        cache-dependency-path: '**/package-lock.json'
+
+    - name: Install Dependencies (Root/Backend)
+      run: npm ci
+
+    - name: Install Dependencies (Frontend)
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Generate Prisma Client
+      run: npx prisma generate
+
+    - name: Type Check (TypeScript Strict Mode)
+      run: |
+        cd frontend && npm run build -- --no-emit
+
+    - name: Linting Protocols
+      run: |
+        # Frontend linting
+        cd frontend && npm run lint
+
+  # SIMULATION TESTING
+  e2e-simulation:
+    needs: verification
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Boot Docker Compose Stack
+        # Use a temporary .env file for testing with a JWT_SECRET
+        run: |
+          echo "JWT_SECRET=test_secret_for_ci" > .env
+          docker-compose -f docker-compose.yml up -d --build
+
+      - name: Wait for System Initialization (Backend/Frontend startup, DB ready, migrations)
+        run: sleep 30 # Increased wait time for full initialization and migrations
+
+      - name: Run E2E Tests
+        run: npx playwright test
+        env:
+          BASE_URL: http://localhost:5173
+          # Provide JWT_SECRET to tests if they need to generate tokens or verify externally
+          JWT_SECRET: test_secret_for_ci 
+
+      - name: Teardown
+        if: always()
+        run: |
+          docker-compose down
+          rm .env # Clean up temporary .env

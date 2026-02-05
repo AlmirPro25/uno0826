@@ -1,0 +1,55 @@
+
+name: Luxe Production Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-push:
+    name: 🚀 Build & Push Docker Images
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Log in to Docker Hub
+      uses: docker/login-action@v2
+      with:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+        
+    - name: Build and Push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: docker/Dockerfile.backend
+        push: true
+        tags: luxedigital/backend:latest,luxedigital/backend:${{ github.ref_name }}
+        
+    - name: Build and Push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: docker/Dockerfile.frontend
+        push: true
+        tags: luxedigital/frontend:latest,luxedigital/frontend:${{ github.ref_name }}
+
+  deploy-ssh:
+    name: 📡 Signal Server Update
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Execute Remote SSH Commands
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd /opt/luxe-digital
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+          docker system prune -f

@@ -1,0 +1,33 @@
+
+{
+  "project_codename": "ANT_COMMAND_C2",
+  "architect": "Aegis-VII",
+  "classification": "TOP_SECRET",
+  "system_core": {
+    "architecture_style": "Monolithic Tactic Server (MTS)",
+    "runtime": "Node.js (Industrial Grade)",
+    "frontend_strategy": "SPA (React/Vite)",
+    "persistence": "PostgreSQL (Robust Enterprise Database)"
+  },
+  "tech_stack": {
+    "backend": {
+      "framework": "Express.js",
+      "database": "Prisma ORM (PostgreSQL)",
+      "modules": ["cors", "body-parser", "jsonwebtoken", "bcryptjs", "express-validator"]
+    },
+    "frontend": {
+      "framework": "React (Vite)",
+      "state_management": "Zustand",
+      "styling": "TailwindCSS + Custom CRT Shaders",
+      "icons": "Lucide React",
+      "routing": "React Router DOM"
+    }
+  },
+  "simulation_mechanics": {
+    "tick_rate_ms": 1000,
+    "resource_types": ["CPU_CYCLES", "BANDWIDTH", "CRYPTO"],
+    "unit_classes": ["MINER_DROID", "HUNTER_KILLER", "GUARDIAN"],
+    "mission_types": ["DATA_MINING", "FIREWALL_ASSAULT", "GRID_DEFENSE"]
+  }
+}
+</

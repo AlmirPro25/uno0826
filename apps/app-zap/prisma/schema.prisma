@@ -1,0 +1,65 @@
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./ghost.db"
+}
+
+// O Perfil Psicológico e de Controle do Alvo
+model Contact {
+  id              String    @id // Serialized ID (e.g., 551199999999@c.us)
+  name            String?
+  pushName        String?
+  profilePicUrl   String?
+  
+  // Estado Operacional
+  isPaused        Boolean   @default(false) // Se true, o humano assumiu
+  lastInteraction DateTime  @default(now())
+  
+  // Perfil Semântico (Calculado pela IA)
+  semanticProfile String?   @default("neutro") // Ex: "Carente", "Direto", "Agressivo"
+  avgResponseTime Int       @default(60) // Em segundos. A IA deve mimetizar isso.
+  
+  // Míssil Teleguiado
+  activeDirective String?   // A "missão" atual (ex: "Venda o curso agora")
+  directiveStatus String    @default("IDLE") // IDLE, EXECUTING, COMPLETED
+  
+  messages        Message[]
+  logs            SystemLog[]
+
+  @@map("contacts")
+}
+
+// Histórico para Contexto (Janela Deslizante)
+model Message {
+  id        String   @id @default(uuid())
+  contactId String
+  contact   Contact  @relation(fields: [contactId], references: [id])
+  
+  fromMe    Boolean  // True = Bot/Humano, False = Cliente
+  body      String
+  timestamp DateTime @default(now())
+  
+  // Metadados para análise de sucesso
+  sentimentScore Float? // -1.0 a 1.0 (Opcional, futuro)
+  
+  @@index([contactId, timestamp])
+  @@map("messages")
+}
+
+// Auditoria de Decisões da IA
+model SystemLog {
+  id          String   @id @default(uuid())
+  contactId   String?
+  contact     Contact? @relation(fields: [contactId], references: [id])
+  
+  level       String   // INFO, WARN, ERROR, ACTION
+  event       String   // "PRESENCE_DETECTED", "MESSAGE_GENERATED", "DELAY_APPLIED"
+  details     String   // JSON string com detalhes da decisão (ex: tempo calculado de delay)
+  createdAt   DateTime @default(now())
+
+  @@map("system_logs")
+}

@@ -1,0 +1,8 @@
+
+version: '3.8'
+
+# TITAN LOGISTICS | DEV ORCHESTRATION
+# Environment: Local Development / Staging
+
+services:
+  #

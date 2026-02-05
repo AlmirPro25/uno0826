@@ -1,0 +1,58 @@
+
+// SENTINEL NEXUS - DATA LAYER
+// Protocolo de Persistência: SQLite
+// Nível de Criptografia: Simulado
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./sentinel.db"
+}
+
+model Asset {
+  id          String   @id @default(uuid())
+  codename    String   @unique // Ex: ALPHA-ONE
+  type        String   // AIR, LAND, SEA
+  origin      String
+  destination String
+  status      String   @default("IN_TRANSIT") // CLEARED, FLAGGED, LOCKED_DOWN
+  threatLevel String   @default("LOW")
+  
+  // Dados de Geolocalização Atual
+  latitude    Float
+  longitude   Float
+  
+  // Telemetria (Última leitura conhecida)
+  temperature Float    @default(0.0)
+  battery     Int      @default(100)
+  isLocked    Boolean  @default(true)
+  
+  // Relacionamentos
+  manifests   Manifest[]
+  logs        SecurityLog[]
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Manifest {
+  id          String   @id @default(uuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  title       String
+  content     String   // Representação encriptada
+  clearance   String   // DIPLOMATIC, HAZMAT, COMMERCIAL
+  issuedAt    DateTime @default(now())
+}
+
+model SecurityLog {
+  id          String   @id @default(uuid())
+  assetId     String
+  asset       Asset    @relation(fields: [assetId], references: [id])
+  level       String   // INFO, WARNING, CRITICAL
+  message     String
+  timestamp   DateTime @default(now())
+}

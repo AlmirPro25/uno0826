@@ -1,0 +1,67 @@
+
+name: AEGIS-VII TACTICAL DEPLOYMENT
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Backend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile.backend
+          push: true
+          tags: ghcr.io/${{ github.repository }}/backend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build and Push Frontend
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: docker/Dockerfile.frontend
+          push: true
+          tags: ghcr.io/${{ github.repository }}/frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  deploy-ssh:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Execute Remote Deployment
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_KEY }}
+          script: |
+            echo "INCOMING TRANSMISSION: UPDATING AEGIS-VII SYSTEMS..."
+            cd /opt/aegis-vii # Ensure this directory exists on your server
+            
+            # Pull latest images and apply production compose
+            # Ensure .env file with JWT_SECRET and other prod configs is present on the remote server
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            
+            echo "SYSTEM UPDATE COMPLETE. OPERATIONAL."

@@ -1,0 +1,66 @@
+
+// AEGIS-VII TACTICAL DB SCHEMA
+// Now using PostgreSQL and Prisma Client for robust data management.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User authentication and authorization
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String   // Hashed password
+  role      String   @default("OPERATOR") // e.g., OPERATOR, ADMIN
+  created_at DateTime @default(now())
+}
+
+// Global resources and base command stats
+model CommandCenter {
+  id             String  @id @default(uuid())
+  cpu_cycles     Int     @default(100)
+  bandwidth      Int     @default(50)
+  crypto_tokens  Int     @default(0)
+  defense_level  Int     @default(1)
+  last_tick      DateTime @default(now())
+}
+
+// The "Ants" -> Digital Agents
+model TacticalUnit {
+  id          String   @id @default(uuid())
+  designation String
+  type        String   // MINER, HUNTER, GUARDIAN
+  level       Int      @default(1)
+  status      String   // IDLE, DEPLOYED, REPAIRING, KIA
+  operation_id String? // Link to active mission
+  efficiency  Float    @default(1.0)
+  created_at  DateTime @default(now())
+}
+
+// Active Missions/Tasks
+model Operation {
+  id          String   @id @default(uuid())
+  name        String
+  type        String   // DATA_MINING, FIREWALL_ASSAULT, GRID_DEFENSE
+  difficulty  Int
+  start_time  DateTime @default(now())
+  end_time    DateTime
+  duration_ms Int
+  reward_cpu  Int
+  reward_bw   Int
+  reward_crypto Int @default(0)
+  unit_id     String   // Who is doing this
+}
+
+// System Logs for the HUD Console
+model CommsLog {
+  id        Int      @id @default(autoincrement())
+  timestamp DateTime @default(now())
+  level     String   // INFO, WARN, ALERT, CRITICAL, SUCCESS
+  message   String
+}

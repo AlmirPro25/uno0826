@@ -9,8 +9,8 @@ export const stackTemplates: Record<TechStack, StackTemplate> = {
     category: 'frontend',
     icon: 'fab fa-html5',
     defaultFiles: [
-      { 
-        name: 'index.html', 
+      {
+        name: 'index.html',
         content: `<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -26,11 +26,11 @@ export const stackTemplates: Record<TechStack, StackTemplate> = {
     </main>
     <script src="script.js"></script>
 </body>
-</html>`, 
-        language: 'html' 
+</html>`,
+        language: 'html'
       },
-      { 
-        name: 'style.css', 
+      {
+        name: 'style.css',
         content: `/* CSS Moderno */
 :root {
   --primary-color: #3b82f6;
@@ -61,25 +61,25 @@ main {
 h1 {
   color: var(--primary-color);
   margin-bottom: 1rem;
-}`, 
-        language: 'css' 
+}`,
+        language: 'css'
       },
-      { 
-        name: 'script.js', 
+      {
+        name: 'script.js',
         content: `// JavaScript ES6+
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Projeto carregado com sucesso!');
     
     // Seu código aqui...
-});`, 
-        language: 'javascript' 
+});`,
+        language: 'javascript'
       }
     ],
     aiInstructions: 'Foque em HTML5 semântico, CSS Grid/Flexbox, JavaScript ES6+ vanilla. Use Web APIs modernas.',
     dependencies: [],
     devDependencies: []
   },
-  
+
   'react-typescript': {
     id: 'react-typescript',
     name: 'React + TypeScript',
@@ -87,8 +87,8 @@ document.addEventListener('DOMContentLoaded', () => {
     category: 'frontend',
     icon: 'fab fa-react',
     defaultFiles: [
-      { 
-        name: 'App.tsx', 
+      {
+        name: 'App.tsx',
         content: `import React, { useState } from 'react';
 import './App.css';
 
@@ -108,8 +108,8 @@ const App: React.FC = () => {
   );
 };
 
-export default App;`, 
-        language: 'typescript' 
+export default App;`,
+        language: 'typescript'
       }
     ],
     aiInstructions: 'Use React hooks, TypeScript strict, componentes funcionais, props tipadas. Foque em performance e reutilização.',
@@ -124,8 +124,8 @@ export default App;`,
     category: 'backend',
     icon: 'fab fa-node-js',
     defaultFiles: [
-      { 
-        name: 'server.ts', 
+      {
+        name: 'server.ts',
         content: `import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -150,8 +150,8 @@ app.get('/api/health', (req, res) => {
 
 app.listen(PORT, () => {
   console.log(\`Servidor rodando na porta \${PORT}\`);
-});`, 
-        language: 'typescript' 
+});`,
+        language: 'typescript'
       }
     ],
     aiInstructions: 'Foque em APIs RESTful, middleware, validação, autenticação JWT, banco de dados, error handling.',
@@ -255,6 +255,134 @@ app.listen(PORT, () => {
     ],
     aiInstructions: 'Use .NET Core, Entity Framework, ASP.NET Core Web API.',
     dependencies: [],
+    devDependencies: []
+  },
+
+  // Novas stacks adicionadas
+  'svelte': {
+    id: 'svelte',
+    name: 'Svelte',
+    description: 'Svelte com compilação otimizada',
+    category: 'frontend',
+    icon: 'fas fa-fire',
+    defaultFiles: [
+      { name: 'App.svelte', content: '<script>\n  let count = 0;\n</script>\n\n<button on:click={() => count++}>\n  Clicks: {count}\n</button>', language: 'svelte' }
+    ],
+    aiInstructions: 'Use Svelte 5 com runes, stores e transições. Foque em simplicidade e performance.',
+    dependencies: ['svelte'],
+    devDependencies: ['@sveltejs/vite-plugin-svelte', 'vite']
+  },
+
+  'nextjs': {
+    id: 'nextjs',
+    name: 'Next.js',
+    description: 'React com SSR/SSG e App Router',
+    category: 'frontend',
+    icon: 'fas fa-n',
+    defaultFiles: [
+      { name: 'page.tsx', content: `export default function Home() {\n  return (\n    <main>\n      <h1>Next.js App</h1>\n    </main>\n  );\n}`, language: 'typescript' }
+    ],
+    aiInstructions: 'Use Next.js 14+ com App Router, Server Components, streaming e otimizações de performance.',
+    dependencies: ['next', 'react', 'react-dom'],
+    devDependencies: ['@types/react', '@types/node', 'typescript']
+  },
+
+  'go-fiber': {
+    id: 'go-fiber',
+    name: 'Go + Fiber',
+    description: 'Go ultra-performático com Fiber',
+    category: 'backend',
+    icon: 'fas fa-bolt',
+    defaultFiles: [
+      { name: 'main.go', content: `package main\n\nimport "github.com/gofiber/fiber/v2"\n\nfunc main() {\n    app := fiber.New()\n\n    app.Get("/", func(c *fiber.Ctx) error {\n        return c.JSON(fiber.Map{"status": "ok"})\n    })\n\n    app.Listen(":3000")\n}`, language: 'go' }
+    ],
+    aiInstructions: 'Use Go com Fiber, GORM para banco de dados, JWT para auth. Foque em alta performance.',
+    dependencies: [],
+    devDependencies: []
+  },
+
+  // CSS/Styling options
+  'tailwind': {
+    id: 'tailwind',
+    name: 'Tailwind CSS',
+    description: 'Utility-first CSS framework',
+    category: 'frontend',
+    icon: 'fas fa-wind',
+    defaultFiles: [
+      { name: 'tailwind.config.js', content: `module.exports = {\n  content: ["./src/**/*.{js,jsx,ts,tsx}"],\n  theme: { extend: {} },\n  plugins: [],\n}`, language: 'javascript' }
+    ],
+    aiInstructions: 'Use Tailwind CSS v3 com classes utilitárias. Evite CSS customizado quando possível.',
+    dependencies: ['tailwindcss'],
+    devDependencies: ['autoprefixer', 'postcss']
+  },
+
+  'sass': {
+    id: 'sass',
+    name: 'SASS/SCSS',
+    description: 'CSS com superpoderes',
+    category: 'frontend',
+    icon: 'fab fa-sass',
+    defaultFiles: [
+      { name: 'styles.scss', content: `$primary: #3b82f6;\n\n.container {\n  max-width: 1200px;\n  margin: 0 auto;\n  \n  .title {\n    color: $primary;\n  }\n}`, language: 'scss' }
+    ],
+    aiInstructions: 'Use SASS/SCSS com variáveis, mixins, nesting e funções. Organize em partials.',
+    dependencies: [],
+    devDependencies: ['sass']
+  },
+
+  'css-vanilla': {
+    id: 'css-vanilla',
+    name: 'CSS Puro',
+    description: 'CSS moderno sem frameworks',
+    category: 'frontend',
+    icon: 'fab fa-css3-alt',
+    defaultFiles: [
+      { name: 'styles.css', content: `:root {\n  --primary: #3b82f6;\n  --secondary: #64748b;\n}\n\n* { box-sizing: border-box; margin: 0; padding: 0; }\n\nbody {\n  font-family: system-ui, sans-serif;\n  line-height: 1.6;\n}`, language: 'css' }
+    ],
+    aiInstructions: 'Use CSS moderno com variáveis, Grid, Flexbox, animations e custom properties.',
+    dependencies: [],
+    devDependencies: []
+  },
+
+  'styled-components': {
+    id: 'styled-components',
+    name: 'Styled Components',
+    description: 'CSS-in-JS para React',
+    category: 'frontend',
+    icon: 'fas fa-palette',
+    defaultFiles: [
+      { name: 'Button.tsx', content: `import styled from 'styled-components';\n\nexport const Button = styled.button\`\n  background: #3b82f6;\n  color: white;\n  padding: 12px 24px;\n  border: none;\n  border-radius: 8px;\n  cursor: pointer;\n  \n  &:hover {\n    background: #2563eb;\n  }\n\`;`, language: 'typescript' }
+    ],
+    aiInstructions: 'Use Styled Components com props dinâmicas, temas e animações.',
+    dependencies: ['styled-components'],
+    devDependencies: ['@types/styled-components']
+  },
+
+  'chakra': {
+    id: 'chakra',
+    name: 'Chakra UI',
+    description: 'Components acessíveis para React',
+    category: 'frontend',
+    icon: 'fas fa-yin-yang',
+    defaultFiles: [
+      { name: 'App.tsx', content: `import { ChakraProvider, Button, Box } from '@chakra-ui/react';\n\nfunction App() {\n  return (\n    <ChakraProvider>\n      <Box p={4}>\n        <Button colorScheme="blue">Click me</Button>\n      </Box>\n    </ChakraProvider>\n  );\n}`, language: 'typescript' }
+    ],
+    aiInstructions: 'Use Chakra UI com props de estilo, temas customizados e components compostos.',
+    dependencies: ['@chakra-ui/react', '@emotion/react', '@emotion/styled'],
+    devDependencies: []
+  },
+
+  'material': {
+    id: 'material',
+    name: 'Material UI',
+    description: 'Design System Google para React',
+    category: 'frontend',
+    icon: 'fas fa-square',
+    defaultFiles: [
+      { name: 'App.tsx', content: `import { Button, Container, Typography } from '@mui/material';\n\nfunction App() {\n  return (\n    <Container>\n      <Typography variant="h1">Material UI</Typography>\n      <Button variant="contained">Click me</Button>\n    </Container>\n  );\n}`, language: 'typescript' }
+    ],
+    aiInstructions: 'Use Material UI v5 com sx prop, temas customizados e componentes do Material Design.',
+    dependencies: ['@mui/material', '@emotion/react', '@emotion/styled'],
     devDependencies: []
   }
 };

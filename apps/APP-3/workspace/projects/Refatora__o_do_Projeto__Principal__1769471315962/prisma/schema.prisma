@@ -1,0 +1,78 @@
+
+// TITAN LOGISTICS DATABASE SCHEMA
+// Architect: Aurelius
+// Persistence Strategy: SQLite (Portable High-Performance)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./titan_core.db"
+}
+
+enum AssetStatus {
+  IDLE
+  IN_FLIGHT
+  MAINTENANCE
+  DECOMMISSIONED
+}
+
+enum AssetCategory {
+  GLOBAL_JET
+  COASTAL_YACHT
+  URBAN_HELI
+  ARMORED_CONVOY
+}
+
+model Asset {
+  id            String        @id @default(uuid())
+  name          String        @unique
+  category      AssetCategory
+  status        AssetStatus   @default(IDLE)
+  
+  // Telemetria Atual
+  latitude      Float
+  longitude     Float
+  altitude      Int           @default(0) // Pés
+  heading       Float         @default(0.0)
+  
+  // Especificações
+  speedKnots    Int
+  rangeNm       Int
+  capacityPax   Int
+  imageUrl      String
+  
+  // Metadados
+  pricePerHour  Float
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  bookings      Booking[]
+}
+
+model Booking {
+  id              String   @id @default(uuid())
+  ticketNumber    String   @unique // Ex: TL-2023-X99
+  
+  passengerName   String
+  vipCode         String?
+  
+  // Detalhes da Rota
+  originLat       Float
+  originLng       Float
+  destLat         Float
+  destLng         Float
+  
+  departureTime   DateTime
+  estimatedDurationMin Int
+  
+  totalCost       Float
+  status          String   @default("CONFIRMED") // CONFIRMED, COMPLETED, CANCELLED
+
+  assetId         String
+  asset           Asset    @relation(fields: [assetId], references: [id])
+  
+  createdAt       DateTime @default(now())
+}

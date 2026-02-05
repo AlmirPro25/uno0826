@@ -1,0 +1,18 @@
+[Unit]
+Description=PROST-QS Core Backend Service
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/apps/uno0826/backend
+EnvironmentFile=/home/ubuntu/apps/uno0826/.env
+ExecStart=/home/ubuntu/apps/uno0826/backend/prost-qs-linux
+Restart=always
+RestartSec=5
+TimeoutStartSec=3600
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

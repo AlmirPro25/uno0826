@@ -41,28 +41,29 @@
 import { GoogleGenAI } from "@google/genai";
 import { ApiKeyManager } from '../../services/ApiKeyManager';
 import { DISTRIBUTED_MESH_NETWORK_MANIFEST } from '../../services/manifestos/DISTRIBUTED_MESH_NETWORK_MANIFEST';
+import { DESIGN_PRINCIPLES_MANIFEST } from '../../services/manifestos/DESIGN_PRINCIPLES_MANIFEST';
 import { getAuroraManifestContext } from '../../services/AlexandriaManifestBridge';
 import { ThreePhasePipeline } from '../../services/ThreePhasePipeline';
 import type { PipelineResult } from '../../services/manifestos/THREE_PHASE_PIPELINE_MANIFEST';
 // 👑 PROST-QS SOVEREIGN KERNEL - Auth, Billing, Planos delegados
-import { 
+import {
   PROST_QS_SOVEREIGN_KERNEL_MANIFEST,
   shouldUseProstQS,
   getProstQSPromptContext,
   generateProstQSBaseFiles
 } from '../../services/manifestos/PROST_QS_SOVEREIGN_KERNEL_MANIFEST';
 // 🔍 PROST-QS AUDITOR - Validação de conformidade (Anti-Simulação)
-import { 
-  ProstQSAuditor, 
+import {
+  ProstQSAuditor,
   auditProstQSCompliance,
-  type AuditResult 
+  type AuditResult
 } from '../../services/ProstQSAuditor';
 // 🆕 LOW-LEVEL ARCHITECT - Suporte a sistemas de baixo nível
-import { 
-  LowLevelArchitect, 
+import {
+  LowLevelArchitect,
   detectLowLevelProject,
   type LowLevelRequest,
-  type LowLevelProjectType 
+  type LowLevelProjectType
 } from './LowLevelArchitect';
 // 🧠 AURORA KERNEL CONCEPT - Os 6 Eixos Fundamentais
 import {
@@ -203,7 +204,7 @@ export class AuroraBuilder {
   private threePhasePipeline: ThreePhasePipeline;
   private designDocArchitect: DesignDocArchitect;
   private mobileArchitect: MobileArchitect;
-  
+
   constructor() {
     const apiKey = ApiKeyManager.getKeyToUse();
     if (apiKey) {
@@ -213,7 +214,7 @@ export class AuroraBuilder {
     this.designDocArchitect = new DesignDocArchitect();
     this.mobileArchitect = new MobileArchitect();
   }
-  
+
   /**
    * 🌟 MÉTODO PRINCIPAL: Gera aplicação completa com Arquiteto + Artesão
    * 
@@ -226,14 +227,14 @@ export class AuroraBuilder {
     const startTime = Date.now();
     this.log('🌟 AURORA BUILDER INICIADO');
     this.log(`📝 Prompt: ${request.userPrompt}`);
-    
+
     // 📋 GERAR DESIGN DOC PRIMEIRO (se solicitado)
     let designDoc: GeneratedDesignDoc | undefined;
     if (request.generateDesignDoc || this.shouldGenerateDesignDoc(request)) {
       this.log('\n📋 ═══════════════════════════════════════════════════════════════════════');
       this.log('📋 DESIGN DOC ARCHITECT - GERANDO DOCUMENTAÇÃO BIG TECH');
       this.log('📋 ═══════════════════════════════════════════════════════════════════════');
-      
+
       const designDocResult = await this.designDocArchitect.generate({
         userPrompt: request.userPrompt,
         style: request.designDocStyle,
@@ -242,18 +243,18 @@ export class AuroraBuilder {
         team: request.team,
         autoDetectStyle: true
       });
-      
+
       designDoc = designDocResult.designDoc;
-      
+
       // Adicionar contexto do Design Doc ao request
       request.context = (request.context || '') + '\n' + designDocResult.auroraContext;
-      
+
       this.log(`✅ Design Doc gerado: ${designDoc.company} style`);
       this.log(`📊 Goals: ${designDoc.sections.goals.length}`);
       this.log(`📊 Non-Goals: ${designDoc.sections.nonGoals.length}`);
       this.log(`📊 Riscos: ${designDoc.sections.risks.length}`);
     }
-    
+
     // 🆕 DETECTAR SE É PROJETO LOW-LEVEL (PRIORIDADE MÁXIMA)
     const lowLevelType = detectLowLevelProject(request.userPrompt);
     if (lowLevelType || request.isLowLevel || request.projectType === 'lowlevel') {
@@ -261,14 +262,14 @@ export class AuroraBuilder {
       this.log('⚙️ LOW-LEVEL ARCHITECT MODE ATIVADO');
       this.log(`⚙️ Tipo detectado: ${lowLevelType || request.lowLevelType || 'generic'}`);
       this.log('⚙️ ═══════════════════════════════════════════════════════════════════════');
-      
+
       return this.buildLowLevel({
         ...request,
         isLowLevel: true,
         lowLevelType: lowLevelType || request.lowLevelType
       }, startTime, designDoc);
     }
-    
+
     // 📱 DETECTAR SE É PROJETO MOBILE (Android/iOS)
     const isMobileProject = detectMobileProject(request.userPrompt);
     if (isMobileProject || request.isMobile || request.projectType === 'mobile') {
@@ -279,7 +280,7 @@ export class AuroraBuilder {
       this.log(`📱 Plataforma: ${detectedPlatform}`);
       this.log(`📱 Framework: ${detectedFramework}`);
       this.log('📱 ═══════════════════════════════════════════════════════════════════════');
-      
+
       return this.buildMobile({
         ...request,
         isMobile: true,
@@ -287,7 +288,7 @@ export class AuroraBuilder {
         mobileFramework: request.mobileFramework || detectedFramework
       }, startTime, designDoc);
     }
-    
+
     // 👑 DETECTAR SE DEVE USAR PROST-QS (Kernel Soberano para Auth/Billing)
     const shouldInjectProstQS = shouldUseProstQS(request.userPrompt) || request.useProstQS || request.forceProstQS;
     if (shouldInjectProstQS) {
@@ -302,71 +303,71 @@ export class AuroraBuilder {
         this.log('👑 🔥 MODO MANDATÓRIO: Código será REJEITADO se não usar PROST-QS');
       }
       this.log('👑 ═══════════════════════════════════════════════════════════════════════');
-      
+
       // Injetar contexto do PROST-QS no request
       request.context = (request.context || '') + '\n' + getProstQSPromptContext();
       request.useProstQS = true;
     }
-    
+
     // 🚀 DETECTAR SE DEVE USAR PIPELINE DE 3 FASES
     const shouldUseThreePhase = this.shouldUseThreePhasePipeline(request);
-    
+
     if (shouldUseThreePhase) {
       this.log('🔥 MODO THREE-PHASE PIPELINE ATIVADO (3 chamadas especializadas)');
       return this.buildWithThreePhasePipeline(request, startTime, designDoc);
     }
-    
+
     this.log('⚡ MODO MONOLÍTICO (1 chamada rápida)');
-    
+
     // 🌉 INTEGRAÇÃO COM ALEXANDRIA BRIDGE - Detectar manifestos relevantes
     const manifestContext = getAuroraManifestContext(request.userPrompt);
     if (manifestContext) {
       this.log('🌉 ALEXANDRIA BRIDGE - Manifestos detectados e carregados');
       request.context = manifestContext;
     }
-    
+
     // Detectar se é sistema distribuído
     const isDistributed = this.detectDistributedSystem(request);
     if (isDistributed) {
       this.log('🌐 SISTEMA DISTRIBUÍDO DETECTADO - Ativando Manifesto Mesh Network');
       request.isDistributed = true;
     }
-    
+
     try {
       // FASE 1: ARQUITETO - Criar arquitetura
       this.log('\n🏗️ FASE 1: ARQUITETO - Criando arquitetura...');
       const blueprint = await this.architect(request);
       this.log(`✅ Arquitetura criada: ${blueprint.projectName}`);
       this.log(`📊 Tech Stack: ${blueprint.techStack.join(', ')}`);
-      
+
       // FASE 2: ARTESÃO - Implementar código
       this.log('\n🎨 FASE 2: ARTESÃO - Implementando código...');
       const code = await this.artisan(blueprint, request);
       this.log(`✅ Código gerado: ${code.files.length} arquivos`);
       this.log(`📊 Qualidade: ${code.qualityScore}/100`);
-      
+
       // FASE 3: AUDITORIA PROST-QS (se aplicável)
       let prostQSAudit: AuditResult | undefined;
       const shouldAuditProstQS = shouldInjectProstQS || request.prostQSRequired;
-      
+
       if (shouldAuditProstQS) {
         this.log('\n🔍 FASE 3A: AUDITORIA PROST-QS - Validando conformidade...');
-        
+
         // Combinar todo o código em uma string para auditoria
         const allCode = code.files.map(f => f.content).join('\n\n');
         const auditor = new ProstQSAuditor();
         prostQSAudit = auditor.audit(allCode);
-        
+
         this.log(`🔍 Score de conformidade: ${prostQSAudit.score}/100`);
         this.log(`🔍 Recomendação: ${prostQSAudit.recommendation}`);
-        
+
         if (prostQSAudit.violations.length > 0) {
           this.log(`⚠️ Violações encontradas: ${prostQSAudit.violations.length}`);
           prostQSAudit.violations.forEach(v => {
             this.log(`  - [${v.type}] ${v.code}: ${v.message}`);
           });
         }
-        
+
         // Se há violações críticas, rejeitar (especialmente se prostQSRequired)
         const criticalViolations = prostQSAudit.violations.filter(v => v.type === 'CRITICAL');
         if (criticalViolations.length > 0 && (request.prostQSRequired || !request.allowLocalAuth)) {
@@ -382,14 +383,14 @@ export class AuroraBuilder {
           );
         }
       }
-      
+
       // FASE 4: AVALIAÇÃO FINAL
       const totalScore = (code.qualityScore + (code.readyForProduction ? 10 : 0)) / 1.1;
       this.log(`\n🎯 SCORE FINAL: ${totalScore.toFixed(0)}/100`);
-      
+
       const executionTime = Date.now() - startTime;
       this.log(`⏱️ Tempo de execução: ${executionTime}ms`);
-      
+
       return {
         blueprint,
         code,
@@ -399,13 +400,13 @@ export class AuroraBuilder {
         designDoc, // 📋 Incluir Design Doc se gerado
         prostQSAudit // 🔍 Incluir resultado da auditoria PROST-QS
       };
-      
+
     } catch (error) {
       this.log(`❌ ERRO: ${error}`);
       throw error;
     }
   }
-  
+
   /**
    * 📋 Detecta se deve gerar Design Doc automaticamente
    * 
@@ -418,13 +419,13 @@ export class AuroraBuilder {
     if (request.generateDesignDoc === false) {
       return false;
     }
-    
+
     // 🔥 SEMPRE GERAR DESIGN DOC INTERNAMENTE
     // O contexto do Design Doc (Goals, Non-Goals, Riscos, Alternativas)
     // melhora significativamente a qualidade do código gerado
     return true;
   }
-  
+
   /**
    * 🌐 Detecta se o pedido é para sistema distribuído
    */
@@ -438,12 +439,12 @@ export class AuroraBuilder {
       'distributed', 'high availability', 'auto-clustering',
       'mesh network', 'p2p', 'peer-to-peer'
     ];
-    
+
     const promptLower = request.userPrompt.toLowerCase();
     return distributedKeywords.some(keyword => promptLower.includes(keyword)) ||
-           request.projectType === 'distributed';
+      request.projectType === 'distributed';
   }
-  
+
   /**
    * 🏗️ ARQUITETO: Analisa requisitos e cria arquitetura
    */
@@ -451,19 +452,19 @@ export class AuroraBuilder {
     if (!this.genAI) {
       throw new Error('API Key do Gemini não configurada');
     }
-    
+
     const architectPrompt = this.buildArchitectPrompt(request);
-    
+
     const result = await this.genAI.models.generateContent({
       model: 'gemini-2.0-flash-exp',
       contents: [{ text: architectPrompt }]
     });
     const response = result.text;
-    
+
     // Parsear resposta do arquiteto
     return this.parseArchitectureBlueprint(response, request);
   }
-  
+
   /**
    * 🎨 ARTESÃO: Implementa código com excelência
    */
@@ -474,19 +475,19 @@ export class AuroraBuilder {
     if (!this.genAI) {
       throw new Error('API Key do Gemini não configurada');
     }
-    
+
     const artisanPrompt = this.buildArtisanPrompt(blueprint, request);
-    
+
     const result = await this.genAI.models.generateContent({
       model: 'gemini-2.0-flash-exp',
       contents: [{ text: artisanPrompt }]
     });
     const response = result.text;
-    
+
     // Parsear código gerado
     return this.parseArtisanCode(response, blueprint);
   }
-  
+
   /**
    * 📝 Constrói prompt para o Arquiteto
    */
@@ -511,7 +512,7 @@ Você DEVE criar uma arquitetura MESH NETWORK com:
 
 ═══════════════════════════════════════════════════════════════════════════════
 ` : '';
-    
+
     return `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    🏗️ MODO ARQUITETO ATIVADO 🏗️                             ║
@@ -522,6 +523,8 @@ Você é um ARQUITETO DE SOFTWARE SÊNIOR com 15+ anos de experiência.
 Sua missão: Analisar o pedido do usuário e criar uma ARQUITETURA COMPLETA.
 
 ${meshManifesto}
+
+${DESIGN_PRINCIPLES_MANIFEST}
 
 📝 PEDIDO DO USUÁRIO:
 "${request.userPrompt}"
@@ -648,7 +651,7 @@ ${request.context}
 Retorne APENAS o JSON, sem texto adicional.
 `;
   }
-  
+
   /**
    * 📝 Constrói prompt para o Artesão
    * 
@@ -734,7 +737,7 @@ upstream backend {
 
 ═══════════════════════════════════════════════════════════════════════════════
 ` : '';
-    
+
     return `
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║                    🎨 MODO ARTESÃO ATIVADO 🎨                                ║
@@ -745,6 +748,8 @@ Você é um ARTESÃO DIGITAL com maestria em código de excelência.
 Sua missão: Implementar a arquitetura criada pelo ARQUITETO com PERFEIÇÃO.
 
 ${meshInstructions}
+
+${DESIGN_PRINCIPLES_MANIFEST}
 
 ═══════════════════════════════════════════════════════════════════════════════
 
@@ -983,7 +988,7 @@ conteúdo aqui
 Gere TODOS os arquivos necessários seguindo a arquitetura definida.
 `;
   }
-  
+
   /**
    * 📊 Parseia resposta do Arquiteto
    */
@@ -997,16 +1002,16 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       if (jsonMatch) {
         return JSON.parse(jsonMatch[0]);
       }
-      
+
       // Fallback: criar blueprint básico
       return this.createFallbackBlueprint(request);
-      
+
     } catch (error) {
       this.log(`⚠️ Erro ao parsear blueprint, usando fallback`);
       return this.createFallbackBlueprint(request);
     }
   }
-  
+
   /**
    * 📊 Parseia código do Artesão
    */
@@ -1015,11 +1020,11 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     blueprint: ArchitectureBlueprint
   ): ArtisanCode {
     const files: Array<{ path: string; content: string; language: string }> = [];
-    
+
     // Extrair arquivos do formato FILE: ... ---content--- ---
     const fileRegex = /FILE:\s*(.+?)\nLANGUAGE:\s*(.+?)\n---\n([\s\S]*?)---/g;
     let match;
-    
+
     while ((match = fileRegex.exec(response)) !== null) {
       files.push({
         path: match[1].trim(),
@@ -1027,17 +1032,17 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
         language: match[2].trim()
       });
     }
-    
+
     // Se não encontrou arquivos no formato, tentar extrair blocos de código
     if (files.length === 0) {
       const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
       let blockMatch;
       let fileIndex = 0;
-      
+
       while ((blockMatch = codeBlockRegex.exec(response)) !== null) {
         const language = blockMatch[1] || 'text';
         const content = blockMatch[2].trim();
-        
+
         // Tentar detectar o tipo de arquivo pelo conteúdo
         let path = `file${fileIndex}`;
         if (content.includes('package main')) path = 'main.go';
@@ -1045,16 +1050,16 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
         else if (content.includes('import React')) path = 'App.tsx';
         else if (content.includes('FROM ')) path = 'Dockerfile';
         else if (content.includes('version:')) path = 'docker-compose.yml';
-        
+
         files.push({ path, content, language });
         fileIndex++;
       }
     }
-    
+
     // Calcular score de qualidade
     const qualityScore = this.calculateQualityScore(files);
     const readyForProduction = qualityScore >= 85;
-    
+
     return {
       files,
       qualityScore,
@@ -1062,39 +1067,39 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       readyForProduction
     };
   }
-  
+
   /**
    * 📊 Calcula score de qualidade do código
    */
   private calculateQualityScore(files: Array<{ path: string; content: string }>): number {
     let score = 100;
-    
+
     // Verificar se tem arquivos
     if (files.length === 0) score -= 50;
-    
+
     // Verificar se tem README
     const hasReadme = files.some(f => f.path.toLowerCase().includes('readme'));
     if (!hasReadme) score -= 10;
-    
+
     // Verificar se tem Docker
     const hasDocker = files.some(f => f.path.toLowerCase().includes('docker'));
     if (!hasDocker) score -= 5;
-    
+
     // Verificar se tem TODOs
     const hasTodos = files.some(f => f.content.includes('TODO') || f.content.includes('FIXME'));
     if (hasTodos) score -= 15;
-    
+
     // Verificar se tem tratamento de erros
-    const hasErrorHandling = files.some(f => 
-      f.content.includes('try') || 
-      f.content.includes('catch') || 
+    const hasErrorHandling = files.some(f =>
+      f.content.includes('try') ||
+      f.content.includes('catch') ||
       f.content.includes('if err')
     );
     if (!hasErrorHandling) score -= 10;
-    
+
     return Math.max(0, Math.min(100, score));
   }
-  
+
   /**
    * 🔧 Cria blueprint fallback
    */
@@ -1123,7 +1128,7 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       reasoning: 'Stack padrão para aplicações fullstack'
     };
   }
-  
+
   /**
    * 🔍 Detecta se deve usar o pipeline de 3 fases
    * Ativa automaticamente para projetos complexos
@@ -1133,7 +1138,7 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     if (request.useThreePhasePipeline !== undefined) {
       return request.useThreePhasePipeline;
     }
-    
+
     // Ativar automaticamente para projetos complexos
     const complexKeywords = [
       'fintech', 'banco', 'bank', 'pagamento', 'payment',
@@ -1142,19 +1147,19 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       'fullstack', 'full-stack', 'sistema completo',
       'dashboard', 'admin', 'painel', 'crm', 'erp'
     ];
-    
+
     const promptLower = request.userPrompt.toLowerCase();
     const hasComplexKeyword = complexKeywords.some(k => promptLower.includes(k));
-    
+
     // Ativar para complexidade enterprise ou complex
     const isComplexProject = request.complexity === 'enterprise' || request.complexity === 'complex';
-    
+
     // Ativar para tipos específicos
     const isComplexType = request.projectType === 'fintech' || request.projectType === 'fullstack';
-    
+
     return hasComplexKeyword || isComplexProject || isComplexType;
   }
-  
+
   /**
    * 🚀 BUILD COM THREE-PHASE PIPELINE (3 chamadas especializadas)
    * Mais poder, mais profundidade, mais qualidade
@@ -1167,7 +1172,7 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     this.log('\n╔══════════════════════════════════════════════════════════════════════════════╗');
     this.log('║              🌟 THREE-PHASE PIPELINE - 3 CHAMADAS ESPECIALIZADAS 🌟          ║');
     this.log('╚══════════════════════════════════════════════════════════════════════════════╝\n');
-    
+
     try {
       const pipelineResult = await this.threePhasePipeline.execute({
         userPrompt: request.userPrompt,
@@ -1180,16 +1185,16 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
           this.log(`✅ Fase ${phase} completa: ${result.files.length} arquivos`);
         }
       });
-      
+
       // Converter resultado do pipeline para formato AuroraResult
       return this.convertPipelineResult(pipelineResult, request, startTime, designDoc);
-      
+
     } catch (error) {
       this.log(`❌ ERRO NO PIPELINE: ${error}`);
       throw error;
     }
   }
-  
+
   /**
    * 🔄 Converte resultado do pipeline para formato AuroraResult
    */
@@ -1200,14 +1205,14 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     designDoc?: GeneratedDesignDoc
   ): AuroraResult {
     // Combinar todos os arquivos das 3 fases
-    const allFiles = pipelineResult.phases.flatMap(phase => 
+    const allFiles = pipelineResult.phases.flatMap(phase =>
       phase.files.map(f => ({
         path: f.path,
         content: f.content,
         language: f.language
       }))
     );
-    
+
     // Criar blueprint baseado nos resultados
     const blueprint: ArchitectureBlueprint = {
       projectName: this.extractProjectName(request.userPrompt),
@@ -1234,24 +1239,24 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       fileStructure: this.buildFileStructure(allFiles),
       reasoning: 'Gerado pelo Three-Phase Pipeline com 3 chamadas especializadas'
     };
-    
+
     // Calcular score de qualidade
     const qualityScore = this.calculatePipelineQualityScore(pipelineResult);
-    
+
     const code: ArtisanCode = {
       files: allFiles,
       qualityScore,
       improvements: [],
       readyForProduction: qualityScore >= 85
     };
-    
+
     const executionTime = Date.now() - startTime;
-    
+
     this.log(`\n🎯 PIPELINE COMPLETO!`);
     this.log(`📊 Total de arquivos: ${allFiles.length}`);
     this.log(`📊 Score de qualidade: ${qualityScore}/100`);
     this.log(`⏱️ Tempo total: ${(executionTime / 1000).toFixed(2)}s`);
-    
+
     return {
       blueprint,
       code,
@@ -1261,44 +1266,44 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       designDoc // 📋 Incluir Design Doc se gerado
     };
   }
-  
+
   /**
    * 📊 Calcula score de qualidade do pipeline
    */
   private calculatePipelineQualityScore(result: PipelineResult): number {
     let score = 100;
-    
+
     // Verificar se todas as fases completaram
     if (result.phases.length < 3) score -= 20;
-    
+
     // Verificar quantidade de arquivos por fase
     const phase1Files = result.phases[0]?.files.length || 0;
     const phase2Files = result.phases[1]?.files.length || 0;
     const phase3Files = result.phases[2]?.files.length || 0;
-    
+
     if (phase1Files < 3) score -= 10; // Backend mínimo
     if (phase2Files < 3) score -= 10; // Frontend mínimo
     if (phase3Files < 2) score -= 5;  // Docs mínimo
-    
+
     // Verificar arquivos essenciais
     const allFiles = result.phases.flatMap(p => p.files);
     const hasReadme = allFiles.some(f => f.path.toLowerCase().includes('readme'));
     const hasDocker = allFiles.some(f => f.path.toLowerCase().includes('docker'));
     const hasTests = allFiles.some(f => f.path.toLowerCase().includes('test'));
-    
+
     if (!hasReadme) score -= 5;
     if (!hasDocker) score -= 5;
     if (!hasTests) score -= 5;
-    
+
     return Math.max(0, Math.min(100, score));
   }
-  
+
   /**
    * 📁 Constrói estrutura de arquivos
    */
   private buildFileStructure(files: Array<{ path: string }>): Record<string, string> {
     const structure: Record<string, string> = {};
-    
+
     for (const file of files) {
       const parts = file.path.split('/');
       if (parts.length > 1) {
@@ -1309,10 +1314,10 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       }
       structure[file.path] = file.path;
     }
-    
+
     return structure;
   }
-  
+
   /**
    * 📝 Extrai nome do projeto do prompt
    */
@@ -1322,17 +1327,17 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       /crie?\s+(?:um|uma|o|a)?\s*(.+?)(?:\s+com|\s+que|\s+para|$)/i,
       /(?:sistema|app|aplicativo|projeto)\s+(?:de\s+)?(.+?)(?:\s+com|\s+que|\s+para|$)/i
     ];
-    
+
     for (const pattern of patterns) {
       const match = prompt.match(pattern);
       if (match && match[1]) {
         return match[1].trim().substring(0, 50);
       }
     }
-    
+
     return 'Projeto Aurora';
   }
-  
+
   /**
    * 📝 Adiciona log
    */
@@ -1340,11 +1345,11 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     this.logs.push(message);
     console.log(message);
   }
-  
+
   // ============================================
   // 🔍 PROST-QS AUDITOR - VALIDAÇÃO DE CONFORMIDADE
   // ============================================
-  
+
   /**
    * 🔍 Audita código gerado para conformidade com PROST-QS
    * 
@@ -1361,21 +1366,21 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     this.log('\n🔍 ═══════════════════════════════════════════════════════════════════════');
     this.log('🔍 PROST-QS AUDITOR - VALIDANDO CONFORMIDADE');
     this.log('🔍 ═══════════════════════════════════════════════════════════════════════');
-    
+
     // Combinar todo o código para auditoria
     const allCode = files.map(f => `// FILE: ${f.path}\n${f.content}`).join('\n\n');
-    
+
     // Executar auditoria
     const auditor = new ProstQSAuditor();
     const result = auditor.audit(allCode);
-    
+
     // Log do resultado
     if (result.passed) {
       this.log(`✅ AUDITORIA APROVADA: Score ${result.score}/100`);
     } else {
       this.log(`❌ AUDITORIA REPROVADA: Score ${result.score}/100`);
       this.log(`🚨 Violações encontradas: ${result.violations.length}`);
-      
+
       // Listar violações críticas
       const criticalViolations = result.violations.filter(v => v.type === 'CRITICAL');
       if (criticalViolations.length > 0) {
@@ -1389,13 +1394,13 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
         }
       }
     }
-    
+
     this.log(`📊 Recomendação: ${result.recommendation}`);
     this.log('🔍 ═══════════════════════════════════════════════════════════════════════\n');
-    
+
     return result;
   }
-  
+
   /**
    * 🔧 Ajusta score total baseado na auditoria PROST-QS
    * 
@@ -1405,22 +1410,22 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     if (auditResult.passed) {
       return baseScore;
     }
-    
+
     // Penalizar baseado na severidade
     const criticalCount = auditResult.violations.filter(v => v.type === 'CRITICAL').length;
     const severeCount = auditResult.violations.filter(v => v.type === 'SEVERE').length;
-    
+
     // Cada violação crítica reduz 15 pontos
     // Cada violação severa reduz 10 pontos
     const penalty = (criticalCount * 15) + (severeCount * 10);
-    
+
     return Math.max(0, baseScore - penalty);
   }
-  
+
   // ============================================
   // 🆕 LOW-LEVEL ARCHITECT MODE
   // ============================================
-  
+
   /**
    * ⚙️ BUILD LOW-LEVEL: Sistemas operacionais, kernels, drivers, compiladores
    * 
@@ -1447,7 +1452,7 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
     if (!this.genAI) {
       throw new Error('API Key do Gemini não configurada');
     }
-    
+
     // Analisar request com LowLevelArchitect
     const lowLevelRequest: LowLevelRequest = {
       userPrompt: request.userPrompt,
@@ -1455,7 +1460,7 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       targetArchitecture: request.targetArchitecture || 'x86_64',
       primaryLanguage: request.primaryLanguage || 'rust'
     };
-    
+
     // Detectar linguagem e arquitetura se não especificados
     const analyzed = LowLevelArchitect.analyzeRequest(request.userPrompt);
     if (analyzed) {
@@ -1463,22 +1468,22 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       lowLevelRequest.targetArchitecture = analyzed.targetArchitecture;
       lowLevelRequest.primaryLanguage = analyzed.primaryLanguage;
     }
-    
+
     this.log(`\n⚙️ Tipo de Projeto: ${lowLevelRequest.projectType}`);
     this.log(`⚙️ Linguagem Principal: ${lowLevelRequest.primaryLanguage}`);
     this.log(`⚙️ Arquitetura Alvo: ${lowLevelRequest.targetArchitecture}`);
-    
+
     // 🧠 EIXO 1-6: SINTETIZAR ABSTRACT MACHINE
     this.log('\n🧠 ═══════════════════════════════════════════════════════════════════════');
     this.log('🧠 AURORA KERNEL CONCEPT - SÍNTESE DE MÁQUINA ABSTRATA');
     this.log('🧠 ═══════════════════════════════════════════════════════════════════════');
-    
+
     // Detectar intents do prompt
     const detectedIntents = this.detectSystemIntents(request.userPrompt, lowLevelRequest.projectType);
     const systemIntents = request.systemIntents || detectedIntents;
-    
+
     this.log(`🎯 Intents detectados: ${systemIntents.join(', ')}`);
-    
+
     // Sintetizar Abstract Machine
     const abstractMachine = SystemSynthesisEngine.synthesize(
       this.extractProjectName(request.userPrompt),
@@ -1486,36 +1491,36 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       systemIntents,
       [lowLevelRequest.targetArchitecture as 'x86_64' | 'arm64' | 'riscv64' | 'wasm']
     );
-    
+
     this.log(`🏗️ Modelo de Computação: ${abstractMachine.computationModel}`);
     this.log(`📜 Token ISA: ${abstractMachine.tokenISA.length} instruções`);
     this.log(`⏱️ Scheduling: ${abstractMachine.temporal.scheduling}`);
     this.log(`🔄 Concorrência: ${abstractMachine.concurrency.model}`);
     this.log(`⚠️ Isolamento: ${abstractMachine.fault.isolation}`);
-    
+
     // Gerar justificativa
     const reasoning = SystemSynthesisEngine.explainDecisions(abstractMachine);
     this.log('\n📋 Justificativa de arquitetura gerada');
-    
+
     // Gerar prompt enriquecido COM Abstract Machine
     const basePrompt = LowLevelArchitect.enrichPrompt(lowLevelRequest);
     const enrichedPrompt = this.enrichWithAbstractMachine(basePrompt, abstractMachine, reasoning);
-    
+
     this.log('\n🔨 Gerando código de baixo nível baseado na Abstract Machine...');
-    
+
     // Chamar o modelo
     const result = await this.genAI.models.generateContent({
       model: 'gemini-2.0-flash-exp',
       contents: [{ text: enrichedPrompt }]
     });
-    
+
     const response = result.text || '';
-    
+
     // Parsear arquivos gerados
     const files = this.parseLowLevelFiles(response, lowLevelRequest.primaryLanguage);
-    
+
     this.log(`✅ Gerados ${files.length} arquivos`);
-    
+
     // Criar blueprint
     const blueprint: ArchitectureBlueprint = {
       projectName: this.extractProjectName(request.userPrompt),
@@ -1537,24 +1542,24 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       fileStructure: this.buildFileStructure(files),
       reasoning: `Projeto de baixo nível: ${lowLevelRequest.projectType} em ${lowLevelRequest.primaryLanguage} para ${lowLevelRequest.targetArchitecture}`
     };
-    
+
     // Calcular score
     const qualityScore = this.calculateLowLevelQualityScore(files, lowLevelRequest);
-    
+
     const code: ArtisanCode = {
       files,
       qualityScore,
       improvements: [],
       readyForProduction: qualityScore >= 80
     };
-    
+
     const executionTime = Date.now() - startTime;
-    
+
     this.log(`\n🎯 LOW-LEVEL BUILD COMPLETO!`);
     this.log(`📊 Arquivos: ${files.length}`);
     this.log(`📊 Score: ${qualityScore}/100`);
     this.log(`⏱️ Tempo: ${(executionTime / 1000).toFixed(2)}s`);
-    
+
     return {
       blueprint,
       code,
@@ -1565,14 +1570,14 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       designDoc // 📋 Incluir Design Doc se gerado
     };
   }
-  
+
   /**
    * 🎯 Detecta System Intents do prompt do usuário
    */
   private detectSystemIntents(prompt: string, projectType: LowLevelProjectType): SystemIntent[] {
     const promptLower = prompt.toLowerCase();
     const intents: SystemIntent[] = [];
-    
+
     // Detectar por palavras-chave
     const intentKeywords: Record<SystemIntent, string[]> = {
       'ISOLAMENTO_FORTE': ['isolamento', 'isolation', 'sandbox', 'separação', 'microkernel'],
@@ -1586,13 +1591,13 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       'ENERGIA_MINIMA': ['baixo consumo', 'low power', 'energia', 'battery', 'embedded'],
       'TOLERANCIA_FALHAS': ['tolerante a falhas', 'fault tolerant', 'resiliente', 'recovery', 'supervisor']
     };
-    
+
     for (const [intent, keywords] of Object.entries(intentKeywords)) {
       if (keywords.some(k => promptLower.includes(k))) {
         intents.push(intent as SystemIntent);
       }
     }
-    
+
     // Adicionar intents padrão por tipo de projeto
     const defaultIntents: Record<LowLevelProjectType, SystemIntent[]> = {
       'operating_system': ['ISOLAMENTO_FORTE', 'EXTENSIBILIDADE'],
@@ -1611,15 +1616,15 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       'debugger': ['EXTENSIBILIDADE'],
       'emulator': ['PORTABILIDADE']
     };
-    
+
     // Adicionar defaults se não detectou nenhum
     if (intents.length === 0 && defaultIntents[projectType]) {
       intents.push(...defaultIntents[projectType]);
     }
-    
+
     return intents;
   }
-  
+
   /**
    * 🧠 Enriquece prompt com informações da Abstract Machine
    */
@@ -1635,7 +1640,7 @@ Gere TODOS os arquivos necessários seguindo a arquitetura definida.
       }
       return `• ${token}`;
     }).join('\n');
-    
+
     return `
 ${basePrompt}
 
@@ -1682,7 +1687,7 @@ O código gerado DEVE refletir:
 ${reasoning}
 `;
   }
-  
+
   /**
    * 📦 Parseia arquivos de resposta low-level
    */
@@ -1691,42 +1696,42 @@ ${reasoning}
     primaryLanguage: string
   ): Array<{ path: string; content: string; language: string }> {
     const files: Array<{ path: string; content: string; language: string }> = [];
-    
+
     // Formato: ===FILE: path=== ou FILE: path
     const fileRegex = /(?:===FILE:|FILE:)\s*(.+?)(?:===)?\s*\n(?:LANGUAGE:\s*(.+?)\s*\n)?(?:---\n)?([\s\S]*?)(?:---|(?=(?:===FILE:|FILE:)|$))/g;
     let match;
-    
+
     while ((match = fileRegex.exec(response)) !== null) {
       const path = match[1].trim();
       const language = match[2]?.trim() || this.detectLanguageFromPath(path, primaryLanguage);
       const content = match[3].trim();
-      
+
       if (content.length > 0) {
         files.push({ path, content, language });
       }
     }
-    
+
     // Fallback: extrair blocos de código
     if (files.length === 0) {
       const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
       let blockMatch;
       let fileIndex = 0;
-      
+
       while ((blockMatch = codeBlockRegex.exec(response)) !== null) {
         const language = blockMatch[1] || primaryLanguage;
         const content = blockMatch[2].trim();
-        
+
         // Detectar path pelo conteúdo
         let path = this.detectPathFromContent(content, language, fileIndex);
-        
+
         files.push({ path, content, language });
         fileIndex++;
       }
     }
-    
+
     return files;
   }
-  
+
   /**
    * 🔍 Detecta linguagem pelo path do arquivo
    */
@@ -1753,7 +1758,7 @@ ${reasoning}
     };
     return langMap[ext || ''] || defaultLang;
   }
-  
+
   /**
    * 🔍 Detecta path pelo conteúdo do arquivo
    */
@@ -1765,7 +1770,7 @@ ${reasoning}
     if (content.includes('mod ') && language === 'rust') {
       return `src/lib.rs`;
     }
-    
+
     // C
     if (content.includes('#include') && content.includes('int main')) {
       return 'src/main.c';
@@ -1773,12 +1778,12 @@ ${reasoning}
     if (content.includes('#ifndef') || content.includes('#pragma once')) {
       return `include/header${index}.h`;
     }
-    
+
     // Assembly
     if (content.includes('section .text') || content.includes('global _start')) {
       return 'boot/boot.asm';
     }
-    
+
     // Build files
     if (content.includes('[package]') && content.includes('name =')) {
       return 'Cargo.toml';
@@ -1789,7 +1794,7 @@ ${reasoning}
     if (content.includes('ENTRY(') || content.includes('SECTIONS')) {
       return 'linker.ld';
     }
-    
+
     // Default
     const extMap: Record<string, string> = {
       'rust': 'rs', 'c': 'c', 'cpp': 'cpp', 'assembly': 'asm',
@@ -1797,7 +1802,7 @@ ${reasoning}
     };
     return `src/file${index}.${extMap[language] || 'txt'}`;
   }
-  
+
   /**
    * 🔧 Retorna framework/toolchain para tipo de projeto
    */
@@ -1821,7 +1826,7 @@ ${reasoning}
     };
     return frameworks[projectType] || 'Custom';
   }
-  
+
   /**
    * 📁 Retorna estrutura de pastas para tipo de projeto
    */
@@ -1845,20 +1850,20 @@ ${reasoning}
     };
     return structures[projectType] || 'src/';
   }
-  
+
   /**
    * 🛠️ Retorna tech stack para projeto low-level
    */
   private getLowLevelTechStack(request: LowLevelRequest): string[] {
     const stack: string[] = [request.primaryLanguage];
-    
+
     // Adicionar ferramentas comuns
     if (request.primaryLanguage === 'rust') {
       stack.push('Cargo', 'rustc', 'rust-analyzer');
     } else if (request.primaryLanguage === 'c' || request.primaryLanguage === 'cpp') {
       stack.push('GCC/Clang', 'Make/CMake', 'GDB');
     }
-    
+
     // Adicionar por tipo de projeto
     if (request.projectType === 'operating_system' || request.projectType === 'bootloader') {
       stack.push('NASM', 'QEMU', 'xorriso');
@@ -1866,12 +1871,12 @@ ${reasoning}
     if (request.projectType === 'kernel_module') {
       stack.push('Linux Headers', 'insmod/rmmod');
     }
-    
+
     stack.push(request.targetArchitecture || 'x86_64');
-    
+
     return stack;
   }
-  
+
   /**
    * 📊 Calcula score de qualidade para projeto low-level
    */
@@ -1880,31 +1885,31 @@ ${reasoning}
     request: LowLevelRequest
   ): number {
     let score = 100;
-    
+
     // Verificar quantidade de arquivos
     if (files.length === 0) score -= 50;
     else if (files.length < 3) score -= 20;
-    
+
     // Verificar se tem arquivo principal
-    const hasMain = files.some(f => 
-      f.path.includes('main.') || 
+    const hasMain = files.some(f =>
+      f.path.includes('main.') ||
       f.path.includes('boot.') ||
       f.path.includes('kernel.')
     );
     if (!hasMain) score -= 15;
-    
+
     // Verificar se tem build system
-    const hasBuild = files.some(f => 
-      f.path.includes('Makefile') || 
+    const hasBuild = files.some(f =>
+      f.path.includes('Makefile') ||
       f.path.includes('Cargo.toml') ||
       f.path.includes('CMakeLists')
     );
     if (!hasBuild) score -= 10;
-    
+
     // Verificar se tem README
     const hasReadme = files.some(f => f.path.toLowerCase().includes('readme'));
     if (!hasReadme) score -= 5;
-    
+
     // Verificar se usa a linguagem correta
     const usesCorrectLang = files.some(f => {
       const ext = f.path.split('.').pop();
@@ -1919,20 +1924,20 @@ ${reasoning}
       return langExts[request.primaryLanguage]?.includes(ext || '') || false;
     });
     if (!usesCorrectLang) score -= 20;
-    
+
     // Verificar se tem linker script (para OS/bootloader)
     if (['operating_system', 'bootloader', 'firmware'].includes(request.projectType)) {
       const hasLinker = files.some(f => f.path.includes('.ld') || f.path.includes('linker'));
       if (!hasLinker) score -= 10;
     }
-    
+
     return Math.max(0, Math.min(100, score));
   }
-  
+
   // ============================================
   // 📱 MOBILE ARCHITECT - BUILD MOBILE APPS
   // ============================================
-  
+
   /**
    * 📱 Constrói aplicação mobile completa (Android/iOS)
    * 
@@ -1949,7 +1954,7 @@ ${reasoning}
     designDoc?: GeneratedDesignDoc
   ): Promise<AuroraResult> {
     this.log('\n📱 MOBILE ARCHITECT - GERANDO APP MOBILE COMPLETO');
-    
+
     // Gerar arquitetura e arquivos via MobileArchitect
     const mobileResult = await this.mobileArchitect.generate({
       userPrompt: request.userPrompt,
@@ -1960,21 +1965,21 @@ ${reasoning}
       needsBackend: true,
       complexity: request.complexity as any
     });
-    
+
     // Adicionar contexto mobile ao request
     request.context = (request.context || '') + '\n' + mobileResult.auroraContext;
-    
+
     this.log(`✅ Plataforma: ${mobileResult.platform}`);
     this.log(`✅ Framework: ${mobileResult.framework}`);
     this.log(`✅ Arquivos gerados: ${mobileResult.files.length}`);
-    
+
     // Converter arquivos do MobileArchitect para formato ArtisanCode
     const files = mobileResult.files.map(f => ({
       path: f.path,
       content: f.content,
       language: f.language
     }));
-    
+
     // Criar blueprint
     const blueprint: ArchitectureBlueprint = {
       projectName: request.appName || this.extractProjectName(request.userPrompt),
@@ -2001,24 +2006,24 @@ ${reasoning}
       fileStructure: this.buildFileStructure(files),
       reasoning: `App mobile ${mobileResult.platform} usando ${mobileResult.framework} com backend Go integrado`
     };
-    
+
     // Calcular score
     const qualityScore = this.calculateMobileQualityScore(files, mobileResult);
-    
+
     const code: ArtisanCode = {
       files,
       qualityScore,
       improvements: [],
       readyForProduction: qualityScore >= 85
     };
-    
+
     const executionTime = Date.now() - startTime;
-    
+
     this.log(`\n🎯 MOBILE BUILD COMPLETO!`);
     this.log(`📊 Arquivos: ${files.length}`);
     this.log(`📊 Score: ${qualityScore}/100`);
     this.log(`⏱️ Tempo: ${(executionTime / 1000).toFixed(2)}s`);
-    
+
     return {
       blueprint,
       code,
@@ -2029,7 +2034,7 @@ ${reasoning}
       mobileResult
     };
   }
-  
+
   /**
    * 📱 Retorna nome amigável do framework mobile
    */
@@ -2045,7 +2050,7 @@ ${reasoning}
     };
     return names[framework] || framework;
   }
-  
+
   /**
    * 📱 Retorna bibliotecas do framework mobile
    */
@@ -2061,16 +2066,16 @@ ${reasoning}
     };
     return libs[framework] || [];
   }
-  
+
   /**
    * 📱 Retorna tech stack completa do projeto mobile
    */
   private getMobileTechStack(result: MobileArchitectResult): string[] {
     const stack: string[] = [];
-    
+
     // Framework principal
     stack.push(this.getMobileFrameworkName(result.framework));
-    
+
     // Plataformas
     if (result.platform === 'android' || result.platform === 'both') {
       stack.push('Android', 'Kotlin', 'Jetpack Compose');
@@ -2078,18 +2083,18 @@ ${reasoning}
     if (result.platform === 'ios' || result.platform === 'both') {
       stack.push('iOS', 'Swift', 'SwiftUI');
     }
-    
+
     // Backend
     if (result.architecture.structure.backend) {
       stack.push('Go', 'Gin', 'PostgreSQL', 'Redis', 'JWT');
     }
-    
+
     // Infra
     stack.push('Docker', 'GitHub Actions');
-    
+
     return [...new Set(stack)]; // Remove duplicatas
   }
-  
+
   /**
    * 📱 Calcula score de qualidade para projeto mobile
    */
@@ -2098,49 +2103,49 @@ ${reasoning}
     result: MobileArchitectResult
   ): number {
     let score = 100;
-    
+
     // Verificar quantidade de arquivos
     if (files.length === 0) score -= 50;
     else if (files.length < 5) score -= 20;
     else if (files.length < 10) score -= 10;
-    
+
     // Verificar arquivos Android
     if (result.platform === 'android' || result.platform === 'both') {
       const hasAndroidManifest = files.some(f => f.path.includes('AndroidManifest'));
       const hasBuildGradle = files.some(f => f.path.includes('build.gradle'));
       const hasMainActivity = files.some(f => f.path.includes('MainActivity'));
-      
+
       if (!hasAndroidManifest) score -= 10;
       if (!hasBuildGradle) score -= 10;
       if (!hasMainActivity) score -= 5;
     }
-    
+
     // Verificar arquivos iOS
     if (result.platform === 'ios' || result.platform === 'both') {
       const hasAppSwift = files.some(f => f.path.includes('App.swift'));
       const hasContentView = files.some(f => f.path.includes('ContentView'));
-      
+
       if (!hasAppSwift) score -= 10;
       if (!hasContentView) score -= 5;
     }
-    
+
     // Verificar backend
     if (result.architecture.structure.backend) {
       const hasMainGo = files.some(f => f.path.includes('main.go'));
       const hasDockerfile = files.some(f => f.path.includes('Dockerfile'));
-      
+
       if (!hasMainGo) score -= 10;
       if (!hasDockerfile) score -= 5;
     }
-    
+
     // Verificar README
     const hasReadme = files.some(f => f.path.toLowerCase().includes('readme'));
     if (!hasReadme) score -= 5;
-    
+
     // Verificar CI/CD
     const hasCI = files.some(f => f.path.includes('.github/workflows'));
     if (!hasCI) score -= 5;
-    
+
     return Math.max(0, Math.min(100, score));
   }
 }

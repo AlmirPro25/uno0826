@@ -1,0 +1,50 @@
+
+# CYDONIA RETINAL INTERFACE PROTOCOL
+# Stage 1: Synthesis (Build)
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Context: Root
+COPY package*.json ./
+COPY frontend/package*.json ./frontend/
+COPY shared/package*.json ./shared/
+
+# Install deps
+COPY shared ./shared
+COPY frontend ./frontend
+
+WORKDIR /app/frontend
+RUN npm ci
+
+# Compile Assets (Vite Build)
+# Enforce production mode for minification
+RUN npm run build
+
+# Stage 2: Projection (Serve)
+FROM nginx:alpine AS runner
+
+# Hardened Nginx Configuration for SPA
+# Redirects 404s to index.html for client-side routing
+RUN echo 'server { \
+    listen 80; \
+    server_name localhost; \
+    root /usr/share/nginx/html; \
+    index index.html; \
+    location / { \
+        try_files $uri $uri/ /index.html; \
+    } \
+    location /api/ { \
+        proxy_pass http://backend:3000; \
+        proxy_http_version 1.1; \
+        proxy_set_header Upgrade $http_upgrade; \
+        proxy_set_header Connection "upgrade"; \
+    } \
+}' > /etc/nginx/conf.d/default.conf
+
+# Copy artifacts
+COPY --from=builder /app/frontend/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]

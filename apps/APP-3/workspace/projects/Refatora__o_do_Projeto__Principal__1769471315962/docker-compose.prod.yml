@@ -1,0 +1,50 @@
+
+version: '3.8'
+
+# TITAN LOGISTICS | PRODUCTION ORCHESTRATION
+# Environment: Live Mission Critical
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: ../docker/Dockerfile.backend
+    container_name: titan_backend_prod
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/data/titan_core.db
+      - JWT_SECRET=${JWT_SECRET}
+      - PORT=3000
+    volumes:
+      - titan_prod_data:/data
+    networks:
+      - titan_prod_net
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+    restart: always
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: ../docker/Dockerfile.frontend
+      args:
+        - VITE_API_URL=/api/v1 
+    container_name: titan_frontend_prod
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - backend
+    networks:
+      - titan_prod_net
+    restart: always
+
+volumes:
+  titan_prod_data:
+
+networks:
+  titan_prod_net:
+    driver: bridge

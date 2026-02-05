@@ -1,0 +1,77 @@
+
+version: '3.8'
+
+# AEGIS-VII DEVELOPMENT ENVIRONMENT
+# "Hot-Reload enabled. Tactical Data Volatile."
+
+services:
+  # TACTICAL DATABASE (PostgreSQL)
+  db:
+    image: postgres:14-alpine
+    container_name: aegis_db_dev
+    environment:
+      POSTGRES_DB: aegis_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - aegis_db_data_dev:/var/lib/postgresql/data # Persist DB data
+    ports:
+      - "5432:5432"
+    networks:
+      - aegis_net
+
+  # TACTICAL KERNEL (Backend)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: aegis_core_dev
+    # Command to run Prisma migrations before starting the Node.js server
+    command: sh -c "npx prisma migrate deploy --schema ./prisma/schema.prisma && node server.js"
+    volumes:
+      - ./server.js:/usr/src/app/server.js
+      - ./package.json:/usr/src/app/package.json
+      - ./node_modules:/usr/src/app/node_modules
+      - ./prisma:/usr/src/app/prisma # Mount prisma schema for generate
+      - ./shared:/usr/src/app/shared
+      - ./.env:/usr/src/app/.env # Mount .env for development
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/aegis_db
+      PORT: 3000
+      TICK_RATE_MS: 1000
+      JWT_SECRET: ${JWT_SECRET:-DEV_SECRET_DO_NOT_USE_IN_PROD}
+    depends_on:
+      - db
+    networks:
+      - aegis_net
+
+  # HEADS-UP DISPLAY (Frontend - Dev Server)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+      target: builder # Use builder stage for dev to have devDeps
+    container_name: aegis_hud_dev
+    # Using Vite dev server with proxy to backend
+    command: npm run dev -- --host
+    volumes:
+      - ./frontend:/usr/src/app/frontend
+      - ./shared:/usr/src/app/shared
+      - /usr/src/app/frontend/node_modules # Explicitly mount node_modules inside container
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_URL: http://backend:3000 # Frontend's proxy target for Vite dev server
+    depends_on:
+      - backend
+    networks:
+      - aegis_net
+
+volumes:
+  aegis_db_data_dev:
+
+networks:
+  aegis_net:
+    driver: bridge

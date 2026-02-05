@@ -1,0 +1,55 @@
+
+// CYDONIA ARCHITECT: Schema de Persistência Neuromórfica
+// Engine: SQLite (Optimized for Edge/Embedded Contexts)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./aerosphere_core.db"
+}
+
+// Tabela de snapshot cíclico da biosfera
+model TelemetryFrame {
+  id                Int      @id @default(autoincrement())
+  recorded_at       DateTime @default(now())
+  
+  // Atmosfera
+  oxygen_ppm        Int      // 210000 = 21%
+  carbon_dioxide_ppm Int
+  pressure_kpa      Float
+  temperature_c     Float
+  radiation_level   Float    // Sieverts/h
+  
+  // Recursos
+  energy_grid_load  Float    // % de carga
+  water_reserve_lvl Float    // %
+  
+  // Integridade
+  shield_frequency  Float    // Mhz
+  hull_integrity    Float    // %
+
+  @@index([recorded_at])
+}
+
+// Log imutável de ações e alertas
+model SystemLog {
+  id          Int      @id @default(autoincrement())
+  timestamp   DateTime @default(now())
+  severity    String   // INFO, WARNING, ALERT, CRITICAL
+  origin      String   // SYSTEM, USER_OVERRIDE, AUTOMATION
+  message     String
+  
+  // Metadados técnicos em JSON stringify
+  meta_data   String? 
+}
+
+// Configurações persistentes de Setpoints (Memória do Sistema)
+model CalibrationConfig {
+  key         String   @id
+  value       Float
+  updated_at  DateTime @default(now())
+  last_author String   // ID do operador
+}

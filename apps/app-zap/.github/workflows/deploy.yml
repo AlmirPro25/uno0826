@@ -1,0 +1,57 @@
+
+name: Ghost Protocol Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Login to GitHub Container Registry
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Build and Push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: docker/Dockerfile.backend
+        push: true
+        tags: ghcr.io/${{ github.repository }}/backend:latest
+
+    - name: Build and Push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: docker/Dockerfile.frontend
+        push: true
+        tags: ghcr.io/${{ github.repository }}/frontend:latest
+
+  deploy-ssh:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to VPS via SSH
+      uses: appleboy/ssh-action@v0.1.10
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        key: ${{ secrets.SSH_KEY }}
+        script: |
+          cd /opt/ghost-protocol
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d
+          docker system prune -f

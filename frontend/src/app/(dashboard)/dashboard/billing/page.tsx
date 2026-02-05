@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { CreditCard, Zap, FileText, CheckCircle2, BarChart, History, Wallet, Loader2, Crown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useApp } from "@/contexts/app-context";
+import { useAuth } from "@/contexts/auth-context";
 import { AppHeader } from "@/components/dashboard/app-header";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -31,6 +32,7 @@ type SubscriptionStatus = {
 
 function BillingContent() {
     const { activeApp } = useApp();
+    const { user } = useAuth();
     const searchParams = useSearchParams();
     const [account, setAccount] = useState<BillingAccount | null>(null);
     const [subStatus, setSubStatus] = useState<SubscriptionStatus | null>(null);
@@ -41,7 +43,7 @@ function BillingContent() {
         // Check for success/canceled params from Stripe redirect
         const success = searchParams.get('success');
         const canceled = searchParams.get('canceled');
-        
+
         if (success === 'true') {
             toast.success("🎉 Pagamento realizado com sucesso! Seu plano Pro está ativo.");
         } else if (canceled === 'true') {
@@ -68,10 +70,29 @@ function BillingContent() {
     }, []);
 
     const handleUpgrade = async () => {
+        if (!activeApp) {
+            toast.error("Selecione um aplicativo para fazer upgrade.");
+            return;
+        }
+        if (!user) {
+            toast.error("Usuário não autenticado.");
+            return;
+        }
+
         setUpgrading(true);
         try {
-            const res = await api.post("/billing/checkout/pro");
-            if (res.data.url) {
+            const email = user.profile?.email || user.email || "";
+            const name = user.profile?.name || email;
+
+            const res = await api.post(`/apps/${activeApp.id}/billing/checkout`, {
+                plan_id: "plan_pro",
+                email: email,
+                name: name
+            });
+            if (res.data.checkout_url) {
+                window.location.href = res.data.checkout_url;
+            } else if (res.data.url) {
+                // Fallback for different response structure
                 window.location.href = res.data.url;
             } else {
                 toast.error("Falha ao criar sessão de checkout");
@@ -111,7 +132,7 @@ function BillingContent() {
     return (
         <div className="space-y-10 pb-20">
             <AppHeader />
-            
+
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                     <h1 className="text-3xl font-black text-white uppercase tracking-tighter leading-none">
@@ -120,8 +141,8 @@ function BillingContent() {
                     <p className="text-slate-500 mt-1 font-medium">Gestão soberana de fluxos financeiros e subscrições.</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button 
-                        variant="outline" 
+                    <Button
+                        variant="outline"
                         className="bg-white/5 border-white/10 text-white hover:bg-white/10 rounded-xl px-6 font-bold uppercase tracking-widest text-[10px]"
                         onClick={handleManageSubscription}
                     >
@@ -140,7 +161,7 @@ function BillingContent() {
                     <div className="relative z-10">
                         <div className={cn(
                             "inline-flex items-center gap-2 px-3 py-1 rounded-full border text-[10px] font-black uppercase tracking-[0.2em] mb-6",
-                            isPro 
+                            isPro
                                 ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
                                 : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400"
                         )}>
@@ -159,7 +180,7 @@ function BillingContent() {
 
                         {isPro ? (
                             <div className="flex items-center gap-6">
-                                <Button 
+                                <Button
                                     onClick={handleManageSubscription}
                                     className="h-14 px-10 rounded-2xl bg-white text-black hover:bg-slate-200 font-black uppercase tracking-widest text-xs transition-all"
                                 >
@@ -179,7 +200,7 @@ function BillingContent() {
                                         </span>
                                     ))}
                                 </div>
-                                <Button 
+                                <Button
                                     onClick={handleUpgrade}
                                     disabled={upgrading}
                                     className="h-14 px-10 rounded-2xl bg-indigo-600 text-white hover:bg-indigo-500 font-black uppercase tracking-widest text-xs transition-all shadow-xl shadow-indigo-600/20"

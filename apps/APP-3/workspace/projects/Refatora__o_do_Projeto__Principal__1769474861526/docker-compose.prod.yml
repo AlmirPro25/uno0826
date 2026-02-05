@@ -1,0 +1,59 @@
+
+version: '3.8'
+
+# AEGIS-VII PRODUCTION ENVIRONMENT
+# "Fortified. Optimized. Ready for War."
+
+services:
+  # TACTICAL DATABASE (PostgreSQL)
+  db:
+    image: postgres:14-alpine
+    container_name: aegis_db_prod
+    environment:
+      POSTGRES_DB: aegis_db
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - aegis_db_data_prod:/var/lib/postgresql/data # Persist DB data
+    networks:
+      - aegis_internal
+    restart: always
+
+  # TACTICAL KERNEL (Backend)
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: aegis_core_prod
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/aegis_db
+      NODE_ENV: production
+      PORT: 3000
+      TICK_RATE_MS: 1000
+      JWT_SECRET: ${JWT_SECRET} # Use secret from environment (e.g., .env in prod server)
+    depends_on:
+      - db
+    networks:
+      - aegis_internal
+    restart: always
+
+  # FRONTEND PROXY (Nginx)
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: aegis_hud_prod
+    ports:
+      - "80:80" # Expose standard HTTP port
+    depends_on:
+      - backend # Frontend depends on backend for API proxying
+    networks:
+      - aegis_internal
+    restart: always
+
+volumes:
+  aegis_db_data_prod:
+
+networks:
+  aegis_internal:
+    driver: bridge

@@ -1,0 +1,300 @@
+
+openapi: 3.0.0
+info:
+  title: Aegis-VII Tactical Command API
+  version: 1.0.0
+  description: Interface de Controle para Operações Digitais Autônomas.
+servers:
+  - url: http://localhost:3000/api
+    description: Local Command Node
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - bearerAuth: []
+
+paths:
+  /auth/register:
+    post:
+      summary: Register a new operator account
+      description: Creates a new user with 'OPERATOR' role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterPayload'
+      responses:
+        '201':
+          description: User registered, returns JWT.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+        '400':
+          description: Invalid input.
+        '409':
+          description: Username already exists.
+        '500':
+          description: Internal server error.
+
+  /auth/login:
+    post:
+      summary: Authenticate operator
+      description: Authenticates a user and provides a JWT for subsequent requests.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginPayload'
+      responses:
+        '200':
+          description: Authentication successful, returns JWT.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token:
+                    type: string
+                  user:
+                    $ref: '#/components/schemas/User'
+        '401':
+          description: Invalid credentials.
+        '500':
+          description: Internal server error.
+
+  /status:
+    get:
+      summary: Tactical Situation Report (SITREP)
+      description: Returns global resources, active units, and recent logs. Requires authentication.
+      responses:
+        '200':
+          description: Full tactical snapshot.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  resources:
+                    $ref: '#/components/schemas/Resources'
+                  units:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Unit'
+                  operations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Operation'
+                  logs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Log'
+        '401':
+          description: Unauthorized.
+
+  /fabricate:
+    post:
+      summary: Fabricate new Unit
+      description: Spends resources to create a new agent (Ant). Requires authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                type:
+                  type: string
+                  enum: [MINER, HUNTER, GUARDIAN]
+                  description: Type of unit to fabricate.
+              required:
+                - type
+      responses:
+        '201':
+          description: Unit deployed.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Unit'
+        '400':
+          description: Invalid request body.
+        '401':
+          description: Unauthorized.
+        '402':
+          description: Insufficient resources.
+        '500':
+          description: Internal server error.
+
+  /deploy:
+    post:
+      summary: Deploy Unit to Operation
+      description: Assigns an idle unit to a task. Requires authentication.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                unitId:
+                  type: string
+                  description: ID of the unit to deploy.
+                missionType:
+                  type: string
+                  enum: [DATA_MINING, FIREWALL_ASSAULT, GRID_DEFENSE]
+                  description: Type of mission for the unit.
+              required:
+                - unitId
+                - missionType
+      responses:
+        '200':
+          description: Operation commenced.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Operation'
+        '400':
+          description: Invalid request body or unit not idle.
+        '401':
+          description: Unauthorized.
+        '404':
+          description: Unit not found.
+        '500':
+          description: Internal server error.
+
+  /purge:
+    post:
+      summary: Factory Reset
+      description: Wipes DB for fresh simulation. Requires authentication (and ideally ADMIN role).
+      responses:
+        '200':
+          description: System purged.
+        '401':
+          description: Unauthorized.
+        '500':
+          description: Internal server error.
+
+components:
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        role:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+    LoginPayload:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    RegisterPayload:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+    Resources:
+      type: object
+      properties:
+        id:
+          type: string
+        cpu_cycles:
+          type: integer
+        bandwidth:
+          type: integer
+        crypto_tokens:
+          type: integer
+        defense_level:
+          type: integer
+        last_tick:
+          type: string
+          format: date-time
+    Unit:
+      type: object
+      properties:
+        id:
+          type: string
+        designation:
+          type: string
+        type:
+          type: string
+          enum: [MINER, HUNTER, GUARDIAN]
+        level:
+          type: integer
+        status:
+          type: string
+          enum: [IDLE, DEPLOYED, REPAIRING, KIA]
+        operation_id:
+          type: string
+          nullable: true
+        efficiency:
+          type: number
+        created_at:
+          type: string
+          format: date-time
+    Operation:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [DATA_MINING, FIREWALL_ASSAULT, GRID_DEFENSE]
+        difficulty:
+          type: integer
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        duration_ms:
+          type: integer
+        reward_cpu:
+          type: integer
+        reward_bw:
+          type: integer
+        reward_crypto:
+          type: integer
+        unit_id:
+          type: string
+    Log:
+      type: object
+      properties:
+        id:
+          type: integer
+        timestamp:
+          type: string
+          format: date-time
+        level:
+          type: string
+          enum: [INFO, WARN, ALERT, CRITICAL, SUCCESS]
+        message:
+          type: string

@@ -1,0 +1,38 @@
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: ghost_brain_prod
+    volumes:
+      - ghost_storage:/app/data
+      # Não montamos código fonte em prod
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/app/data/ghost.db
+      - NODE_ENV=production
+      - PORT=3000
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: ghost_ui_prod
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: always
+
+volumes:
+  ghost_storage:

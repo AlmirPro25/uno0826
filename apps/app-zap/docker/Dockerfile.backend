@@ -1,0 +1,67 @@
+
+# STAGE 1: Builder & Dependencies
+FROM node:18-slim as builder
+
+# Instalação de dependências do sistema para o Prisma e Build
+RUN apt-get update -y && apt-get install -y openssl
+
+WORKDIR /app
+
+# Copia arquivos de configuração de dependências
+# Assumindo estrutura de monorepo ou pastas adjacentes
+COPY backend/package*.json ./backend/
+COPY shared/ ./shared/
+
+# Instalação
+WORKDIR /app/backend
+RUN npm ci
+
+# Geração do Client Prisma
+COPY backend/prisma ./prisma
+RUN npx prisma generate
+
+# Copia o código fonte
+COPY backend/ .
+
+# Build do TypeScript
+RUN npm run build
+
+# STAGE 2: Production Runner (Heavy Duty for Puppeteer)
+FROM node:18-slim
+
+# Variáveis de Ambiente Críticas para Puppeteer
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/google-chrome-stable \
+    NODE_ENV=production
+
+# Instalação do Chrome Stable e dependências necessárias para o WhatsApp Web
+RUN apt-get update && apt-get install -y \
+    wget \
+    gnupg \
+    ca-certificates \
+    procps \
+    libxss1 \
+    && wget -q -O - https://dl-ssl.google.com/linux/linux_signing_key.pub | apt-key add - \
+    && sh -c 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" >> /etc/apt/sources.list.d/google.list' \
+    && apt-get update \
+    && apt-get install -y google-chrome-stable fonts-ipafont-gothic fonts-wqy-zenhei fonts-thai-tlwg fonts-kacst fonts-freefont-ttf libxss1 \
+      --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# Copia node_modules e build do stage anterior
+COPY --from=builder /app/backend/dist ./dist
+COPY --from=builder /app/backend/node_modules ./node_modules
+COPY --from=builder /app/backend/package*.json ./
+COPY --from=builder /app/backend/prisma ./prisma
+# Copia o shared compilado ou fonte se necessário (depende do build do TS)
+COPY --from=builder /app/shared ../shared
+
+# Cria diretório para persistência do SQLite e Sessão WA
+RUN mkdir -p /app/data
+
+EXPOSE 3000
+
+# Script de inicialização: Deploy do Banco -> Início
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/server.js"]

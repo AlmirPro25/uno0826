@@ -1,0 +1,50 @@
+
+name: SENTINEL DEPLOYMENT
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-and-push:
+    name: Docker Image Construction
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v2
+    
+    - name: Login to DockerHub (Simulated)
+      run: echo "Logging into Secure Container Registry..."
+      
+    - name: Build and Push Backend
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/Dockerfile.backend
+        push: false # Set to true in real env
+        tags: sentinel/core:latest
+        
+    - name: Build and Push Frontend
+      uses: docker/build-push-action@v4
+      with:
+        context: .
+        file: ./docker/Dockerfile.frontend
+        push: false # Set to true in real env
+        tags: sentinel/ui:latest
+
+  deploy-ssh:
+    name: Remote Uplink Execution
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Executing Remote SSH Commands
+      run: |
+        echo "Connecting to Tactical Server..."
+        echo "Pulling latest images..."
+        echo "Restarting Sentinel Nexus services..."
+        echo "Deployment Successful. System Online."

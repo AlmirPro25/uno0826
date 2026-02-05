@@ -1,0 +1,298 @@
+<html lang="pt-BR" class="scroll-smooth"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LuxeDigital | Curadoria Automotiva</title>
+    
+    <!-- TAILWIND CSS (Engine Visual) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- CONFIGURAÇÃO DE DESIGN SYSTEM -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#151b28', 950: '#020617' },
+                        amber: { 450: '#F59E0B' }, // Ouro escovado
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        serif: ['Playfair Display', 'serif'],
+                    },
+                    backgroundImage: {
+                        'hero-pattern': "linear-gradient(to bottom, rgba(2,6,23,0.3), rgba(2,6,23,1)), url('https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?q=80&w=2600&auto=format&fit=crop')",
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- FONTS -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&amp;family=Playfair+Display:ital,wght@0,400;0,700;1,400&amp;display=swap" rel="stylesheet">
+    
+    <!-- ICONS -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <style>
+        /* Custom Scrollbar for Luxury Feel */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #475569; }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.4);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-300 font-sans antialiased selection:bg-amber-500/30 selection:text-amber-200">
+
+    <!-- NAVIGATION -->
+    <nav class="fixed w-full z-50 glass-panel border-b border-white/5 transition-all duration-300" id="navbar">
+        <div class="max-w-7xl mx-auto px-6 lg:px-12">
+            <div class="flex items-center justify-between h-20">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="gem" class="w-6 h-6 text-amber-500"></i>
+                    <span class="text-xl font-serif font-bold tracking-widest text-white">LUXE<span class="text-amber-500">DIGITAL</span></span>
+                </div>
+                <div class="hidden md:flex items-center space-x-10 text-sm tracking-widest font-light uppercase">
+                    <a href="#showroom" class="hover:text-amber-400 transition-colors">Showroom</a>
+                    <a href="#concierge" class="hover:text-amber-400 transition-colors">Concierge</a>
+                    <a href="#" class="px-5 py-2 border border-white/20 rounded-sm hover:bg-white hover:text-black transition-all duration-300">Login Cliente</a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO SECTION -->
+    <header class="relative h-screen flex items-center justify-center bg-hero-pattern bg-cover bg-center bg-fixed bg-no-repeat">
+        <div class="text-center space-y-8 px-4 fade-in-up">
+            <p class="text-amber-500 tracking-[0.3em] uppercase text-sm font-semibold">Engenharia da Emoção</p>
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-serif text-white leading-tight">
+                Além da <br><i class="font-serif italic text-white/90">Performance</i>
+            </h1>
+            <p class="max-w-xl mx-auto text-lg text-slate-400 font-light">
+                Curadoria exclusiva das máquinas mais raras do planeta. 
+                Onde a engenharia mecânica encontra a arte renascentista.
+            </p>
+            <div class="pt-8">
+                <a href="#showroom" class="group relative px-8 py-4 bg-amber-600 text-white font-medium tracking-widest uppercase text-sm overflow-hidden rounded-sm inline-block">
+                    <span class="absolute inset-0 w-full h-full bg-amber-500/20 group-hover:bg-amber-500/40 transition-all duration-300"></span>
+                    <span class="relative flex items-center gap-2">
+                        Explorar Coleção <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                    </span>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- SHOWROOM GRID -->
+    <section id="showroom" class="py-24 px-6 lg:px-12 max-w-7xl mx-auto">
+        <div class="flex justify-between items-end mb-16">
+            <div>
+                <h2 class="text-4xl font-serif text-white mb-2">O Paddock</h2>
+                <div class="h-1 w-20 bg-amber-500"></div>
+            </div>
+            <p class="hidden md:block text-slate-500 text-sm uppercase tracking-widest text-right">
+                Inventário Atualizado<br>
+                <span id="inventory-date" class="text-slate-300"></span>
+            </p>
+        </div>
+
+        <!-- LOADING STATE -->
+        <div id="loader" class="flex justify-center items-center h-64">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-amber-500"></div>
+        </div>
+
+        <!-- ERROR STATE -->
+        <div id="error-message" class="hidden text-center py-20 bg-red-900/10 border border-red-500/20 rounded-md">
+            <i data-lucide="alert-triangle" class="w-12 h-12 text-red-500 mx-auto mb-4"></i>
+            <h3 class="text-xl text-white font-serif">Sistemas Offline</h3>
+            <p class="text-slate-400 mt-2">Não foi possível recuperar a telemetria da frota.</p>
+        </div>
+
+        <!-- GRID DE CARROS -->
+        <div id="car-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 opacity-0 transition-opacity duration-1000">
+            <!-- Cards injetados via JS -->
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-white/5 bg-slate-950 py-12 text-center text-slate-600 text-sm">
+        <p>© 2024 LuxeDigital Automotive. Todos os direitos reservados.</p>
+        <p class="mt-2 text-xs uppercase tracking-widest">Londres • Dubai • Mônaco</p>
+    </footer>
+
+    <!-- MODAL CONCIERGE -->
+    <div id="concierge-modal" class="fixed inset-0 z-[60] hidden">
+        <!-- Backdrop -->
+        <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md transition-opacity" onclick="closeModal()"></div>
+        
+        <!-- Modal Content -->
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-lg p-1">
+            <div class="glass-panel bg-slate-900 p-8 rounded-sm shadow-2xl border border-amber-500/20 relative">
+                <button onclick="closeModal()" class="absolute top-4 right-4 text-slate-500 hover:text-white transition-colors">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+
+                <div class="text-center mb-8">
+                    <span class="text-amber-500 text-xs tracking-[0.2em] uppercase">Interesse Exclusivo</span>
+                    <h3 class="text-2xl font-serif text-white mt-2" id="modal-car-name">Veículo</h3>
+                    <p class="text-slate-400 text-sm mt-1">Nossa equipe entrará em contato em até 1 hora.</p>
+                </div>
+
+                <form id="inquiry-form" class="space-y-6">
+                    <input type="hidden" id="machine-id" name="machine_id">
+                    
+                    <div class="space-y-1">
+                        <label class="text-xs uppercase tracking-wider text-slate-400">Nome Completo</label>
+                        <input type="text" name="client_name" required="" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 text-white px-4 py-3 outline-none transition-colors rounded-sm">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-xs uppercase tracking-wider text-slate-400">Contato (Email ou Telefone)</label>
+                        <input type="text" name="contact_info" required="" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 text-white px-4 py-3 outline-none transition-colors rounded-sm">
+                    </div>
+
+                    <div class="space-y-1">
+                        <label class="text-xs uppercase tracking-wider text-slate-400">Mensagem (Opcional)</label>
+                        <textarea name="message" rows="3" class="w-full bg-slate-950 border border-slate-700 focus:border-amber-500 text-white px-4 py-3 outline-none transition-colors rounded-sm"></textarea>
+                    </div>
+
+                    <button type="submit" class="w-full bg-amber-600 hover:bg-amber-500 text-white py-4 font-medium uppercase tracking-widest text-sm transition-colors rounded-sm flex justify-center items-center gap-2">
+                        <span>Confirmar Interesse</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                    </button>
+                </form>
+
+                <div id="form-success" class="hidden text-center py-10">
+                    <i data-lucide="check-circle" class="w-16 h-16 text-green-500 mx-auto mb-4"></i>
+                    <h4 class="text-xl text-white font-serif">Solicitação Confirmada</h4>
+                    <p class="text-slate-400 mt-2">Obrigado pela preferência.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIC CORE -->
+    <script>
+        //
+
+<script type="text/plain" data-path="docs/architecture.json">
+{
+  "system_identity": {
+    "name": "LuxeDigital Automotive Core",
+    "version": "1.0.0-Titanium",
+    "architecture_style": "Monolithic RESTful Service with Embedded Persistence",
+    "design_philosophy": "Minimalism, Latency-Zero, Visual Fidelity"
+  },
+  "technical_stack": {
+    "runtime": "Node.js (LTS)",
+    "framework": "Express.js (Minimalist configuration)",
+    "persistence": "SQLite3 (Self-contained, ACID compliant)",
+    "frontend": "Vanilla ES6+ with Tailwind CSS via CDN (Zero-Build Pipeline)"
+  },
+  "data_flow": {
+    "ingress": "Express Static Middleware -> HTML5 Application",
+    "interaction": "Client Fetch API -> REST JSON Endpoints",
+    "storage": "SQLite B-Tree Storage Engine"
+  },
+  "security_protocols": {
+    "sanitization": "Input validation on all POST requests",
+    "cors": "Strict origin policy",
+    "error_handling": "Obfuscated internal server errors, graceful client degradation"
+  },
+  "components": {
+    "server": "Single entry point (server.js) handling API and Static serving",
+    "client": "Single entry point (index.html) managing DOM, State, and Styles"
+  }
+}
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+Aqui é o **Arquiteto de Elite**. A conexão neural entre o núcleo de processamento (Backend) e a interface visual (Frontend) será estabelecida agora.
+
+Nesta fase, não estamos apenas "fazendo chamadas de API". Estamos construindo um **Sistema Nervoso Digital**. Implementaremos uma camada de serviço robusta, tipagem estrita para garantir a integridade dos dados entre fronteiras e gerenciamento de estado que reage instantaneamente.
+
+**Arquitetura de Integração:**
+1.  **Tipagem Compartilhada:** A verdade única (`Schema`) que governa o Backend e o Frontend.
+2.  **Camada de Transporte (Axios):** Configurada com interceptadores cirúrgicos para tratamento de erros e latência.
+3.  **Camada de Serviço (Services):** Abstração limpa das rotas da API.
+4.  **Gerenciamento de Estado (Zustand):** Armazenamento reativo para dados da frota e estados de UI.
+5.  **Hooks Reativos:** Lógica encapsulada para consumo fácil nos componentes.
+
+Executando protocolos de integração...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>

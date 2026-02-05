@@ -1,0 +1,53 @@
+
+# ==========================================
+# AEGIS-VII BACKEND CONTAINER SPEC
+# STAGE: TACTICAL BUILDER
+# ==========================================
+FROM node:18-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Copy Manifests
+COPY package*.json ./
+COPY prisma/schema.prisma ./prisma/ # Copy Prisma schema
+COPY shared/ ./shared/
+
+# Install Dependencies
+RUN npm ci
+
+# Generate Prisma Client
+RUN npx prisma generate
+
+# Copy Source Code
+COPY server.js .
+
+# ==========================================
+# STAGE: DEPLOYMENT UNIT (RUNTIME)
+# ==========================================
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Install production dependencies only
+COPY package*.json ./
+RUN npm ci --only=production
+
+# Copy Built Artifacts from Builder
+COPY --from=builder /usr/src/app/server.js ./server.js
+COPY --from=builder /usr/src/app/node_modules ./node_modules
+COPY --from=builder /usr/src/app/prisma ./prisma # Include prisma folder for runtime
+COPY --from=builder /usr/src/app/shared ./shared
+
+# Environment Setup
+ENV NODE_ENV=production
+ENV PORT=3000
+# DATABASE_URL will be provided by Docker Compose/Kubernetes
+# JWT_SECRET for authentication
+# TICK_RATE_MS for simulation speed
+
+# Expose Tactical Port
+EXPOSE 3000
+
+# Initialization Command (Run Prisma migrations then start Node.js server)
+# The `migrate deploy` command is idempotent and only applies pending migrations.
+CMD ["sh", "-c", "npx prisma migrate deploy --schema ./prisma/schema.prisma && node server.js"]

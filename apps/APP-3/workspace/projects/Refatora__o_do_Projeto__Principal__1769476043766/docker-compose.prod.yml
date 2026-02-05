@@ -1,0 +1,36 @@
+
+# CYDONIA PRODUCTION MATRIX
+# Mode: DEEP SPACE SURVIVAL
+# Redundancy: High
+
+version: '3.8'
+
+services:
+  backend:
+    image: ghcr.io/cydonia/aerosphere-backend:latest
+    restart: always
+    volumes:
+      - production_db:/app/data
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=file:/app/data/aerosphere_core.db
+      # Secrets injected via CI/CD or Orchestrator
+    networks:
+      - internal_mesh
+
+  frontend:
+    image: ghcr.io/cydonia/aerosphere-ui:latest
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - internal_mesh
+
+volumes:
+  production_db:
+
+networks:
+  internal_mesh:
+    driver: bridge

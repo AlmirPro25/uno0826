@@ -1,0 +1,37 @@
+{
+    "$schema": "https://prost-qs.com/schemas/app-manifest-v1.json",
+    "version": "1.0",
+    "app": {
+        "id": "alexandria_manifest_system",
+        "name": "Alexandria",
+        "description": "Sistema de Manifestos Técnicos com IA - 52 manifestos, 70+ serviços, 65+ componentes.",
+        "version": "2.0.0",
+        "author": {
+            "name": "Almir",
+            "email": "dev@prostqs.com"
+        }
+    },
+    "permissions": {
+        "identity": {
+            "read": true,
+            "write": false
+        },
+        "agents": {
+            "enabled": true
+        },
+        "ai_access": {
+            "enabled": true,
+            "models": [
+                "gemini-pro",
+                "gemini-pro-vision"
+            ]
+        }
+    },
+    "callbacks": {
+        "webhook": "https://alexandria.prostqs.com/api/webhook"
+    },
+    "policies": {
+        "anti_simulation": true,
+        "require_manifest_activation": true
+    }
+}

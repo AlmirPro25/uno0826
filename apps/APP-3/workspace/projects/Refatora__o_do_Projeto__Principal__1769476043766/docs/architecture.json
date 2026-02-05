@@ -1,0 +1,46 @@
+
+{
+  "project_identity": {
+    "codename": "AEROSPHERE_OS",
+    "designation": "Planetary Homeostasis System",
+    "version": "0.9.4-BETA (Cydonia Build)",
+    "architect": "X-2084"
+  },
+  "architectural_principles": {
+    "core_philosophy": "Resilience over latency. Survival is non-negotiable.",
+    "pattern": "Monolithic Neuromorphic Server with Embedded Retina Client",
+    "data_flow": "Unidirectional State Hydration (Server -> Client) with Executive Override Upstream (Client -> Server)"
+  },
+  "system_components": {
+    "backend_cortex": {
+      "runtime": "Node.js (v20+ LTS)",
+      "framework": "Express (Minimalist Configuration)",
+      "persistence": "SQLite3 (WAL Mode - Write Ahead Logging for high concurrency)",
+      "responsibilities": [
+        "Telemetry Aggregation",
+        "Bio-rhythm Calculation",
+        "Fail-Safe Triggering",
+        "Audit Logging (Immutable)"
+      ]
+    },
+    "frontend_retina": {
+      "runtime": "Browser (Chromium Engine Optimized)",
+      "rendering": "Vanilla JS + HTML5 Canvas (GPU Accelerated)",
+      "styling": "Tailwind CSS (via CDN for single-file portability)",
+      "responsibilities": [
+        "Data Visualization (Holographic HUD)",
+        "Atmospheric Simulation (Particle System)",
+        "Executive Command Interface"
+      ]
+    }
+  },
+  "resilience_protocols": {
+    "database_lock_strategy": "In-memory buffer fallback during disk I/O latency",
+    "network_partition": "Client enters 'Local Simulation Mode' using last known coefficients",
+    "critical_failure": "Server auto-restarts with 'Safe Mode' parameters (O2: 19.5%, Pressure: 101.3kPa)"
+  },
+  "security_clearance": {
+    "auth_level": "Level 5 (Planetary Overseer)",
+    "encryption": "Simulated Quantum-Resistant Hashing for Executive Actions"
+  }
+}

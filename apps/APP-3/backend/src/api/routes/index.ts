@@ -6,6 +6,7 @@ import imageRoutes from './imageRoutes';
 import advancedTerminalRoutes from './advancedTerminalRoutes'; // Terminal avançado
 import researchRoutes from './researchRoutes';
 import kiroToolsRoutes from './kiroToolsRoutes';
+import factoryRoutes from './factoryRoutes';
 
 const router = Router();
 
@@ -26,5 +27,6 @@ router.use('/images', imageRoutes);
 router.use('/terminal', advancedTerminalRoutes);
 router.use('/research', researchRoutes);
 router.use('/kiro', kiroToolsRoutes);
+router.use('/factory', factoryRoutes);
 
 export default router;

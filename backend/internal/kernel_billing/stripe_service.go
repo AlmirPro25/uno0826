@@ -24,18 +24,19 @@ import (
 // ========================================
 
 var (
-	ErrStripeNotConfigured = errors.New("stripe not configured for kernel billing")
-	ErrCustomerNotFound    = errors.New("stripe customer not found")
+	ErrStripeNotConfigured  = errors.New("stripe not configured for kernel billing")
+	ErrCustomerNotFound     = errors.New("stripe customer not found")
 	ErrSubscriptionNotFound = errors.New("stripe subscription not found")
 )
 
 // KernelStripeConfig configuração do Stripe para o kernel
 type KernelStripeConfig struct {
-	SecretKey      string
-	WebhookSecret  string
-	SuccessURL     string
-	CancelURL      string
-	TestMode       bool // SEMPRE true até liberação gradual
+	SecretKey     string
+	WebhookSecret string
+	SuccessURL    string
+	CancelURL     string
+	TestMode      bool // SEMPRE true até liberação gradual
+	Prices        map[string]string
 }
 
 // KernelStripeService gerencia integração Stripe do kernel
@@ -77,6 +78,10 @@ func LoadKernelStripeConfig() *KernelStripeConfig {
 		SuccessURL:    os.Getenv("KERNEL_STRIPE_SUCCESS_URL"),
 		CancelURL:     os.Getenv("KERNEL_STRIPE_CANCEL_URL"),
 		TestMode:      os.Getenv("KERNEL_STRIPE_LIVE_MODE") != "true", // Default: test mode
+		Prices: map[string]string{
+			"plan_pro":        os.Getenv("KERNEL_STRIPE_PRICE_PRO"),
+			"plan_enterprise": os.Getenv("KERNEL_STRIPE_PRICE_ENTERPRISE"),
+		},
 	}
 }
 
@@ -194,9 +199,14 @@ func (s *KernelStripeService) CreateCheckoutSession(ctx context.Context, appID, 
 	var opErr error
 
 	err = s.circuitBreaker.Execute(func() error {
-		// Criar Price ID dinâmico ou usar existente
-		// Em produção, você teria Price IDs pré-criados no Stripe
-		priceID := fmt.Sprintf("price_%s_monthly", plan.Name)
+		// Obter Price ID do mapa de configuração
+		priceID := s.config.Prices[planID]
+		if priceID == "" {
+			// Fallback para hardcoded ou erro (dependendo da severidade)
+			// Para Monday rush, vamos logar erro e tentar o constructed como última chance (hack)
+			log.Printf("⚠️ [KERNEL_STRIPE] Price ID não configurado para %s (env KERNEL_STRIPE_PRICE_%s), tentando fallback", planID, plan.Name)
+			priceID = fmt.Sprintf("price_%s_monthly", plan.Name)
+		}
 
 		params := &stripe.CheckoutSessionParams{
 			Customer: stripe.String(customerID),

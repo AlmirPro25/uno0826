@@ -1,0 +1,43 @@
+
+# ==========================================
+# AEGIS-VII FRONTEND HUD SPEC
+# STAGE: ASSET COMPILATION
+# ==========================================
+FROM node:18-alpine AS builder
+
+WORKDIR /usr/src/app
+
+# Copy Manifests
+COPY frontend/package*.json ./frontend/
+COPY shared/ ./shared/
+
+# Install Dependencies
+WORKDIR /usr/src/app/frontend
+RUN npm ci
+
+# Copy Source Code and public assets
+COPY frontend/ .
+COPY frontend/public/sounds /usr/src/app/frontend/public/sounds # Ensure sounds are copied
+
+# Compile Assets (Vite Build)
+RUN npm run build
+
+# ==========================================
+# STAGE: WEB SERVER (NGINX)
+# ==========================================
+FROM nginx:alpine
+
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy built assets from builder stage
+COPY --from=builder /usr/src/app/frontend/dist /usr/share/nginx/html
+
+# Copy Custom Nginx Config
+COPY docker/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose Public Port
+EXPOSE 80
+
+# Launch Nginx in foreground
+CMD ["nginx", "-g", "daemon off;"]

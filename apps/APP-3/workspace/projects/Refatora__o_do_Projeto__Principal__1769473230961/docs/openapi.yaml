@@ -1,0 +1,168 @@
+
+openapi: 3.0.3
+info:
+  title: Sentinel Nexus API
+  description: API de Comando e Controle para Operações Táticas Transfronteiriças.
+  version: 1.0.0
+  contact:
+    name: SENTINEL PRIME
+    email: ops@sentinelnexus.mil
+servers:
+  - url: http://localhost:3000/api
+    description: Servidor de Comando Local
+paths:
+  /system/status:
+    get:
+      summary: Retorna o status operacional do sistema e nível de ameaça global.
+      responses:
+        '200':
+          description: Status operacional.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatus'
+
+  /assets:
+    get:
+      summary: Lista todos os ativos rastreados e seus status atuais.
+      responses:
+        '200':
+          description: Lista de ativos.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Asset'
+
+  /assets/{id}:
+    get:
+      summary: Obtém telemetria detalhada e manifesto de um ativo específico.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Detalhes do ativo.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssetDetail'
+
+  /assets/{id}/lockdown:
+    post:
+      summary: PROTOCOLO DE PÂNICO. Bloqueia remotamente o container/ativo.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Ativo bloqueado com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  lockdown_timestamp:
+                    type: string
+                    format: date-time
+
+  /assets/{id}/manifest:
+    get:
+      summary: Recupera documentos do cofre digital (simulado).
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Manifesto decriptado.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Manifest'
+
+components:
+  schemas:
+    SystemStatus:
+      type: object
+      properties:
+        threat_level:
+          type: string
+          enum: [LOW, ELEVATED, HIGH, CRITICAL]
+        active_assets:
+          type: integer
+        system_integrity:
+          type: number
+          format: float
+        server_time:
+          type: string
+          format: date-time
+
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        codename:
+          type: string
+          example: "OP-RED-DRAGON"
+        type:
+          type: string
+          enum: [AIR, LAND, SEA]
+        status:
+          type: string
+          enum: [CLEARED, UNDER_INSPECTION, FLAGGED, IN_TRANSIT, LOCKED_DOWN]
+        current_coordinates:
+          type: object
+          properties:
+            lat:
+              type: number
+            lng:
+              type: number
+        destination:
+          type: string
+        origin:
+          type: string
+
+    AssetDetail:
+      allOf:
+        - $ref: '#/components/schemas/Asset'
+        - type: object
+          properties:
+            telemetry:
+              type: object
+              properties:
+                temperature:
+                  type: number
+                humidity:
+                  type: number
+                battery_level:
+                  type: integer
+                breach_detected:
+                  type: boolean
+
+    Manifest:
+      type: object
+      properties:
+        id:
+          type: string
+        content_type:
+          type: string
+        classification:
+          type: string
+        checksum:
+          type: string
+        digital_signature:
+          type: string

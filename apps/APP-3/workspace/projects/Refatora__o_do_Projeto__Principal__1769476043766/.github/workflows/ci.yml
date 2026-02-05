@@ -1,0 +1,62 @@
+
+name: "AEROSPHERE INTEGRITY CHECK"
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  structural-analysis:
+    name: "Hull Integrity (Lint & Type)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: "Initialize Node.js 18 (LTS)"
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: '**/package-lock.json'
+
+      - name: "Install Modules"
+        run: npm ci
+        working-directory: ./backend # Adjust for monorepo root if necessary
+
+      - name: "Type Check (Shared)"
+        run: tsc --noEmit
+        working-directory: ./shared
+
+      - name: "Lint Backend"
+        run: npm run lint --if-present
+        working-directory: ./backend
+
+  simulation-testing:
+    name: "Simulation (Tests)"
+    runs-on: ubuntu-latest
+    needs: structural-analysis
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: "Setup Test Environment"
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: "Install All Deps"
+        run: |
+          cd frontend && npm ci
+          cd ../backend && npm ci
+      
+      - name: "Playwright Install"
+        run: npx playwright install --with-deps
+        working-directory: ./frontend
+
+      # Simulate E2E in a headless environment
+      - name: "Execute Critical Path Tests"
+        run: npm run test:e2e
+        working-directory: ./frontend
+        env:
+          CI: true

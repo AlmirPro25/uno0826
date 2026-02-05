@@ -1,6 +1,6 @@
 // types/ProjectStructure.ts - Tipos para estrutura de projetos
 
-export type TechStack = 
+export type TechStack =
   | 'html5-vanilla'
   | 'react-typescript'
   | 'vue-composition'
@@ -10,7 +10,18 @@ export type TechStack =
   | 'python-fastapi'
   | 'php-laravel'
   | 'java-spring'
-  | 'csharp-dotnet';
+  | 'csharp-dotnet'
+  // Novas stacks
+  | 'svelte'
+  | 'nextjs'
+  | 'go-fiber'
+  // CSS/Styling
+  | 'tailwind'
+  | 'sass'
+  | 'css-vanilla'
+  | 'styled-components'
+  | 'chakra'
+  | 'material';
 
 export interface StackFile {
   name: string;

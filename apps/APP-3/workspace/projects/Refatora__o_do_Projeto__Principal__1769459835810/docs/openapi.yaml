@@ -1,0 +1,110 @@
+
+openapi: 3.0.3
+info:
+  title: LuxeDigital Concierge API
+  description: Telemetria e interface de gestão para inventário de ultra-luxo.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Local Production Environment
+paths:
+  /fleet:
+    get:
+      summary: Recupera o inventário disponível (The Showroom)
+      description: Retorna uma lista otimizada de veículos com metadados essenciais.
+      responses:
+        '200':
+          description: Sucesso. Retorna array de máquinas.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Machine'
+        '500':
+          description: Falha crítica no motor de persistência.
+
+  /concierge/inquire:
+    post:
+      summary: Registrar interesse de alto valor
+      description: Processa um lead de cliente, valida dados e armazena para contato VIP.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Inquiry'
+      responses:
+        '201':
+          description: Interesse registrado com sucesso.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "confirmed"
+                  message:
+                    type: string
+                    example: "Nosso concierge entrará em contato em breve."
+        '400':
+          description: Dados de entrada inválidos ou malformados.
+
+components:
+  schemas:
+    Machine:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        marque:
+          type: string
+          example: "Bugatti"
+        model:
+          type: string
+          example: "Chiron Pur Sport"
+        year:
+          type: integer
+          example: 2023
+        price:
+          type: number
+          format: double
+          example: 3500000.00
+        engine:
+          type: string
+          example: "8.0L W16 Quad-Turbo"
+        power_hp:
+          type: integer
+          example: 1500
+        zero_to_sixty:
+          type: number
+          format: float
+          example: 2.3
+        image_url:
+          type: string
+          format: uri
+        description:
+          type: string
+          description: Narrativa de venda.
+        status:
+          type: string
+          enum: [AVAILABLE, RESERVED, SOLD]
+    
+    Inquiry:
+      type: object
+      required:
+        - machine_id
+        - client_name
+        - contact_info
+      properties:
+        machine_id:
+          type: integer
+        client_name:
+          type: string
+        contact_info:
+          type: string
+          description: Email ou Telefone
+        message:
+          type: string

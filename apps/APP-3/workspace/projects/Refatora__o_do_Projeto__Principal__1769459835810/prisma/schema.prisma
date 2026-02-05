@@ -1,0 +1,36 @@
+
+// Nota do Arquiteto: Este schema é uma representação lógica.
+// A implementação real será feita via SQL cru no server.js para evitar dependências pesadas.
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./luxe.db"
+}
+
+model Machine {
+  id            Int      @id @default(autoincrement())
+  marque        String   // Ex: Rolls-Royce
+  model         String   // Ex: Phantom VIII
+  year          Int
+  price         Float
+  engine        String   // Detalhe técnico vital
+  power_hp      Int      // Cavalaria
+  zero_to_sixty Float    // Aceleração
+  image_url     String
+  description   String
+  status        String   @default("AVAILABLE") // AVAILABLE, RESERVED, SOLD
+  created_at    DateTime @default(now())
+  
+  inquiries     Inquiry[]
+}
+
+model Inquiry {
+  id           Int      @id @default(autoincrement())
+  machine_id   Int
+  client_name  String
+  contact_info String
+  message      String?
+  timestamp    DateTime @default(now())
+  
+  machine      Machine  @relation(fields: [machine_id], references: [id])
+}

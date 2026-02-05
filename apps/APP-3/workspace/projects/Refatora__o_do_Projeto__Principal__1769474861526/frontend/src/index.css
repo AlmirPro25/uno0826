@@ -1,0 +1,62 @@
+
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --aegis-green: #33ff33;
+  --aegis-bg: #050505;
+}
+
+body {
+  background-color: var(--aegis-bg);
+  color: var(--aegis-green);
+  font-family: 'Share Tech Mono', monospace;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+/* CRT EFFECTS */
+.crt::before {
+  content: " ";
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+  z-index: 50;
+  background-size: 100% 2px, 3px 100%;
+  pointer-events: none;
+}
+
+.scanline {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100px;
+  background: linear-gradient(to bottom, transparent, rgba(51, 255, 51, 0.1), transparent);
+  opacity: 0.1;
+  animation: scanline 8s linear infinite;
+  pointer-events: none;
+  z-index: 51;
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100vh); }
+}
+
+/* CUSTOM SCROLLBAR */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #001100; }
+::-webkit-scrollbar-thumb { background: #33ff33; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #66ff66; }
+
+/* UTILS */
+.text-glow { text-shadow: 0 0 5px var(--aegis-green); }
+.border-glow { box-shadow: 0 0 5px var(--aegis-green), inset 0 0 10px rgba(51, 255, 51, 0.1); }

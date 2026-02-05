@@ -1,7 +1,8 @@
 import axios from "axios";
 
 // API URL - Oracle Cloud em produção
-export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prostqs.com.br/api/v1";
+// export const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.prostqs.com.br/api/v1";
+export const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://64.181.175.25:8080/api/v1";
 
 export const api = axios.create({
     baseURL: API_URL,

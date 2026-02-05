@@ -1,0 +1,132 @@
+
+openapi: 3.0.3
+info:
+  title: Titan Logistics Command API
+  description: API de controle de frota de ultra-luxo e reservas táticas.
+  version: 1.0.0
+  contact:
+    name: Aurelius
+    email: architect@titan-logistics.elite
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Command Center
+
+components:
+  schemas:
+    AssetStatus:
+      type: string
+      enum: [IDLE, IN_FLIGHT, MAINTENANCE, DECOMMISSIONED]
+    AssetCategory:
+      type: string
+      enum: [GLOBAL_JET, COASTAL_YACHT, URBAN_HELI, ARMORED_CONVOY]
+    
+    Asset:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+          example: "Gulfstream G700 'Imperator'"
+        category:
+          $ref: '#/components/schemas/AssetCategory'
+        status:
+          $ref: '#/components/schemas/AssetStatus'
+        latitude:
+          type: number
+          format: float
+        longitude:
+          type: number
+          format: float
+        heading:
+          type: number
+        speed_knots:
+          type: integer
+        range_nm:
+          type: integer
+        capacity_pax:
+          type: integer
+        imageUrl:
+          type: string
+
+    BookingRequest:
+      type: object
+      required: [assetId, passengerName, originLat, originLng, destLat, destLng, departureTime]
+      properties:
+        assetId:
+          type: string
+          format: uuid
+        passengerName:
+          type: string
+        vipCode:
+          type: string
+          description: "Código de acesso elite (opcional)"
+        originLat:
+          type: number
+        originLng:
+          type: number
+        destLat:
+          type: number
+        destLng:
+          type: number
+        departureTime:
+          type: string
+          format: date-time
+
+    BoardingPass:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        ticketNumber:
+          type: string
+          example: "TITAN-X99-AF"
+        estimatedFlightTime:
+          type: string
+          example: "4h 30m"
+        status:
+          type: string
+          enum: [CONFIRMED, PENDING_CLEARANCE]
+
+paths:
+  /assets:
+    get:
+      summary: Retorna a frota completa e sua telemetria atual.
+      responses:
+        '200':
+          description: Frota recuperada com sucesso.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Asset'
+  
+  /bookings:
+    post:
+      summary: Executa uma reserva de alta prioridade.
+      description: Bloqueia o ativo e gera o plano de voo/rota.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+      responses:
+        '201':
+          description: Reserva confirmada.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BoardingPass'
+        '409':
+          description: Conflito de agendamento ou ativo indisponível.
+
+  /telemetry/simulate:
+    post:
+      summary: DEV ONLY - Força um ciclo de atualização de simulação.
+      responses:
+        '200':
+          description: Simulação avançada.

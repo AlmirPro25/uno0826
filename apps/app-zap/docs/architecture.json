@@ -1,0 +1,62 @@
+
+{
+  "system_name": "GhostProtocol_Engagement_Engine",
+  "version": "1.0.0-MVP",
+  "description": "Sistema de automação híbrida para WhatsApp focado em mimetização humana e controle granular.",
+  "architectural_pattern": "Event-Driven Monolith",
+  "core_components": {
+    "runtime": {
+      "environment": "Node.js v18+",
+      "framework": "Express (API) + Socket.io (Real-time telemetry)"
+    },
+    "whatsapp_engine": {
+      "library": "whatsapp-web.js",
+      "role": "Headless Browser Controller",
+      "critical_features": [
+        "LocalAuth strategy (session persistence)",
+        "Presence monitoring (Online/Offline/Typing)",
+        "State synchronization"
+      ]
+    },
+    "cognitive_layer": {
+      "provider": "Google Gemini Flash 1.5",
+      "role": "Semantic Analysis & Low-Res Text Generation",
+      "constraints": [
+        "Max tokens: 40 (enforce brevity)",
+        "Temperature: 0.8 (natural variation)",
+        "System Prompt: Enforce lowercase, typos, slang based on user profile"
+      ]
+    },
+    "rhythm_controller": {
+      "module": "PulseManager",
+      "logic": "Calculated Jitter",
+      "formula": "((UserAvgResponseTime * 0.4) + Random(30s, 120s)) * UrgencyFactor"
+    }
+  },
+  "data_flow": {
+    "ingress": "WhatsApp Web Socket Events -> Event Bus",
+    "processing": "Event Bus -> Context Builder -> Gemini API -> Strategy Filter",
+    "egress": "Action Queue -> Human Delay Simulator -> WhatsApp Injection"
+  },
+  "websocket_events": {
+    "server_to_client": [
+      "qr_code",
+      "ready",
+      "message_new",
+      "presence_update",
+      "agent_typing",
+      "log_entry"
+    ],
+    "client_to_server": [
+      "inject_directive",
+      "override_pause",
+      "override_resume",
+      "manual_message"
+    ]
+  },
+  "database": {
+    "type": "SQLite",
+    "orm": "Prisma",
+    "rationale": "Zero-latency local storage for high-frequency read/write of context and logs."
+  }
+}

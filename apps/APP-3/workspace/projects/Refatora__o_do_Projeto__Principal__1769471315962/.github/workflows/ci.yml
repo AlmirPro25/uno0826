@@ -1,0 +1,11 @@
+
+name: Titan Integrity Protocol (CI)
+
+on:
+  push:
+    branches: [ "main", "develop" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  #

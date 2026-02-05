@@ -25,6 +25,36 @@
 // IMPORTS DOS MANIFESTOS
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// 🌊 FOURIER TRANSFORM MASTER - O Matemático da Realidade (Level 101)
+import {
+    FOURIER_TRANSFORM_MASTER_MANIFEST,
+    shouldEnableFourierMaster
+} from './FOURIER_TRANSFORM_MASTER_MANIFEST';
+
+// 🦀 RUST SOVEREIGNTY - O Substrato de Aço (Level 103)
+import {
+    RUST_SOVEREIGNTY_MANIFEST,
+    shouldEnableRustSovereignty
+} from './RUST_SOVEREIGNTY_MANIFEST';
+
+// 🛡️ ARES DEFENSE SYSTEM - Engenharia Militar & Aeroespacial (Level 105)
+import {
+    ARES_DEFENSE_SYSTEM_MANIFEST,
+    shouldEnableAresDefense
+} from './ARES_DEFENSE_SYSTEM_MANIFEST';
+
+// ⚔️ ORION OFFENSIVE SYSTEM - Guerra Cibernética & Ataque (Level 106)
+import {
+    ORION_OFFENSIVE_SYSTEM_MANIFEST,
+    shouldEnableOrionOffensive
+} from './ORION_OFFENSIVE_SYSTEM_MANIFEST';
+
+// 🗣️ AETHER VOX - Spectral Resonance Engine (Level 99)
+import {
+    AETHER_VOX_MANIFEST,
+    shouldEnableAetherVox
+} from './AETHER_VOX_MANIFEST';
+
 import { SYNTHIA_LABS_MANIFEST, shouldEnableSynthiaLabs } from './SYNTHIA_LABS_MANIFEST';
 import { PROJECT_AURA_MANIFEST, shouldEnableProjectAura } from './PROJECT_AURA_MANIFEST';
 import { OMNIS_QUANTUM_MANIFEST, shouldEnableOmnis } from './OMNIS_QUANTUM_MANIFEST';
@@ -66,11 +96,11 @@ import { GEMINI_ROBOTICS_MANIFEST, shouldEnableGeminiRobotics } from './GEMINI_R
 // 🧠🚀 MICRO_SAAS_FACTORY - A Fábrica Suprema de Micro-SaaS Autônomos
 import MICRO_SAAS_FACTORY_MANIFEST from './MICRO_SAAS_FACTORY_MANIFEST';
 // 🚀 SYSTEMS PROGRAMMING - Anti-Fallback Supreme (Rust, C++, Go, Assembly)
-import { 
-    SYSTEMS_PROGRAMMING_MANIFEST, 
+import {
+    SYSTEMS_PROGRAMMING_MANIFEST,
     shouldEnableSystemsProgramming,
     AntiFallbackValidator,
-    SystemsRequirementDetector 
+    SystemsRequirementDetector
 } from './SYSTEMS_PROGRAMMING_MANIFEST';
 
 // 🧬 TOKEN COMPUTING - O Assembly da Cognição (Level 100)
@@ -111,6 +141,24 @@ import {
     MEMORY_TEMPLATES
 } from './MEMORY_MANAGEMENT_MANIFEST';
 
+// 🌌 SPECTRAL MATH CORE - O Alfabeto do Universo (Level 104)
+import {
+    SPECTRAL_MATH_CORE_MANIFEST,
+    shouldEnableSpectralMath
+} from './SPECTRAL_MATH_CORE_MANIFEST';
+
+// 📐 EINSTEIN GEOMETRY CORE - The Fabric of Reality (Level 105)
+import {
+    EINSTEIN_GEOMETRY_MANIFEST,
+    shouldEnableEinsteinGeometry
+} from './EINSTEIN_GEOMETRY_MANIFEST';
+
+// 🏛️ SOCRATIC GOVERNANCE CORE - The Philosopher King (Level 106)
+import {
+    SOCRATIC_GOVERNANCE_MANIFEST,
+    shouldEnableSocraticGovernance
+} from './SOCRATIC_GOVERNANCE_MANIFEST';
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // TIPOS E INTERFACES
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -133,6 +181,62 @@ export interface OrchestratorResult {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const MANIFEST_REGISTRY = [
+    {
+        name: 'SOCRATIC_GOVERNANCE',
+        level: 106,
+        manifest: JSON.stringify(SOCRATIC_GOVERNANCE_MANIFEST, null, 2),
+        detector: shouldEnableSocraticGovernance,
+        description: 'Socratic Governance Core - The Philosopher King (Ethics, Dialectics, Risk Management, CTO-Level)'
+    },
+    {
+        name: 'EINSTEIN_GEOMETRY',
+        level: 105,
+        manifest: JSON.stringify(EINSTEIN_GEOMETRY_MANIFEST, null, 2),
+        detector: shouldEnableEinsteinGeometry,
+        description: 'Einstein Geometry Core - The Fabric of Reality (Manifolds, Symmetry, Spectral Graphs, Bayesian)'
+    },
+    {
+        name: 'ORION_OFFENSIVE',
+        level: 106,
+        manifest: JSON.stringify(ORION_OFFENSIVE_SYSTEM_MANIFEST, null, 2),
+        detector: shouldEnableOrionOffensive,
+        description: 'ORION Offensive System - Ciberguerra, Red Team, Exploits e Fuzzing'
+    },
+    {
+        name: 'ARES_DEFENSE',
+        level: 105,
+        manifest: JSON.stringify(ARES_DEFENSE_SYSTEM_MANIFEST, null, 2),
+        detector: shouldEnableAresDefense,
+        description: 'ARES Defense System - Engenharia Aeroespacial, Defesa e Infraestrutura Crítica'
+    },
+    {
+        name: 'AETHER_VOX',
+        level: 99,
+        manifest: JSON.stringify(AETHER_VOX_MANIFEST, null, 2),
+        detector: shouldEnableAetherVox,
+        description: 'AETHER-VOX - Clonagem de Voz de Alta Fidelidade & Síntese Espectral'
+    },
+    {
+        name: 'FOURIER_MASTER',
+        level: 101,
+        manifest: JSON.stringify(FOURIER_TRANSFORM_MASTER_MANIFEST, null, 2),
+        detector: shouldEnableFourierMaster,
+        description: 'Fourier Master - O Matemático da Realidade (FFT, FNet, FNO, Quantum, Radar, SIGINT)'
+    },
+    {
+        name: 'RUST_SOVEREIGNTY',
+        level: 103,
+        manifest: JSON.stringify(RUST_SOVEREIGNTY_MANIFEST, null, 2),
+        detector: shouldEnableRustSovereignty,
+        description: 'Rust Sovereignty - O Substrato de Aço (Ownership, Borrowing, Lifetimes, Zero-Cost)'
+    },
+    {
+        name: 'SPECTRAL_MATH',
+        level: 104,
+        manifest: JSON.stringify(SPECTRAL_MATH_CORE_MANIFEST, null, 2),
+        detector: shouldEnableSpectralMath,
+        description: 'Spectral Math Core - O Alfabeto do Universo (Fourier, Wavelet, Laplace, Z-Transform, Spectral Graph)'
+    },
     {
         name: 'TOKEN_COMPUTING',
         level: 100,
@@ -440,7 +544,7 @@ function shouldEnableMicroSaaSFactory(prompt: string): boolean {
  */
 export function detectActiveManifests(prompt: string): ManifestMatch[] {
     const activeManifests: ManifestMatch[] = [];
-    
+
     // Verificar manifestos de alto nível (5-10)
     for (const entry of MANIFEST_REGISTRY) {
         if (entry.detector(prompt)) {
@@ -452,10 +556,10 @@ export function detectActiveManifests(prompt: string): ManifestMatch[] {
             });
         }
     }
-    
+
     // Ordenar por nível (maior primeiro)
     activeManifests.sort((a, b) => b.level - a.level);
-    
+
     return activeManifests;
 }
 
@@ -466,7 +570,7 @@ function calculateConfidence(prompt: string, manifestName: string): number {
     const promptLower = prompt.toLowerCase();
     let matchCount = 0;
     let totalKeywords = 0;
-    
+
     // Keywords por manifesto
     const keywordMap: Record<string, string[]> = {
         'OMEGA': ['omega', 'singularidade', 'auto-modificação', 'ast', 'meta-programming'],
@@ -476,16 +580,16 @@ function calculateConfidence(prompt: string, manifestName: string): number {
         'AURA': ['voz', 'voice', 'smart home', 'iot', 'alexa', 'jarvis'],
         'SYNTHIA': ['pytorch', 'mlops', 'training', 'model', 'neural', 'mlflow']
     };
-    
+
     const keywords = keywordMap[manifestName] || [];
     totalKeywords = keywords.length;
-    
+
     for (const keyword of keywords) {
         if (promptLower.includes(keyword)) {
             matchCount++;
         }
     }
-    
+
     return totalKeywords > 0 ? (matchCount / totalKeywords) * 100 : 0;
 }
 
@@ -496,15 +600,15 @@ function calculateConfidence(prompt: string, manifestName: string): number {
 export function orchestrateManifests(prompt: string): OrchestratorResult {
     let enrichedPrompt = prompt;
     const activeManifests: ManifestMatch[] = [];
-    
+
     // 1. Detectar manifestos de alto nível (5-10)
     const highLevelManifests = detectActiveManifests(prompt);
-    
+
     // 2. Aplicar o manifesto de maior nível (se houver)
     if (highLevelManifests.length > 0) {
         const topManifest = highLevelManifests[0];
         console.log(`🎯 [ORCHESTRATOR] Ativando ${topManifest.name} (Level ${topManifest.level}) - Confiança: ${topManifest.confidence.toFixed(1)}%`);
-        
+
         enrichedPrompt = `${topManifest.manifest}
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -512,12 +616,12 @@ export function orchestrateManifests(prompt: string): OrchestratorResult {
 ═══════════════════════════════════════════════════════════════════════════════
 
 ${enrichedPrompt}`;
-        
+
         activeManifests.push(topManifest);
     }
-    
+
     // 3. Aplicar manifestos de nível 3 (sempre verificar)
-    
+
     // MCP Integration
     if (shouldEnableMCP(prompt)) {
         console.log('🔌 [ORCHESTRATOR] Ativando MCP Integration');
@@ -526,7 +630,7 @@ ${enrichedPrompt}`;
 ${enrichedPrompt}`;
         activeManifests.push({ name: 'MCP', level: 3, manifest: MCP_INTEGRATION_MANIFEST, confidence: 100 });
     }
-    
+
     // Mesh Network
     if (shouldEnableMesh(prompt)) {
         console.log('🌐 [ORCHESTRATOR] Ativando Mesh Network');
@@ -535,7 +639,7 @@ ${enrichedPrompt}`;
 ${enrichedPrompt}`;
         activeManifests.push({ name: 'MESH', level: 3, manifest: DISTRIBUTED_MESH_NETWORK_MANIFEST, confidence: 100 });
     }
-    
+
     // Hybrid Architecture
     if (shouldEnableHybrid(prompt)) {
         console.log('🏗️ [ORCHESTRATOR] Ativando Hybrid Architecture');
@@ -544,7 +648,7 @@ ${enrichedPrompt}`;
 ${enrichedPrompt}`;
         activeManifests.push({ name: 'HYBRID', level: 3, manifest: HYBRID_ARCHITECTURE_MANIFEST, confidence: 100 });
     }
-    
+
     // Hono Framework
     if (shouldEnableHono(prompt)) {
         console.log('🔥 [ORCHESTRATOR] Ativando Hono Framework');
@@ -553,7 +657,7 @@ ${enrichedPrompt}`;
 ${enrichedPrompt}`;
         activeManifests.push({ name: 'HONO', level: 3, manifest: HONO_FRAMEWORK_MANIFEST, confidence: 100 });
     }
-    
+
     // TDD (sempre para criação de código)
     if (shouldEnableTDD(prompt)) {
         console.log('🧪 [ORCHESTRATOR] Ativando TDD');
@@ -562,7 +666,7 @@ ${enrichedPrompt}`;
 ${enrichedPrompt}`;
         activeManifests.push({ name: 'TDD', level: 3, manifest: TEST_DRIVEN_DEVELOPMENT_MANIFEST, confidence: 100 });
     }
-    
+
     return {
         enrichedPrompt,
         activeManifests,
@@ -579,10 +683,10 @@ ${enrichedPrompt}`;
 export function enrichPromptWithManifests(prompt: string): string {
     // PRIMEIRO: Aplicar o Manifesto Mestre Supremo
     let enrichedPrompt = enrichWithMasterManifest(prompt);
-    
+
     // DEPOIS: Aplicar manifestos específicos detectados
     const result = orchestrateManifests(prompt);
-    
+
     console.log(`
 ╔══════════════════════════════════════════════════════════════════════════════╗
 ║              🔥 MANIFESTO MESTRE SUPREMO ATIVADO 🔥                          ║
@@ -591,7 +695,7 @@ export function enrichPromptWithManifests(prompt: string): string {
 ║  ${result.activeManifests.map(m => `${m.name} (L${m.level})`).join(' → ').substring(0, 66).padEnd(68)}║
 ╚══════════════════════════════════════════════════════════════════════════════╝
 `);
-    
+
     return enrichedPrompt;
 }
 
@@ -655,6 +759,20 @@ export {
     // MANIFESTO MESTRE SUPREMO - O CÉREBRO DO SISTEMA
     MANIFESTO_MESTRE_SUPREMO,
     enrichWithMasterManifest,
+    // Level 101 - Fourier Master (REALITY ARCHITECT)
+    FOURIER_TRANSFORM_MASTER_MANIFEST,
+    // Level 106 - Socratic Governance Core (THE PHILOSOPHER KING)
+    SOCRATIC_GOVERNANCE_MANIFEST,
+    shouldEnableSocraticGovernance,
+    // Level 105 - Einstein Geometry Core (THE FABRIC)
+    EINSTEIN_GEOMETRY_MANIFEST,
+    shouldEnableEinsteinGeometry,
+    // Level 104 - Spectral Math Core (THE ALPHABET)
+    SPECTRAL_MATH_CORE_MANIFEST,
+    shouldEnableSpectralMath,
+    // Level 103 - Rust Sovereignty (THE IRON CORE)
+    RUST_SOVEREIGNTY_MANIFEST,
+    shouldEnableRustSovereignty,
     // Level 100 - Token Computing (TRANSCENDENCE)
     TOKEN_COMPUTING_MANIFEST,
     TokenVirtualMachine,

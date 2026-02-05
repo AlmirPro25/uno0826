@@ -44,6 +44,7 @@ import type { editor } from 'monaco-editor';
 import * as monacoEditor from 'monaco-editor/esm/vs/editor/editor.api';
 import { JSX } from 'react';
 
+import { backendTerminalService } from './services/BackendTerminalService';
 
 // New Component: AutoCritiquePanel (inlined to avoid creating new files)
 interface AutoCritiquePanelProps {
@@ -198,7 +199,7 @@ export const App = (): JSX.Element => {
 
   // 🌟 THREE-PHASE PIPELINE - Mini indicador discreto
   const miniPipeline = useMiniPipeline();
-  
+
   // 👁️ GOD VIEW - Visualização da colméia trabalhando
   const godView = useCanvasGodView();
 
@@ -335,42 +336,42 @@ export const App = (): JSX.Element => {
       try {
         // Ativar sistema de pontuação universal automaticamente
         console.log('🎯 Ativando Sistema Universal de Pontuação...');
-        
+
         // Interceptar gerações de código para aplicar pontuação automática
         const originalHandleAiCommand = store.handleAiCommand;
         if (originalHandleAiCommand) {
           store.handleAiCommand = async (...args) => {
             const result = await originalHandleAiCommand.apply(store, args);
-            
+
             // Aplicar pontuação após geração
             setTimeout(async () => {
               const currentCode = store.htmlCode;
               if (currentCode && currentCode.length > 100) {
                 const score = await UniversalScoringSystem.evaluateCodeAfterGeneration(
-                  currentCode, 
+                  currentCode,
                   'universal-mode'
                 );
                 const correctedCode = await UniversalScoringSystem.autoCorrectIfNeeded(
-                  currentCode, 
+                  currentCode,
                   score
                 );
-                
+
                 if (correctedCode !== currentCode) {
                   store.setHtmlCode(correctedCode);
                 }
               }
             }, 500);
-            
+
             return result;
           };
         }
-        
+
         console.log('✅ Sistema Universal de Pontuação ativado com sucesso!');
       } catch (error) {
         console.error('❌ Erro ao ativar Sistema Universal de Pontuação:', error);
       }
     };
-    
+
     activateUniversalScoring();
   }, []);
 
@@ -492,7 +493,7 @@ export const App = (): JSX.Element => {
         togglePersonaSelector();
         return;
       }
-      
+
       // Gerar com a persona selecionada
       generateWithSelectedPersona(prompt, editorRef.current?.getValue() || htmlCode);
       return;
@@ -504,10 +505,10 @@ export const App = (): JSX.Element => {
       try {
         const { mobileAppDetector } = await import('../services/MobileAppDetector');
         const intent = mobileAppDetector.detectMobileIntent(prompt);
-        
+
         if (intent.isMobileApp && intent.confidence >= 70) {
           console.log('📱 App mobile detectado automaticamente!', intent);
-          
+
           // Aprimorar prompt com requisitos mobile
           enhancedPrompt = `
 🎯 APLICATIVO MOBILE ANDROID (WebView)
@@ -555,7 +556,7 @@ export const App = (): JSX.Element => {
 📱 PROMPT ORIGINAL:
 ${prompt}
 `;
-          
+
           console.log('✨ Prompt aprimorado para mobile:', enhancedPrompt);
         }
       } catch (error) {
@@ -567,7 +568,7 @@ ${prompt}
     // Anti-Simulação OFF = usuário quer controle manual = mostrar pesquisa + paletas
     const isNewProject = !projectPlan && !action;
     const isInitialCode = htmlCode === initialHtmlBase || !htmlCode.trim();
-    
+
     if (isNewProject) {
       console.log('🎨 Anti-Simulação OFF + Novo projeto = Iniciando pesquisa de paletas...');
       // Resetar código para garantir fluxo limpo
@@ -578,7 +579,7 @@ ${prompt}
       performAdvancedResearchAndShowPalettes(enhancedPrompt);
       return;
     }
-    
+
     // 🎯 SE JÁ EXISTE CÓDIGO E TEM PLANO, CONTINUAR EVOLUINDO
     if (htmlCode.trim() && !action && projectPlan) {
       handleAiCommand(enhancedPrompt, htmlCode, attachments, undefined, forceFullStack, arquitetaUnica, artesaoMundos);
@@ -635,10 +636,63 @@ ${prompt}
     }
   };
 
-  const handleSelectTechStack = (stack: any, specialist: any) => {
-    console.log('Stack selecionada:', stack, 'Especialista:', specialist);
-    selectTechStack(stack, specialist);
+  const handleSelectTechStack = async (stack: any, specialist: any, fullStack?: { frontend: string | null; backend: string | null; styling: string | null }, projectName?: string) => {
+    console.log('Stack selecionada:', stack, 'Especialista:', specialist, 'FullStack:', fullStack, 'ProjectName:', projectName);
+
+    // Montar descrição da stack completa para feedback
+    let stackDescription = '';
+    if (fullStack) {
+      const parts = [];
+      if (fullStack.frontend) parts.push(`Frontend: ${fullStack.frontend}`);
+      if (fullStack.backend) parts.push(`Backend: ${fullStack.backend}`);
+      if (fullStack.styling) parts.push(`CSS: ${fullStack.styling}`);
+      stackDescription = parts.join(' + ');
+    }
+
+    // Chamar a função original do store (cria aba no editor)
+    selectTechStack(stack, specialist, fullStack);
     setActiveAiSpecialist(specialist);
+
+    // 🏭 FACTORY TRIGGER: Se tiver FullStack/ProjectName, chama a fábrica real
+    if (fullStack) {
+      useAppStore.setState({
+        aiStatusMessage: `🏭 Fábrica Ativada: Iniciando CLI para criar ${projectName || 'projeto'}...`,
+        isLoadingAi: true,
+        currentAppPhase: 'GENERATING_CODE_FROM_PLAN'
+      });
+
+      try {
+        // Disparar comando para o backend
+        await backendTerminalService.generateApp({
+          prompt: `Projeto ${stackDescription}`,
+          projectName: projectName || `project-${Date.now()}`,
+          fullStack
+        });
+
+        useAppStore.setState({
+          aiStatusMessage: `✅ Projeto criado no disco! Verifique o console para output da CLI.`,
+          isLoadingAi: false,
+          currentAppPhase: 'CODE_GENERATED'
+        });
+      } catch (error) {
+        console.error('Erro na fábrica:', error);
+        useAppStore.setState({
+          aiStatusMessage: `❌ Erro na fábrica de software: ${error instanceof Error ? error.message : 'Falha desconhecida'}`,
+          isLoadingAi: false,
+          currentAppPhase: 'AI_ERROR_STATE'
+        });
+      }
+    } else {
+      // Feedback visual simples se for só seleção de template
+      useAppStore.setState({
+        aiStatusMessage: `✅ Template carregado: ${stackDescription || stack}.`,
+        currentAppPhase: 'IDLE'
+      });
+
+      setTimeout(() => {
+        useAppStore.setState({ aiStatusMessage: null });
+      }, 4000);
+    }
   };
 
   const handleOpenTechStackSelector = () => {
@@ -792,7 +846,7 @@ ${prompt}
                   onClose={() => useAppStore.setState({ autoCritiqueResult: null })}
                 />
               )}
-              
+
               {/* Editor */}
               <div className="flex-1 min-h-0">
                 <ResponsiveEditor
@@ -1369,17 +1423,17 @@ ${prompt}
       <FloatingStatusIndicator
         isVisible={isLoadingAi || isGeneratingWithPersona || isLoadingCritique}
         message={
-          isGeneratingWithPersona && selectedPersona 
+          isGeneratingWithPersona && selectedPersona
             ? `🎭 ${selectedPersona.name} trabalhando...`
-            : isLoadingCritique 
-            ? '🔬 Avaliando qualidade do código...'
-            : aiStatusMessage || 'Processando...'
+            : isLoadingCritique
+              ? '🔬 Avaliando qualidade do código...'
+              : aiStatusMessage || 'Processando...'
         }
         progress={detailedStatus?.progress}
         type={
           currentAppPhase === 'AI_ERROR_STATE' ? 'error' :
-          currentAppPhase === 'CODE_GENERATED' ? 'success' :
-          'loading'
+            currentAppPhase === 'CODE_GENERATED' ? 'success' :
+              'loading'
         }
       />
     </>

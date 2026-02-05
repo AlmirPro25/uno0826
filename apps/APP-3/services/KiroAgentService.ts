@@ -34,14 +34,14 @@ export class KiroAgentService {
   private genAI: GoogleGenAI | null = null;
   private conversationHistory: AgentMessage[] = [];
   private maxToolCalls = 10; // Limite de segurança
-  
+
   constructor() {
     const apiKey = ApiKeyManager.getKeyToUse();
     if (apiKey) {
       this.genAI = new GoogleGenAI({ apiKey });
     }
   }
-  
+
   /**
    * Converte nossas tools para o formato do Gemini
    */
@@ -55,10 +55,10 @@ export class KiroAgentService {
         required: tool.parameters.required
       }
     }));
-    
+
     return [{ functionDeclarations }];
   }
-  
+
   /**
    * System prompt do agente
    */
@@ -101,7 +101,7 @@ FORMATO DE RESPOSTA:
 - Mostre o que você fez
 - Se usou ferramentas, explique brevemente o resultado`;
   }
-  
+
   /**
    * Processa uma mensagem do usuário com tool calling
    */
@@ -113,45 +113,50 @@ FORMATO DE RESPOSTA:
         success: false
       };
     }
-    
+
     const toolsUsed: string[] = [];
     let toolCallCount = 0;
-    
+
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        tools: this.getGeminiTools(),
-        systemInstruction: this.getSystemPrompt()
-      });
-      
+      // Usando a API atualizada do @google/genai
+      // Em vez de getGenerativeModel, usamos diretamente o método models.generateContent
+
       // Adiciona mensagem do usuário ao histórico
       this.conversationHistory.push({
         role: 'user',
         content: userMessage
       });
-      
+
       // Prepara o histórico para o Gemini
       const contents = this.conversationHistory.map(msg => ({
         role: msg.role === 'assistant' ? 'model' : 'user',
         parts: [{ text: msg.content }]
       }));
-      
+
       // Loop de tool calling
-      let response = await model.generateContent({ contents });
-      let result = response.response;
-      
+      let response = await this.genAI.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents,
+        config: {
+          systemInstruction: this.getSystemPrompt(),
+          tools: this.getGeminiTools()
+        }
+      });
+
+      let result = response;
+
       while (result.functionCalls && result.functionCalls.length > 0 && toolCallCount < this.maxToolCalls) {
         const functionCall = result.functionCalls[0];
         const toolName = functionCall.name;
         const toolArgs = functionCall.args as Record<string, any>;
-        
+
         console.log(`🔧 Tool call: ${toolName}`, toolArgs);
         toolsUsed.push(toolName);
         toolCallCount++;
-        
+
         // Executa a ferramenta
         const toolResult = await kiroToolExecutor.execute(toolName, toolArgs);
-        
+
         // Adiciona ao histórico
         this.conversationHistory.push({
           role: 'tool',
@@ -159,7 +164,7 @@ FORMATO DE RESPOSTA:
           toolCall: { name: toolName, args: toolArgs },
           toolResult
         });
-        
+
         // Continua a conversa com o resultado da ferramenta
         const toolResponse = {
           role: 'user' as const,
@@ -170,29 +175,36 @@ FORMATO DE RESPOSTA:
             }
           }]
         };
-        
+
         contents.push(toolResponse);
-        
+
         // Nova chamada ao modelo
-        response = await model.generateContent({ contents });
-        result = response.response;
+        response = await this.genAI.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents,
+          config: {
+            systemInstruction: this.getSystemPrompt(),
+            tools: this.getGeminiTools()
+          }
+        });
+        result = response;
       }
-      
+
       // Extrai a resposta final
-      const finalText = result.text() || "Operação concluída.";
-      
+      const finalText = result.text || "Operação concluída.";
+
       // Adiciona resposta ao histórico
       this.conversationHistory.push({
         role: 'assistant',
         content: finalText
       });
-      
+
       return {
         message: finalText,
         toolsUsed,
         success: true
       };
-      
+
     } catch (error: any) {
       console.error('❌ Erro no agente:', error);
       return {
@@ -202,14 +214,14 @@ FORMATO DE RESPOSTA:
       };
     }
   }
-  
+
   /**
    * Limpa o histórico de conversa
    */
   clearHistory() {
     this.conversationHistory = [];
   }
-  
+
   /**
    * Obtém o histórico de conversa
    */

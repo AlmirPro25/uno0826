@@ -39,7 +39,7 @@ class BackendTerminalService {
   }
 
   // --- Gerenciamento de Listeners (Para o Terminal Console) ---
-  
+
   public onOutput(callback: ConsoleListener): () => void {
     this.listeners.push(callback);
     return () => {
@@ -159,7 +159,7 @@ class BackendTerminalService {
       }
 
       const result = await response.json();
-      
+
       if (result.success) {
         this.emitOutput(`[System] ✅ Arquivos salvos com sucesso.\r\n`, 'info');
       } else {
@@ -192,6 +192,47 @@ class BackendTerminalService {
       return data.content;
     } catch (error: any) {
       console.error('Erro ao ler arquivo:', error);
+      throw error;
+    }
+  }
+
+  // 🏭 FACTORY: Gera app via Open Code CLI
+  async generateApp(params: {
+    prompt: string;
+    projectName?: string;
+    fullStack?: { frontend: string | null; backend: string | null; styling: string | null }
+  }): Promise<void> {
+
+    this.emitOutput(`\r\n🏭 Enviando pedido de geração para a fábrica...\r\n`, 'info');
+    if (params.fullStack) {
+      this.emitOutput(`ℹ️  Stack: ${JSON.stringify(params.fullStack)}\r\n`, 'info');
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/factory/generate`, {
+        method: 'POST',
+        headers: this.getHeaders(),
+        body: JSON.stringify(params)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Erro na fábrica (${response.status}): ${response.statusText}`);
+      }
+
+      const result = await response.json();
+
+      if (result.success) {
+        this.emitOutput(`✅ App gerado com sucesso!\r\nDir: ${result.projectPath}\r\n`, 'info');
+        // Mostrar logs se houver
+        if (result.logs) {
+          this.emitOutput(`\r\n--- Logs da Fábrica ---\r\n${result.logs}\r\n-----------------------\r\n`, 'stdout');
+        }
+      } else {
+        this.emitOutput(`❌ Falha na geração: ${result.error}\r\nDetails: ${result.details}\r\n`, 'stderr');
+      }
+
+    } catch (error: any) {
+      this.emitOutput(`❌ Erro ao contactar fábrica: ${error.message}\r\n`, 'stderr');
       throw error;
     }
   }
@@ -246,11 +287,11 @@ class BackendTerminalService {
 
     if (isCritical) {
       console.warn('🚑 Erro crítico detectado. Acionando Self-Healing Engine...');
-      
+
       // Emite evento customizado para o SelfHealingEngine reagir
       window.dispatchEvent(new CustomEvent('terminal_error', {
-        detail: { 
-          error: errorLog, 
+        detail: {
+          error: errorLog,
           command,
           cwd: './project',
           timestamp: new Date().toISOString()

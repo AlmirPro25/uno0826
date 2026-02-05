@@ -1,0 +1,158 @@
+
+openapi: 3.0.0
+info:
+  title: GhostProtocol Control API
+  description: API de controle para o Exoesqueleto de Engajamento. Permite injeção de diretivas e manipulação de estado.
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Local Control Node
+tags:
+  - name: System
+    description: Status e controle global
+  - name: Contacts
+    description: Gerenciamento de alvos e perfis
+  - name: Directives
+    description: Injeção de comandos invisíveis
+
+paths:
+  /system/status:
+    get:
+      summary: Retorna o estado atual do bot e QR Code se necessário
+      tags: [System]
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [INITIALIZING, SCAN_QR, READY, DISCONNECTED]
+                  qr_code:
+                    type: string
+                    description: Base64 QR code image (if needed)
+                  battery_level:
+                    type: integer
+
+  /contacts:
+    get:
+      summary: Lista contatos ativos com metadados de calor
+      tags: [Contacts]
+      responses:
+        '200':
+          description: Lista de contatos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ContactProfile'
+
+  /contacts/{phone}/history:
+    get:
+      summary: Obtém histórico recente para contexto
+      tags: [Contacts]
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Histórico de mensagens
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Message'
+
+  /contacts/{phone}/control:
+    post:
+      summary: Altera o estado de automação de um contato (Pausar/Retomar)
+      tags: [Contacts]
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                action:
+                  type: string
+                  enum: [PAUSE, RESUME, MUTE]
+      responses:
+        '200':
+          description: Estado atualizado
+
+  /contacts/{phone}/directive:
+    post:
+      summary: Injeta uma missão ("Míssil Teleguiado")
+      description: Define a instrução oculta que guiará as próximas respostas da IA.
+      tags: [Directives]
+      parameters:
+        - name: phone
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                instruction:
+                  type: string
+                  example: "Conduza ele para o link de pagamento sutilmente, mas não pressione."
+                urgency:
+                  type: string
+                  enum: [LOW, MEDIUM, HIGH]
+      responses:
+        '200':
+          description: Diretiva injetada com sucesso
+
+components:
+  schemas:
+    ContactProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          description: WhatsApp ID (serialized)
+        name:
+          type: string
+        is_paused:
+          type: boolean
+        last_seen:
+          type: string
+          format: date-time
+        engagement_score:
+          type: integer
+          description: Termômetro de 0 a 100 (Frio a Quente)
+        active_directive:
+          type: string
+          nullable: true
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        from_me:
+          type: boolean
+        body:
+          type: string
+        timestamp:
+          type: integer

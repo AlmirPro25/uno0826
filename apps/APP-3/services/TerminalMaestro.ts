@@ -44,14 +44,14 @@ export interface MaestroResponse {
 export class TerminalMaestro {
     private genAI: GoogleGenAI | null = null;
     private commandHistory: TerminalCommand[] = [];
-    
+
     constructor() {
         const apiKey = ApiKeyManager.getKeyToUse();
         if (apiKey) {
             this.genAI = new GoogleGenAI({ apiKey });
         }
     }
-    
+
     /**
      * Interpreta comando em linguagem natural e converte para CLI
      */
@@ -59,10 +59,8 @@ export class TerminalMaestro {
         if (!this.genAI) {
             return this.fallbackInterpretation(userInput);
         }
-        
+
         try {
-            const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-            
             const prompt = `Você é um assistente especializado em CLI do AI Web Weaver.
 
 COMANDOS DISPONÍVEIS:
@@ -87,36 +85,34 @@ Analise a entrada e retorne um JSON com:
     "risks": ["possíveis riscos"]
 }
 
-Exemplos:
-- "instalar meu app" → {"understood": true, "intent": "install", "cliCommand": "aiweaver install app.html", ...}
-- "listar apps" → {"understood": true, "intent": "list", "cliCommand": "aiweaver list", ...}
-- "debugar o app abc123" → {"understood": true, "intent": "debug", "cliCommand": "aiweaver debug abc123", ...}
-
 Retorne APENAS o JSON, sem texto adicional.`;
 
-            const result = await model.generateContent(prompt);
-            const text = result.response.text();
-            
+            const result = await this.genAI.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt
+            });
+            const text = result.text || '';
+
             // Extrair JSON da resposta
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 const response = JSON.parse(jsonMatch[0]);
                 return response;
             }
-            
+
             return this.fallbackInterpretation(userInput);
         } catch (error) {
             console.error('Erro ao interpretar comando:', error);
             return this.fallbackInterpretation(userInput);
         }
     }
-    
+
     /**
      * Interpretação fallback sem IA
      */
     private fallbackInterpretation(userInput: string): MaestroResponse {
         const input = userInput.toLowerCase().trim();
-        
+
         // Comandos rápidos
         if (input === 'help' || input === 'ajuda' || input === '?') {
             return {
@@ -127,7 +123,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input === 'clear' || input === 'limpar' || input === 'cls') {
             return {
                 understood: true,
@@ -137,7 +133,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input === 'status' || input === 'info') {
             return {
                 understood: true,
@@ -147,7 +143,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         // Detectar intent por palavras-chave
         if (input.includes('install') || input.includes('instalar')) {
             return {
@@ -158,7 +154,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input.includes('start') || input.includes('iniciar') || input.includes('rodar')) {
             return {
                 understood: true,
@@ -168,7 +164,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input.includes('debug') || input.includes('debugar')) {
             return {
                 understood: true,
@@ -178,7 +174,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input.includes('list') || input.includes('listar') || input.includes('mostrar')) {
             return {
                 understood: true,
@@ -188,7 +184,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input.includes('remove') || input.includes('remover') || input.includes('deletar')) {
             return {
                 understood: true,
@@ -199,7 +195,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 risks: ['O app será permanentemente removido']
             };
         }
-        
+
         if (input.includes('logs') || input.includes('log')) {
             return {
                 understood: true,
@@ -209,7 +205,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input.includes('analyze') || input.includes('analisar')) {
             return {
                 understood: true,
@@ -219,7 +215,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         if (input.includes('help') || input.includes('ajuda')) {
             return {
                 understood: true,
@@ -229,7 +225,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 needsConfirmation: false
             };
         }
-        
+
         return {
             understood: false,
             intent: 'unknown',
@@ -237,31 +233,31 @@ Retorne APENAS o JSON, sem texto adicional.`;
             needsConfirmation: false
         };
     }
-    
+
     /**
      * Analisa output do terminal e detecta erros
      */
     async analyzeOutput(command: string, output: string, exitCode: number): Promise<TerminalAnalysis> {
         // Análise básica sem IA
-        const hasError = exitCode !== 0 || 
-                        output.toLowerCase().includes('error') ||
-                        output.toLowerCase().includes('erro') ||
-                        output.toLowerCase().includes('failed') ||
-                        output.toLowerCase().includes('falhou');
-        
+        const hasError = exitCode !== 0 ||
+            output.toLowerCase().includes('error') ||
+            output.toLowerCase().includes('erro') ||
+            output.toLowerCase().includes('failed') ||
+            output.toLowerCase().includes('falhou');
+
         if (!hasError) {
             return {
                 hasError: false,
                 severity: 'low'
             };
         }
-        
+
         // Detectar tipo de erro
         let errorType: TerminalAnalysis['errorType'] = 'unknown';
         let errorMessage = '';
         let suggestion = '';
         let autoFixCommand = '';
-        
+
         if (output.includes('permission denied') || output.includes('acesso negado')) {
             errorType = 'permission';
             errorMessage = 'Permissão negada';
@@ -279,7 +275,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
             errorMessage = 'Erro de rede ou conexão';
             suggestion = 'Verifique sua conexão com a internet';
         }
-        
+
         // Usar IA para análise mais profunda se disponível
         if (this.genAI) {
             try {
@@ -291,7 +287,7 @@ Retorne APENAS o JSON, sem texto adicional.`;
                 console.error('Erro na análise com IA:', error);
             }
         }
-        
+
         return {
             hasError: true,
             errorType,
@@ -301,16 +297,14 @@ Retorne APENAS o JSON, sem texto adicional.`;
             severity: errorType === 'permission' ? 'high' : 'medium'
         };
     }
-    
+
     /**
      * Análise com IA
      */
     private async analyzeWithAI(command: string, output: string): Promise<TerminalAnalysis | null> {
         if (!this.genAI) return null;
-        
+
         try {
-            const model = this.genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
-            
             const prompt = `Analise este output de terminal e identifique problemas:
 
 COMANDO: ${command}
@@ -330,21 +324,24 @@ Retorne um JSON com:
 
 Retorne APENAS o JSON.`;
 
-            const result = await model.generateContent(prompt);
-            const text = result.response.text();
-            
+            const result = await this.genAI.models.generateContent({
+                model: 'gemini-2.5-flash',
+                contents: prompt
+            });
+            const text = result.text || '';
+
             const jsonMatch = text.match(/\{[\s\S]*\}/);
             if (jsonMatch) {
                 return JSON.parse(jsonMatch[0]);
             }
-            
+
             return null;
         } catch (error) {
             console.error('Erro na análise com IA:', error);
             return null;
         }
     }
-    
+
     /**
      * Sugere próximo comando baseado no contexto
      */
@@ -354,7 +351,7 @@ Retorne APENAS o JSON.`;
         projectFiles?: string[];
     }): Promise<string[]> {
         const suggestions: string[] = [];
-        
+
         // Sugestões baseadas no último comando
         if (context.lastCommand?.includes('install')) {
             suggestions.push('aiweaver list');
@@ -369,7 +366,7 @@ Retorne APENAS o JSON.`;
             suggestions.push('aiweaver logs <id>');
             suggestions.push('aiweaver analyze <arquivo>');
         }
-        
+
         // Sugestões baseadas em arquivos do projeto
         if (context.projectFiles && context.projectFiles.length > 0) {
             const htmlFiles = context.projectFiles.filter(f => f.endsWith('.html'));
@@ -378,35 +375,35 @@ Retorne APENAS o JSON.`;
                 suggestions.push(`aiweaver analyze ${htmlFiles[0]}`);
             }
         }
-        
+
         // Sugestões padrão
         if (suggestions.length === 0) {
             suggestions.push('aiweaver help');
             suggestions.push('aiweaver list');
         }
-        
+
         return suggestions.slice(0, 5); // Máximo 5 sugestões
     }
-    
+
     /**
      * Adiciona comando ao histórico
      */
     addToHistory(command: TerminalCommand) {
         this.commandHistory.push(command);
-        
+
         // Manter apenas últimos 100 comandos
         if (this.commandHistory.length > 100) {
             this.commandHistory = this.commandHistory.slice(-100);
         }
     }
-    
+
     /**
      * Obtém histórico de comandos
      */
     getHistory(): TerminalCommand[] {
         return [...this.commandHistory];
     }
-    
+
     /**
      * Limpa histórico
      */

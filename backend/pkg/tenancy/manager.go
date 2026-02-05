@@ -272,15 +272,23 @@ func (m *TenantManager) UpdateTenant(ctx context.Context, tenantID string, updat
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	result := m.db.WithContext(ctx).Model(&Tenant{}).Where("id = ?", tenantID).Updates(updates)
-	if result.Error != nil {
-		return result.Error
+	if err := m.db.WithContext(ctx).Model(&Tenant{}).Where("id = ?", tenantID).Updates(updates).Error; err != nil {
+		return err
 	}
 
 	// Invalidate cache
 	delete(m.tenants, tenantID)
 
 	return nil
+}
+
+// ListTenants returns all tenants (for admin console)
+func (m *TenantManager) ListTenants(ctx context.Context) ([]Tenant, error) {
+	var tenants []Tenant
+	if err := m.db.WithContext(ctx).Find(&tenants).Error; err != nil {
+		return nil, err
+	}
+	return tenants, nil
 }
 
 // SuspendTenant temporarily disables a tenant

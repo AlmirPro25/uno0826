@@ -8,7 +8,7 @@ import {
     LayoutGrid, AppWindow, Activity, AlertTriangle, Key, BarChart3,
     Zap, Ghost, Lock, Scale, Database, BookOpen, Brain, Cog, LogOut, Shield,
     Crown, Webhook, Bot, Workflow, ShieldCheck, History, FileText,
-    DollarSign, CreditCard, PieChart, Users, Terminal
+    DollarSign, CreditCard, PieChart, Users, Terminal, Skull, Gauge, Network, Layers
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useApp } from "@/contexts/app-context";
@@ -25,11 +25,15 @@ const SECTIONS = {
         { href: "/dashboard/ai", label: "Aurora Hub", icon: Sparkles },
         { href: "/dashboard/agents", label: "Agentes Autônomos", icon: Bot },
         { href: "/dashboard/autonomy", label: "Autonomia", icon: Workflow },
+        { href: "/dashboard/vector-memory", label: "Memória Vetorial", icon: Brain },
         { href: "/dashboard/admin/cognitive", label: "Nervos Cognitivos", icon: Brain },
     ],
     monitor: [
         { href: "/dashboard/incidents", label: "Incidentes", icon: AlertTriangle },
         { href: "/dashboard/telemetry", label: "Telemetria", icon: BarChart3 },
+        { href: "/dashboard/observability", label: "Trace Distribuído", icon: Network },
+        { href: "/dashboard/lighthouse", label: "Performance Radar", icon: Gauge },
+        { href: "/dashboard/autoscaler", label: "Infra Elástica", icon: Layers },
         { href: "/dashboard/status", label: "Saúde do Sistema", icon: ShieldCheck },
         { href: "/dashboard/audit", label: "Logs de Auditoria", icon: History },
     ],
@@ -38,6 +42,7 @@ const SECTIONS = {
         { href: "/dashboard/webhooks", label: "Webhooks", icon: Webhook },
         { href: "/dashboard/apikeys", label: "API Keys", icon: Key },
         { href: "/dashboard/jobs", label: "Tarefas Agendadas", icon: Terminal },
+        { href: "/dashboard/chaos", label: "Engenharia de Caos", icon: Skull },
     ],
     governance: [
         { href: "/dashboard/authority", label: "Autoridade Digital", icon: Crown },

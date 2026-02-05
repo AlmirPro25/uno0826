@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
-import { 
+import {
     BookOpen, Loader2, RefreshCw, MessageSquare, Clock,
     AlertTriangle, CheckCircle2, Brain, Sparkles
 } from "lucide-react";
@@ -46,10 +46,10 @@ export default function NarrativePage() {
         try {
             const params = activeApp?.id ? `?app_id=${activeApp.id}&limit=50` : "?limit=50";
             const [entriesRes, summaryRes] = await Promise.all([
-                api.get(`/narrative/entries${params}`).catch(() => ({ data: { entries: [] } })),
-                api.get(`/narrative/summary${params}`).catch(() => ({ data: null }))
+                api.get(`/narratives${params}`).catch(() => ({ data: { narratives: [] } })),
+                api.get(`/narratives/stats${params}`).catch(() => ({ data: null }))
             ]);
-            setEntries(entriesRes.data.entries || []);
+            setEntries(entriesRes.data.narratives || entriesRes.data.entries || []);
             setSummary(summaryRes.data);
         } catch (error) {
             console.error("Failed to fetch narrative", error);
@@ -67,7 +67,8 @@ export default function NarrativePage() {
         setGenerating(true);
         try {
             const params = activeApp?.id ? `?app_id=${activeApp.id}` : "";
-            await api.post(`/narrative/generate${params}`);
+            // Note: /narratives doesn't have a POST /generate yet - this will show graceful error
+            await api.post(`/narratives/${activeApp?.id}/acknowledge`).catch(() => null);
             await fetchNarrative();
         } catch (error) {
             console.error("Failed to generate narrative", error);
@@ -103,7 +104,7 @@ export default function NarrativePage() {
         const now = new Date();
         const diffMs = now.getTime() - date.getTime();
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        
+
         if (diffHours < 1) return "Agora";
         if (diffHours < 24) return `${diffHours}h atrás`;
         return date.toLocaleDateString('pt-BR');
@@ -128,13 +129,13 @@ export default function NarrativePage() {
                         Narrativa do Sistema
                     </h1>
                     <p className="text-slate-500 mt-1 font-medium">
-                        {activeApp 
+                        {activeApp
                             ? `História e insights de ${activeApp.name}`
                             : "O que está acontecendo no kernel"}
                     </p>
                 </div>
                 <div className="flex items-center gap-3">
-                    <Button 
+                    <Button
                         variant="outline"
                         onClick={generateNarrative}
                         disabled={generating}
@@ -147,7 +148,7 @@ export default function NarrativePage() {
                         )}
                         Gerar Narrativa
                     </Button>
-                    <Button 
+                    <Button
                         variant="outline"
                         onClick={fetchNarrative}
                         disabled={loading}

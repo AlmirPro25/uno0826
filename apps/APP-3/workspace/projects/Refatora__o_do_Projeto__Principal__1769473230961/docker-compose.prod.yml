@@ -1,0 +1,38 @@
+
+version: '3.8'
+
+# SENTINEL NEXUS - PRODUCTION DEPLOYMENT
+# Authorized Personnel Only.
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    container_name: sentinel_core_prod
+    restart: always
+    volumes:
+      - sentinel_data:/app/data
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=file:/app/data/sentinel.db
+      - NODE_ENV=production
+
+  frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    container_name: sentinel_ui_prod
+    restart: always
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+
+volumes:
+  sentinel_data:
+
+networks:
+  default:
+    name: sentinel_secure_net

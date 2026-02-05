@@ -71,6 +71,14 @@ func (h *EventHandler) GetUserEvents(c *gin.Context) {
 		return
 	}
 
+	// Verificar permissão (Admin ou Próprio Usuário)
+	authUserID := c.GetString("userID")
+	authRole := c.GetString("role")
+	if authRole != "admin" && authRole != "super_admin" && authUserID != userID.String() {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Sem permissão para visualizar eventos deste usuário"})
+		return
+	}
+
 	limit := 50
 	if l := c.Query("limit"); l != "" {
 		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 500 {
@@ -151,7 +159,8 @@ func RegisterEventSystemRoutes(r *gin.RouterGroup, service *EventService, authMi
 	{
 		// Rotas públicas (autenticado)
 		events.GET("/types", handler.GetEventTypes)
-		
+		events.GET("/user/:user_id", handler.GetUserEvents)
+
 		// GET /events - Lista eventos recentes (para o frontend-old/admin)
 		events.GET("", func(c *gin.Context) {
 			limit := 50
@@ -160,20 +169,20 @@ func RegisterEventSystemRoutes(r *gin.RouterGroup, service *EventService, authMi
 					limit = parsed
 				}
 			}
-			
+
 			// Buscar eventos recentes do sistema
 			recentEvents, err := statsService.GetRecentSystemEvents(limit)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": "Erro ao buscar eventos"})
 				return
 			}
-			
+
 			c.JSON(http.StatusOK, gin.H{
 				"events": recentEvents,
 				"count":  len(recentEvents),
 			})
 		})
-		
+
 		// GET /events/stats - Estatísticas gerais
 		events.GET("/stats", func(c *gin.Context) {
 			stats, err := statsService.GetSystemStats()
@@ -189,9 +198,8 @@ func RegisterEventSystemRoutes(r *gin.RouterGroup, service *EventService, authMi
 		admin.Use(adminMiddleware)
 		{
 			admin.GET("/app/:app_id", handler.GetAppEvents)
-			admin.GET("/user/:user_id", handler.GetUserEvents)
 			admin.GET("/stats/:app_id", handler.GetEventStats)
-			
+
 			// Estatísticas do sistema
 			admin.GET("/system/stats", func(c *gin.Context) {
 				stats, err := statsService.GetSystemStats()
@@ -201,7 +209,7 @@ func RegisterEventSystemRoutes(r *gin.RouterGroup, service *EventService, authMi
 				}
 				c.JSON(http.StatusOK, stats)
 			})
-			
+
 			// Estatísticas em tempo real
 			admin.GET("/system/realtime", func(c *gin.Context) {
 				stats, err := statsService.GetRealtimeStats()
