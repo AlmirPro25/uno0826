@@ -13,6 +13,12 @@ const { v4: uuidv4 } = require('uuid');
 const prostqs = require('./prostqs-client');
 
 // ============================================================================
+// PERSISTENCE + SOCIAL LAYER
+// ============================================================================
+const db = require('./db');
+const social = require('./social');
+
+// ============================================================================
 // VOX-BRIDGE SIGNALING SERVER v2.1 - PRODUCTION READY + PROST-QS
 // ============================================================================
 // MELHORIAS:
@@ -22,20 +28,59 @@ const prostqs = require('./prostqs-client');
 // 4. Room expiration (30 min)
 // 5. Heartbeat obrigatório
 // 6. Métricas de ICE failure
+// 7. Identidade persistente + grafo social real (SQLite)
+// 8. Moderação real (report/block) aplicada no matchmaking
 // ============================================================================
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// ----------------------------------------------------------------------------
+// CORS — allowlist via env (ALLOWED_ORIGINS="https://a.com,https://b.com").
+// Em dev, sem a env, libera localhost. NUNCA usar "*" em produção.
+// ----------------------------------------------------------------------------
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+
+const DEV_ORIGIN_REGEX = /^https?:\/\/(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)(:\d+)?$/;
+
+function isOriginAllowed(origin) {
+  if (!origin) return true; // same-origin / curl / mobile apps (no Origin header)
+  if (ALLOWED_ORIGINS.length > 0) return ALLOWED_ORIGINS.includes(origin);
+  // No allowlist configured -> dev mode: allow local network origins only
+  return DEV_ORIGIN_REGEX.test(origin);
+}
+
+const corsOptions = {
+  origin(origin, callback) {
+    if (isOriginAllowed(origin)) return callback(null, true);
+    return callback(new Error('Not allowed by CORS'));
+  },
+};
+
+app.use(cors(corsOptions));
+app.use(express.json({ limit: '64kb' }));
 
 const server = http.createServer(app);
-const wss = new WebSocket.Server({ server });
+const wss = new WebSocket.Server({
+  server,
+  // Reject WS upgrades from disallowed origins (browser-enforced; defense in depth)
+  verifyClient(info, done) {
+    const origin = info.origin || info.req.headers.origin;
+    if (isOriginAllowed(origin)) return done(true);
+    console.warn(`⛔ WS upgrade rejected from origin: ${origin}`);
+    return done(false, 403, 'Forbidden origin');
+  },
+});
 
 // Estado em memória
 const users = new Map();
 const queue = [];
 const rooms = new Map();
 const rateLimits = new Map();
+const recentPairs = new Map();
+const REMATCH_COOLDOWN = 5 * 60 * 1000;
 
 // Configurações
 const CONFIG = {
@@ -43,17 +88,29 @@ const CONFIG = {
   HEARTBEAT_TIMEOUT: 45000,       // 45s - timeout sem pong
   ROOM_TIMEOUT: 30 * 60 * 1000,   // 30 min - room expira
   NEGOTIATION_TIMEOUT: 15000,     // 15s - timeout de negociação
-  QUEUE_TIMEOUT: 120000,          // 2 min - timeout na fila
+  QUEUE_TIMEOUT: 45000,           // 45s - evita busca "infinita" quando só há uma pessoa
 };
 
 // Rate limiting
 const RATE_LIMITS = {
   chat_message: { max: 10, window: 5000 },
+  media_message: { max: 6, window: 10000 },
   join_queue: { max: 5, window: 10000 },
+  next_match: { max: 5, window: 10000 },
   typing: { max: 20, window: 5000 },
   webrtc_ice: { max: 100, window: 10000 },
   webrtc_offer: { max: 5, window: 10000 },
   webrtc_answer: { max: 5, window: 10000 },
+  // Social / moderation
+  friend_request: { max: 20, window: 60000 },
+  friend_request_respond: { max: 40, window: 60000 },
+  friend_remove: { max: 30, window: 60000 },
+  get_friends: { max: 30, window: 10000 },
+  get_discovery: { max: 30, window: 10000 },
+  report_user: { max: 10, window: 60000 },
+  block_user: { max: 20, window: 60000 },
+  update_languages: { max: 20, window: 60000 },
+  update_interests: { max: 20, window: 60000 },
 };
 
 // Métricas
@@ -168,7 +225,7 @@ setInterval(() => {
       safeSend(user.ws, 'queue_timeout', {});
     }
   }
-}, 30000);
+}, 5000);
 
 // Verificar heartbeat de todos os usuários
 setInterval(() => {
@@ -198,12 +255,13 @@ app.get('/health', (req, res) => {
 });
 
 app.get('/', (req, res) => {
-  res.json({ status: 'ok', message: 'VOX-BRIDGE API v2.0', online: users.size });
+  res.json({ status: 'ok', message: 'VOX-BRIDGE API v2.0', online: social.onlineAccountCount() });
 });
 
 app.get('/stats', (req, res) => {
   res.json({
-    online: users.size,
+    online: social.onlineAccountCount(),
+    connections: users.size,
     inQueue: queue.length,
     activeRooms: rooms.size,
     uptime: Math.floor(process.uptime()),
@@ -354,22 +412,17 @@ app.get('/turn-credentials', (req, res) => {
   }
   
   // ========================================
-  // OPÇÃO 4: Fallback público (APENAS DEV)
-  // ⚠️ NÃO FUNCIONA PARA CONEXÕES INTERCONTINENTAIS
+  // OPÇÃO 4: Fallback APENAS-STUN (DEV)
+  // Sem TURN configurado: retorna só STUN público.
+  // P2P direto funciona na maioria das redes domésticas, mas NÃO atravessa
+  // NAT restritivo/firewalls corporativos. Configure TURN para produção.
+  // (Nenhuma credencial fica embutida no código.)
   // ========================================
-  console.warn('⚠️ VOXGRID: Nenhum TURN configurado - usando fallback público (NÃO RECOMENDADO)');
-  const turnServers = [
-    { 
-      urls: [
-        'turns:global.relay.metered.ca:443?transport=tcp',
-        'turn:global.relay.metered.ca:443',
-        'turn:global.relay.metered.ca:80'
-      ], 
-      username: 'e8dd65c92f6f1f2d5c67c7a3', 
-      credential: 'kW3QfUZKpLqYhDzS' 
-    }
-  ];
-  res.json(turnServers);
+  console.warn('⚠️ VOXGRID: Nenhum TURN configurado - retornando apenas STUN (configure TURN_SECRET/TURN_SERVERS ou METERED_* para produção)');
+  res.json([
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+  ]);
 });
 
 // ============================================================================
@@ -386,18 +439,37 @@ wss.on('connection', (ws, req) => {
   const previousSessionId = url.searchParams.get('session_id');
   const sessionId = previousSessionId || uuidv4();
   const isReconnect = !!previousSessionId;
-  
+
+  // ----------------------------------------------------------------------------
+  // PERSISTENT IDENTITY
+  // The client sends ?token=<persistent>. Unknown/absent token => new account.
+  // The account (id, handle, prefs, social graph) survives reconnects & restarts.
+  // ----------------------------------------------------------------------------
+  const providedToken = url.searchParams.get('token');
+  let account;
+  try {
+    account = db.findOrCreateUser({ token: providedToken });
+  } catch (err) {
+    console.error('Identity error:', err.message);
+    ws.close(1011, 'identity_error');
+    return;
+  }
+  const isNewAccount = account.token !== providedToken;
+  const visibleName = account.display_name || account.handle;
+
   const user = { 
     id, 
+    accountId: account.id,       // persistent account id (used for social graph)
+    handle: account.handle,      // stable handle
     sessionId, // Session ID para telemetria (pode ser recuperado)
     ws, 
     ip,
     userAgent,
-    anonymousId: generateAnonId(), 
-    nativeLanguage: 'pt', 
-    targetLanguage: 'en', 
-    interests: [], 
-    country: 'BR', 
+    anonymousId: visibleName,    // visible name (displayName or stable handle)
+    nativeLanguage: account.native_language || 'pt',
+    targetLanguage: account.target_language || 'en',
+    interests: (() => { try { return JSON.parse(account.interests || '[]'); } catch { return []; } })(),
+    country: account.country || 'BR',
     roomId: null,
     connectedAt: Date.now(),
     lastPong: Date.now(),
@@ -409,6 +481,10 @@ wss.on('connection', (ws, req) => {
   
   users.set(id, user);
   metrics.totalConnections++;
+
+  // Registrar presença (para amigos online / discovery)
+  social.registerPresence(user);
+  db.touchLastSeen(account.id);
 
   // 📊 PROST-QS: Registrar início de sessão (audit legacy)
   prostqs.sessionStarted(id, ip, userAgent, user.country);
@@ -435,12 +511,22 @@ wss.on('connection', (ws, req) => {
   }
 
   safeSend(ws, 'connected', { 
-    userId: id, 
+    userId: account.id,          // persistent account id
+    accountId: account.id,
+    token: account.token,        // client stores this for future reconnects
+    handle: account.handle,
+    isNewAccount,
     sessionId, // Enviar sessionId para o cliente guardar
     anonymousId: user.anonymousId, 
-    online: users.size,
+    online: social.onlineAccountCount(),
     isReconnect 
   });
+
+  // Enviar lista de amigos + pedidos pendentes logo após conectar
+  safeSend(ws, 'friends_list', social.buildFriendsPayload(account.id));
+
+  // Notificar amigos online que este usuário ficou online
+  notifyFriendsPresence(account.id, true);
 
   ws.on('message', (data) => {
     try {
@@ -474,6 +560,12 @@ wss.on('connection', (ws, req) => {
     
     handleDisconnect(user);
     users.delete(id);
+
+    // Presença: remover esta conexão; se foi a última, avisar amigos que ficou offline
+    social.unregisterPresence(user);
+    if (user.accountId && !social.isOnline(user.accountId)) {
+      notifyFriendsPresence(user.accountId, false);
+    }
   });
 
   ws.on('error', (err) => {
@@ -505,7 +597,7 @@ function handleMessage(user, msg) {
   
   switch (msg.type) {
     case 'ping': 
-      safeSend(user.ws, 'pong', { online: users.size, queue: queue.length });
+      safeSend(user.ws, 'pong', { online: social.onlineAccountCount(), queue: queue.length });
       
       // 📊 PROST-QS TELEMETRY: Heartbeat/ping (Fase 30)
       // Envia ping de presença a cada ping do cliente
@@ -528,11 +620,17 @@ function handleMessage(user, msg) {
         prostqs.telemetryMessageSent(user.id, user.sessionId, user.roomId);
       }
       break;
+    case 'media_message':
+      sendMediaMessage(user, msg.payload);
+      break;
     case 'typing': 
       sendTyping(user, msg.payload); 
       break;
     case 'leave_room': 
       leaveRoom(user); 
+      break;
+    case 'next_match':
+      moveRoomToNext(user);
       break;
     case 'webrtc_offer': 
     case 'webrtc_answer': 
@@ -550,6 +648,186 @@ function handleMessage(user, msg) {
       // 📊 PROST-QS TELEMETRY: Falha ICE (Fase 30)
       prostqs.telemetryICEFailure(user.id, user.sessionId, user.roomId, 'ice_connection_failed');
       break;
+
+    // ========================================================================
+    // SOCIAL
+    // ========================================================================
+    case 'get_friends':
+      safeSend(user.ws, 'friends_list', social.buildFriendsPayload(user.accountId));
+      break;
+    case 'get_discovery':
+      safeSend(user.ws, 'discovery_list', { users: social.buildDiscovery(user.accountId) });
+      break;
+    case 'friend_request':
+      handleFriendRequest(user, msg.payload);
+      break;
+    case 'friend_request_respond':
+      handleFriendRequestRespond(user, msg.payload);
+      break;
+    case 'friend_remove':
+      handleFriendRemove(user, msg.payload);
+      break;
+    case 'update_languages':
+      handleUpdateLanguages(user, msg.payload);
+      break;
+    case 'update_interests':
+      handleUpdateInterests(user, msg.payload);
+      break;
+
+    // ========================================================================
+    // MODERATION
+    // ========================================================================
+    case 'report_user':
+      handleReportUser(user, msg.payload);
+      break;
+    case 'block_user':
+      handleBlockUser(user, msg.payload);
+      break;
+  }
+}
+
+// ============================================================================
+// SOCIAL & MODERATION HANDLERS
+// ============================================================================
+
+// Notify all online friends of an account about its presence change
+function notifyFriendsPresence(accountId, online) {
+  const friends = db.getFriends(accountId);
+  for (const friend of friends) {
+    social.sendToAccount(friend.id, 'friend_presence', { friendId: accountId, online }, safeSend);
+  }
+}
+
+function handleFriendRequest(user, payload) {
+  const toAccountId = payload && typeof payload.toUserId === 'string' ? payload.toUserId : null;
+  if (!toAccountId) return;
+
+  const result = social.sendFriendRequest(user, toAccountId);
+  if (!result.ok) {
+    safeSend(user.ws, 'friend_error', { action: 'friend_request', error: result.error });
+    return;
+  }
+
+  // Mutual request -> instantly became friends
+  if (result.becameFriends || result.alreadyFriends) {
+    safeSend(user.ws, 'friends_list', social.buildFriendsPayload(user.accountId));
+    if (result.friendId) {
+      social.sendToAccount(result.friendId, 'friends_list', social.buildFriendsPayload(result.friendId), safeSend);
+      social.sendToAccount(result.friendId, 'friend_request_accepted', {
+        friend: db.publicUser(db.getUserById(user.accountId), { online: true }),
+      }, safeSend);
+    }
+    return;
+  }
+
+  // Pending request created -> notify recipient if online
+  const fromPublic = db.publicUser(db.getUserById(user.accountId), {
+    online: true,
+    requestId: result.request.id,
+    requestedAt: result.request.created_at,
+  });
+  social.sendToAccount(toAccountId, 'friend_request_received', { request: fromPublic }, safeSend);
+  safeSend(user.ws, 'friend_request_sent', { toUserId: toAccountId });
+}
+
+function handleFriendRequestRespond(user, payload) {
+  const requestId = payload && typeof payload.requestId === 'string' ? payload.requestId : null;
+  const accept = !!(payload && payload.accept);
+  if (!requestId) return;
+
+  const result = social.respondFriendRequest(user, requestId, accept);
+  if (!result.ok) {
+    safeSend(user.ws, 'friend_error', { action: 'friend_request_respond', error: result.error });
+    return;
+  }
+
+  // Refresh both sides' lists
+  safeSend(user.ws, 'friends_list', social.buildFriendsPayload(user.accountId));
+
+  if (result.accepted) {
+    social.sendToAccount(result.fromId, 'friends_list', social.buildFriendsPayload(result.fromId), safeSend);
+    social.sendToAccount(result.fromId, 'friend_request_accepted', {
+      friend: db.publicUser(db.getUserById(user.accountId), { online: social.isOnline(user.accountId) }),
+    }, safeSend);
+  }
+}
+
+function handleFriendRemove(user, payload) {
+  const friendId = payload && typeof payload.friendId === 'string' ? payload.friendId : null;
+  if (!friendId) return;
+
+  const result = social.removeFriend(user, friendId);
+  if (!result.ok) return;
+
+  safeSend(user.ws, 'friends_list', social.buildFriendsPayload(user.accountId));
+  social.sendToAccount(friendId, 'friends_list', social.buildFriendsPayload(friendId), safeSend);
+}
+
+function handleUpdateLanguages(user, payload) {
+  if (!payload) return;
+  const native = sanitizeText(payload.native_language || payload.nativeLanguage) || user.nativeLanguage;
+  const target = sanitizeText(payload.target_language || payload.targetLanguage) || user.targetLanguage;
+  user.nativeLanguage = native;
+  user.targetLanguage = target;
+  db.updatePrefs(user.accountId, { nativeLanguage: native, targetLanguage: target });
+}
+
+function handleUpdateInterests(user, payload) {
+  if (!payload) return;
+  const interests = Array.isArray(payload.interests)
+    ? payload.interests.slice(0, 10).map(sanitizeText).filter(Boolean)
+    : [];
+  user.interests = interests;
+  db.updatePrefs(user.accountId, { interests });
+}
+
+function handleReportUser(user, payload) {
+  if (!payload) return;
+  // Resolve the reported account: explicit reportedUserId, or current room partner
+  let reportedId = typeof payload.reportedUserId === 'string' ? payload.reportedUserId : null;
+  if (!reportedId && user.roomId) {
+    const room = rooms.get(user.roomId);
+    const partner = room && room.users.find((u) => u.id !== user.id);
+    if (partner) reportedId = partner.accountId;
+  }
+
+  const result = social.reportUser(user, {
+    reportedId,
+    roomId: user.roomId,
+    reason: sanitizeText(payload.reason),
+    details: sanitizeText(payload.details),
+  });
+
+  if (result.ok) {
+    console.log(`🚩 Report ${result.id} by ${user.handle} against ${reportedId || 'unknown'}`);
+    safeSend(user.ws, 'report_ack', { ok: true });
+  }
+}
+
+function handleBlockUser(user, payload) {
+  // Resolve the target account: explicit targetUserId, or current room partner
+  let targetId = payload && typeof payload.targetUserId === 'string' ? payload.targetUserId : null;
+  if (!targetId && user.roomId) {
+    const room = rooms.get(user.roomId);
+    const partner = room && room.users.find((u) => u.id !== user.id);
+    if (partner) targetId = partner.accountId;
+  }
+  if (!targetId) return;
+
+  const result = social.blockUser(user, targetId);
+  if (!result.ok) return;
+
+  console.log(`🚫 ${user.handle} blocked ${targetId}`);
+  safeSend(user.ws, 'block_ack', { ok: true, targetUserId: targetId });
+  safeSend(user.ws, 'friends_list', social.buildFriendsPayload(user.accountId));
+
+  // If currently in a room with the blocked user, end it for both
+  if (user.roomId) {
+    const room = rooms.get(user.roomId);
+    const partner = room && room.users.find((u) => u.id !== user.id);
+    if (partner && partner.accountId === targetId) {
+      leaveRoom(user);
+    }
   }
 }
 
@@ -603,6 +881,22 @@ function forwardWebRTC(user, type, payload) {
 // QUEUE & ROOM MANAGEMENT
 // ============================================================================
 
+function pairKey(user1, user2) {
+  const id1 = user1.accountId || user1.id;
+  const id2 = user2.accountId || user2.id;
+  return [id1, id2].sort().join(':');
+}
+
+function hasRecentPairCooldown(user1, user2) {
+  const key = pairKey(user1, user2);
+  const expiresAt = recentPairs.get(key) || 0;
+  if (expiresAt <= Date.now()) {
+    recentPairs.delete(key);
+    return false;
+  }
+  return true;
+}
+
 function joinQueue(user, payload) {
   if (user.roomId) return;
   
@@ -617,6 +911,12 @@ function joinQueue(user, payload) {
   const matchIdx = queue.findIndex(q => {
     if (q.id === user.id) return false;
     if (q.ws.readyState !== WebSocket.OPEN) return false; // Skip dead connections
+    if (hasRecentPairCooldown(user, q)) return false;
+
+    // Moderação: nunca casar usuários que se bloquearam (qualquer direção)
+    if (user.accountId && q.accountId && db.isBlockedEither(user.accountId, q.accountId)) {
+      return false;
+    }
     
     // Match perfeito: idiomas complementares
     if (user.targetLanguage === q.nativeLanguage && q.targetLanguage === user.nativeLanguage) {
@@ -695,18 +995,24 @@ function createRoom(user1, user2) {
   
   // user1 = initiator (impolite), user2 = responder (polite)
   const info1 = { 
+    userId: user2.accountId,     // persistent account id (for friend requests)
     odId: user2.anonymousId, 
+    handle: user2.handle,
     nativeLanguage: user2.nativeLanguage, 
     country: user2.country, 
     commonInterests: common,
-    isInitiator: true
+    isInitiator: true,
+    alreadyFriend: !!(user1.accountId && user2.accountId && db.areFriends(user1.accountId, user2.accountId)),
   };
   const info2 = { 
+    userId: user1.accountId,     // persistent account id (for friend requests)
     odId: user1.anonymousId, 
+    handle: user1.handle,
     nativeLanguage: user1.nativeLanguage, 
     country: user1.country, 
     commonInterests: common,
-    isInitiator: false
+    isInitiator: false,
+    alreadyFriend: !!(user1.accountId && user2.accountId && db.areFriends(user1.accountId, user2.accountId)),
   };
   
   console.log(`🎯 Match #${metrics.totalMatches}: ${user1.anonymousId} <-> ${user2.anonymousId}`);
@@ -729,11 +1035,69 @@ function sendChatMessage(user, payload) {
   
   const partner = room.users.find(u => u.id !== user.id);
   if (partner) {
+    // Persist for moderation/history (best-effort)
+    try {
+      db.saveMessage({ roomId: user.roomId, fromId: user.accountId, toId: partner.accountId, text });
+    } catch { /* non-fatal */ }
     safeSend(partner.ws, 'chat_message', { 
       from: user.anonymousId, 
       text, 
       timestamp: Date.now() 
     });
+  }
+}
+
+const ALLOWED_MEDIA_TYPES = new Set(['image', 'audio', 'video']);
+const MAX_MEDIA_DATA_LENGTH = 16 * 1024 * 1024; // Base64 payload, roughly 12 MB binary.
+
+function sendMediaMessage(user, payload) {
+  if (!user.roomId) {
+    safeSend(user.ws, 'media_error', { error: 'not_in_room' });
+    return;
+  }
+
+  const room = rooms.get(user.roomId);
+  if (!room) {
+    safeSend(user.ws, 'media_error', { error: 'room_not_found' });
+    return;
+  }
+
+  const type = typeof payload?.type === 'string' ? payload.type : '';
+  const data = typeof payload?.data === 'string' ? payload.data : '';
+  const fileName = sanitizeText(payload?.fileName || 'arquivo');
+
+  if (!ALLOWED_MEDIA_TYPES.has(type) || !data.startsWith('data:')) {
+    safeSend(user.ws, 'media_error', { error: 'invalid_media' });
+    return;
+  }
+
+  if (data.length > MAX_MEDIA_DATA_LENGTH) {
+    safeSend(user.ws, 'media_error', { error: 'file_too_large', maxBytes: 12 * 1024 * 1024 });
+    return;
+  }
+
+  const partner = room.users.find((roomUser) => roomUser.id !== user.id);
+  if (!partner || partner.ws.readyState !== WebSocket.OPEN) {
+    safeSend(user.ws, 'media_error', { error: 'partner_offline' });
+    return;
+  }
+
+  const mediaId = uuidv4();
+  const timestamp = Date.now();
+  const delivered = safeSend(partner.ws, 'media_message', {
+    id: mediaId,
+    from: user.anonymousId,
+    type,
+    data,
+    fileName: fileName.slice(0, 160),
+    timestamp,
+  });
+
+  if (delivered) {
+    safeSend(user.ws, 'media_delivered', { id: mediaId, timestamp });
+    prostqs.telemetryMessageSent(user.id, user.sessionId, user.roomId);
+  } else {
+    safeSend(user.ws, 'media_error', { error: 'delivery_failed' });
   }
 }
 
@@ -798,6 +1162,44 @@ function leaveRoom(user) {
   user.negotiationStarted = null;
 }
 
+function moveRoomToNext(user) {
+  if (!user.roomId) {
+    joinQueue(user);
+    return;
+  }
+
+  const roomId = user.roomId;
+  const room = rooms.get(roomId);
+  if (!room) {
+    user.roomId = null;
+    joinQueue(user);
+    return;
+  }
+
+  const participants = room.users.filter(Boolean);
+  if (participants.length === 2) {
+    recentPairs.set(pairKey(participants[0], participants[1]), Date.now() + REMATCH_COOLDOWN);
+  }
+
+  rooms.delete(roomId);
+
+  for (const participant of participants) {
+    const duration = Date.now() - (participant.roomJoinedAt || Date.now());
+    prostqs.matchEnded(roomId, participant.id, duration, 'next_match');
+    prostqs.telemetryMatchEnded(participant.id, participant.sessionId, roomId, duration, 'next_match');
+    prostqs.telemetryFeatureLeave(participant.id, participant.sessionId, 'video_chat');
+
+    participant.roomId = null;
+    participant.roomJoinedAt = null;
+    participant.negotiationStarted = null;
+    safeSend(participant.ws, 'next_searching', { cooldownMs: REMATCH_COOLDOWN });
+  }
+
+  for (const participant of participants) {
+    if (participant.ws.readyState === WebSocket.OPEN) joinQueue(participant);
+  }
+}
+
 function handleDisconnect(user) {
   leaveQueue(user);
   leaveRoom(user);
@@ -814,6 +1216,7 @@ process.on('SIGTERM', async () => {
   await prostqs.flushEvents();
   
   wss.clients.forEach(ws => ws.close());
+  db.close();
   server.close(() => process.exit(0));
 });
 
@@ -824,6 +1227,7 @@ process.on('SIGINT', async () => {
   await prostqs.flushEvents();
   
   wss.clients.forEach(ws => ws.close());
+  db.close();
   server.close(() => process.exit(0));
 });
 
